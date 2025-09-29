@@ -1,0 +1,12 @@
+[tool.pytest.ini_options]
+addopts = "-q --maxfail=1 --disable-warnings --cov=lambdas --cov-report=term-missing --cov-fail-under=80"
+pythonpath = ["lambdas"]
+
+
+[tool.black]
+line-length = 100
+
+
+[tool.isort]
+profile = "black"
+

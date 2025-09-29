@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+*.zip
+/.venv/
+/.localstack/
+/.terraform/
+**/.terraform/*
+terraform.tfstate*
+.build/
+.dist/
+

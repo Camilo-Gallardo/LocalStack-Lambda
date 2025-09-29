@@ -1,0 +1,10 @@
+pytest
+pytest-cov
+boto3
+black
+flake8
+isort
+pre-commit
+bandit
+pip-audit
+awscli
