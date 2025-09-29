@@ -8,4 +8,7 @@ __pycache__/
 terraform.tfstate*
 .build/
 .dist/
+logs/
+*.log
+
 
