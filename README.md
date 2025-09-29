@@ -371,5 +371,3 @@ print(resp["Payload"].read().decode())
 **Tail con rotación (scripts/tail_logs.py)** → *ver sección [Logs y observabilidad](#logs-y-observabilidad)*.
 
 ---
-
-¿Necesitas que agregue una **sección de “Contribuir”** (estándares de commit, ramas, flujo Git) o un **workflow de CI** listo?
