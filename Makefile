@@ -67,8 +67,15 @@ plan: package-all ## Terraform plan contra LocalStack
 deploy: package-all ## Despliega recursos a LocalStack (autodescubre lambdas/*/dist.zip)
 	cd infra/terraform && $(TF) init -upgrade && $(TF) apply -auto-approve
 
-nuke: ## Elimina recursos de LocalStack
-	cd infra/terraform && $(TF) destroy -auto-approve || true
+nuke: ## Elimina recursos de LocalStack (destroy con init previo)
+	cd infra/terraform && $(TF) init -upgrade && $(TF) destroy -auto-approve
+
+# =========================
+# Dirs utilitarios
+# =========================
+.PHONY: ensure-dirs
+ensure-dirs: ## Crea carpetas necesarias
+	mkdir -p logs
 
 # =========================
 # Invocación y Logs (genéricos)
@@ -80,28 +87,26 @@ invoke-%: ## Invoca lambda % con payload de ejemplo
 invoke: ## Invoca arbitraria: make invoke FN=<nombre> PAYLOAD='{"k":"v"}'
 	$(PY) scripts/invoke.py --function "$(FN)" --payload '$(PAYLOAD)'
 
-logs-%: ## Muestra últimos logs (120s) de /aws/lambda/% y guarda en logs/%.log
+logs-%: ensure-dirs ## Muestra últimos logs (120s) de /aws/lambda/% y guarda en logs/%.log
 	$(PY) scripts/tail_logs.py --log-group /aws/lambda/$* --since-seconds 120 \
 		--output-file logs/$*.log --max-bytes 2000000 --backup-count 5 || true
 
-logs-follow-%: ## Sigue logs de /aws/lambda/% (idle=15s, máx 300s), guarda en logs/%.log
+logs-follow-%: ensure-dirs ## Sigue logs de /aws/lambda/% (idle=15s, máx 300s), guarda en logs/%.log
 	$(PY) scripts/tail_logs.py --log-group /aws/lambda/$* --follow --idle-exit 15 --max-seconds 300 \
 		--output-file logs/$*.log || true
 
-logs-quick-%: ## Tail rápido de /aws/lambda/% (idle=5s, máx 60s), guarda en logs/%.log
+logs-quick-%: ensure-dirs ## Tail rápido de /aws/lambda/% (idle=5s, máx 60s), guarda en logs/%.log
 	$(PY) scripts/tail_logs.py --log-group /aws/lambda/$* --follow --since-seconds 30 --idle-exit 5 --max-seconds 60 \
 		--output-file logs/$*.log || true
 
 # =========================
 # Listados / utilidades
 # =========================
-.PHONY: list-lambdas
+.PHONY: list-lambdas smoke
 list-lambdas: ## Lista lambdas según Terraform output (requiere deploy previo)
 	@cd infra/terraform && $(TF) output -json lambda_names | jq -r '.[]' || echo "Aún no hay output. Corre 'make deploy'."
 
-# Invoca y extrae logs de TODAS las lambdas (según TF output o carpetas)
-.PHONY: smoke
-smoke: ## Invoca todas las Lambdas y muestra/guarda últimos logs
+smoke: ensure-dirs ## Invoca todas las Lambdas y muestra/guarda últimos logs
 	@names=$$(cd infra/terraform && $(TF) output -json lambda_names 2>/dev/null | jq -r '.[]'); \
 	if [ -z "$$names" ] || [ "$$names" = "null" ]; then \
 	  echo "No hay output de Terraform; usando carpetas con dist.zip"; \
@@ -175,3 +180,4 @@ all-nuke: ## 'all', luego destroy de Terraform y apaga LocalStack
 	$(MAKE) all
 	$(MAKE) nuke
 	$(MAKE) down
+### END
