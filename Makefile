@@ -7,11 +7,9 @@ SHELL := /bin/bash
 AWS_ENDPOINT ?= http://localhost:4566
 REGION       ?= us-east-1
 
-# Python / Pytest del venv
 PY     := $(shell command -v python)
 PYTEST := $(shell command -v pytest)
 
-# Terraform local o en Docker (fallback automático)
 TF_DOCKER = docker run --rm \
   -v "$(PWD)":/workspace -w /workspace \
   --network host \
@@ -20,9 +18,16 @@ TF_DOCKER = docker run --rm \
   hashicorp/terraform:1.9.5
 TF := $(shell command -v terraform 2>/dev/null || echo $(TF_DOCKER))
 
-# Descubrir lambdas por carpeta (un nivel)
+# Descubrir lambdas por carpeta
 LAMBDA_DIRS := $(shell find lambdas -mindepth 1 -maxdepth 1 -type d -printf "%f\n" | sort)
 REQ_FILES   := $(shell find lambdas -mindepth 2 -maxdepth 2 -name requirements.txt | sort)
+
+# === Selector de suite ===
+# RUN = smoke | tests | both
+RUN ?= smoke
+
+# Ventana de logs para SMOKE (segundos, pequeña para no traer invocaciones viejas)
+SMOKE_SINCE ?= 5
 
 # =========================
 # Ayuda
@@ -47,7 +52,7 @@ down: ## Apaga LocalStack y limpia volúmenes
 	docker compose down -v
 
 # =========================
-# Empaquetado (una o todas)
+# Empaquetado
 # =========================
 .PHONY: package-% package-all
 package-%: ## Empaqueta lambda %
@@ -55,58 +60,61 @@ package-%: ## Empaqueta lambda %
 
 package-all: $(addprefix package-,$(LAMBDA_DIRS)) ## Empaqueta todas las lambdas
 	@echo "✅ Lambdas empaquetadas: $(LAMBDA_DIRS)"
-# Tip: empaquetado en paralelo -> make -j $$(nproc) package-all
 
 # =========================
-# Terraform (plan/deploy/destroy)
+# Terraform
 # =========================
 .PHONY: plan deploy nuke
-plan: package-all ## Terraform plan contra LocalStack
+plan: ## Terraform plan contra LocalStack (requiere dist.zip listo)
 	cd infra/terraform && $(TF) init && $(TF) plan
 
-deploy: package-all ## Despliega recursos a LocalStack (autodescubre lambdas/*/dist.zip)
+deploy: ## Despliega recursos a LocalStack (no re-empaqueta)
 	cd infra/terraform && $(TF) init -upgrade && $(TF) apply -auto-approve
 
-nuke: ## Elimina recursos de LocalStack (destroy con init previo)
-	cd infra/terraform && $(TF) init -upgrade && $(TF) destroy -auto-approve
+nuke: ## Destroy + init (para asegurar proveedor)
+	cd infra/terraform && $(TF) init -upgrade && $(TF) destroy -auto-approve || true
 
 # =========================
 # Dirs utilitarios
 # =========================
 .PHONY: ensure-dirs
-ensure-dirs: ## Crea carpetas necesarias
+ensure-dirs:
 	mkdir -p logs
 
 # =========================
-# Invocación y Logs (genéricos)
+# Invocación y Logs
 # =========================
 .PHONY: invoke-% invoke logs-% logs-follow-% logs-quick-%
 invoke-%: ## Invoca lambda % con payload de ejemplo
 	$(PY) scripts/invoke.py --function $* --payload '{"name":"Camilo"}'
 
-invoke: ## Invoca arbitraria: make invoke FN=<nombre> PAYLOAD='{"k":"v"}'
+invoke: ## FN=<nombre> PAYLOAD='{"k":"v"}'
 	$(PY) scripts/invoke.py --function "$(FN)" --payload '$(PAYLOAD)'
 
-logs-%: ensure-dirs ## Muestra últimos logs (120s) de /aws/lambda/% y guarda en logs/%.log
-	$(PY) scripts/tail_logs.py --log-group /aws/lambda/$* --since-seconds 120 \
-		--output-file logs/$*.log --max-bytes 2000000 --backup-count 5 || true
+logs-%: ensure-dirs ## Últimos logs (ventana corta) y guarda en logs/%.log
+	@rm -f logs/$*.log
+	$(PY) scripts/tail_logs.py --log-group /aws/lambda/$* --since-seconds $(SMOKE_SINCE) \
+	  --output-file logs/$*.log --max-bytes 2000000 --backup-count 5 || true
 
-logs-follow-%: ensure-dirs ## Sigue logs de /aws/lambda/% (idle=15s, máx 300s), guarda en logs/%.log
+logs-follow-%: ensure-dirs
 	$(PY) scripts/tail_logs.py --log-group /aws/lambda/$* --follow --idle-exit 15 --max-seconds 300 \
-		--output-file logs/$*.log || true
+	  --output-file logs/$*.log || true
 
-logs-quick-%: ensure-dirs ## Tail rápido de /aws/lambda/% (idle=5s, máx 60s), guarda en logs/%.log
+logs-quick-%: ensure-dirs
 	$(PY) scripts/tail_logs.py --log-group /aws/lambda/$* --follow --since-seconds 30 --idle-exit 5 --max-seconds 60 \
-		--output-file logs/$*.log || true
+	  --output-file logs/$*.log || true
+
+# Ventana configurable para smoke (en segundos)
+LOG_WINDOW ?= 60
 
 # =========================
 # Listados / utilidades
 # =========================
-.PHONY: list-lambdas smoke
-list-lambdas: ## Lista lambdas según Terraform output (requiere deploy previo)
+.PHONY: smoke
+list-lambdas:
 	@cd infra/terraform && $(TF) output -json lambda_names | jq -r '.[]' || echo "Aún no hay output. Corre 'make deploy'."
 
-smoke: ensure-dirs ## Invoca todas las Lambdas y muestra/guarda últimos logs
+smoke: ensure-dirs
 	@names=$$(cd infra/terraform && $(TF) output -json lambda_names 2>/dev/null | jq -r '.[]'); \
 	if [ -z "$$names" ] || [ "$$names" = "null" ]; then \
 	  echo "No hay output de Terraform; usando carpetas con dist.zip"; \
@@ -115,29 +123,48 @@ smoke: ensure-dirs ## Invoca todas las Lambdas y muestra/guarda últimos logs
 	for fn in $$names; do \
 	  echo "==> Invoke $$fn"; \
 	  $(PY) scripts/invoke.py --function $$fn --payload '{"name":"Smoke"}' || exit 1; \
-	  echo "==> Logs $$fn (últimos 60s)"; \
-	  $(PY) scripts/tail_logs.py --log-group /aws/lambda/$$fn --since-seconds 60 --output-file logs/$$fn.log || true; \
+	  echo "==> Logs $$fn (últimos $(LOG_WINDOW)s)"; \
+	  $(PY) scripts/tail_logs.py \
+	    --log-group /aws/lambda/$$fn \
+	    --since-seconds $(LOG_WINDOW) \
+	    --output-file logs/$$fn.log \
+	    --max-bytes 2000000 \
+	    --backup-count 5 || true; \
 	  echo ""; \
 	done
+
 
 # =========================
 # Tests
 # =========================
 .PHONY: test-unit test-integration test-integration-verbose
-test-unit: ## Ejecuta tests unitarios (coverage)
+test-unit: ## Unit tests
 	$(PYTEST) -q tests/unit
 
-test-integration: ## Ejecuta tests de integración contra LocalStack (sin cobertura)
+test-integration: ## Integración contra LocalStack
 	$(PYTEST) -q --no-cov tests/integration
 
-test-integration-verbose: ## Integración verbosa (muestra prints/tiempos)
+test-integration-verbose: ## Integración verbosa
 	$(PYTEST) -vv -s --no-cov -rA --durations=5 tests/integration
+
+# =========================
+# Suite selector (RUN = smoke|tests|both)
+# =========================
+.PHONY: run-suite
+run-suite:
+	@if [ "$(RUN)" = "tests" ]; then \
+	  $(MAKE) test-integration; \
+	elif [ "$(RUN)" = "smoke" ]; then \
+	  $(MAKE) smoke; \
+	else \
+	  $(MAKE) test-integration && $(MAKE) smoke; \
+	fi
 
 # =========================
 # Seguridad / calidad
 # =========================
 .PHONY: security-scan
-security-scan: ## Bandit + pip-audit (por cada requirements.txt de lambdas)
+security-scan: ## Bandit + pip-audit
 	bandit -q -r lambdas -f txt || true
 	@set -e; \
 	for f in $(REQ_FILES); do \
@@ -146,7 +173,7 @@ security-scan: ## Bandit + pip-audit (por cada requirements.txt de lambdas)
 	done
 
 # =========================
-# Alias de compatibilidad (legacy)
+# Alias (legacy)
 # =========================
 .PHONY: package-hello invoke-hello logs-hello logs-hello-follow logs-hello-quick
 package-hello: package-hello_world
@@ -159,25 +186,25 @@ logs-hello-quick:  logs-quick-hello_world
 # Pipelines "one-shot"
 # =========================
 .PHONY: all all-verbose all-down all-nuke
-all: ## Pipeline completo: up -> package-all -> deploy -> list -> test -> smoke
+all: ## up -> package-all -> deploy -> list -> (smoke/tests/both)
 	$(MAKE) up
 	$(MAKE) package-all
 	$(MAKE) deploy
 	$(MAKE) list-lambdas
-	$(MAKE) test-integration
-	$(MAKE) smoke
-	@echo "✅ ALL OK. Siguiente paso sugerido: 'make test-integration-verbose' o 'make logs-<fn>'"
+	$(MAKE) run-suite
+	@echo "✅ ALL OK. RUN=$(RUN). Sugerencia: 'make test-integration-verbose' o 'make logs-<fn>'"
 
-all-verbose: ## Igual que 'all' pero incluye tests verbosos
-	$(MAKE) all
+all-verbose: ## all (both) + integración verbosa
+	$(MAKE) RUN=both up package-all deploy list-lambdas run-suite
 	$(MAKE) test-integration-verbose
 
-all-down: ## 'all' y luego apaga LocalStack
+all-down: ## all y luego apaga LocalStack
 	$(MAKE) all
 	$(MAKE) down
 
-all-nuke: ## 'all', luego destroy de Terraform y apaga LocalStack
-	$(MAKE) all
+all-nuke: ## destroy + down
 	$(MAKE) nuke
 	$(MAKE) down
-### END
+# =========================
+# Fin del Makefile
+# =========================
