@@ -1,15 +1,15 @@
-# LocalStack Lambda Test Environment
+# LocalStack Lambda Lab (Makefile-First)
 
-Ambiente reproducible para **probar funciones AWS Lambda en local**, con:
+Entorno reproducible para **desarrollar y probar Lambdas de AWS en local**, con:
 
 * **LocalStack** (emula servicios AWS),
 * **Terraform** (infra como código),
-* **Pytest** (tests unitarios e integración),
-* **Escáneres de seguridad** (Bandit, pip-audit),
-* **Automatizaciones con Make**,
-* **Tail de logs** con script propio (rotación y auto-stop).
+* **Pytest** (unit/integración),
+* **Makefile** (pipeline de “un botón”: `make all`),
+* **Tail de logs** con rotación,
+* **Scanners de seguridad** (Bandit, pip-audit).
 
-> **Objetivo:** que cualquier persona pueda clonar, levantar el entorno, desplegar una Lambda de ejemplo, **probarla automáticamente** y revisar logs **sin instalar AWS** ni crear recursos reales.
+> **Objetivo**: clonas el repo, corres `make all` y en minutos tienes Lambdas empaquetadas, desplegadas en LocalStack, invocadas, con pruebas y **logs guardados en archivos** — sin tocar AWS real.
 
 ---
 
@@ -20,37 +20,30 @@ Ambiente reproducible para **probar funciones AWS Lambda en local**, con:
 3. [Requisitos](#requisitos)
 4. [Instalación y primer arranque](#instalación-y-primer-arranque)
 5. [Comandos Make (guía rápida)](#comandos-make-guía-rápida)
-6. [Servicios y herramientas usadas](#servicios-y-herramientas-usadas)
+6. [Parámetros útiles (RUN, SMOKE_SINCE, LOG_WINDOW)](#parámetros-útiles-run-smoke_since-log_window)
 7. [Cómo funciona cada pieza](#cómo-funciona-cada-pieza)
-
-   * [LocalStack](#localstack)
-   * [Terraform](#terraform)
-   * [Lambda (packaging y handler)](#lambda-packaging-y-handler)
-   * [Testing](#testing)
-   * [Seguridad](#seguridad)
-   * [Logs y observabilidad](#logs-y-observabilidad)
 8. [Extender el proyecto](#extender-el-proyecto)
-9. [Solución de problemas comunes](#solución-de-problemas-comunes)
-10. [Buenas prácticas y siguientes pasos](#buenas-prácticas-y-siguientes-pasos)
-11. [FAQ](#faq)
+9. [Notas importantes sobre logs “Smoke”](#notas-importantes-sobre-logs-smoke)
+10. [Solución de problemas](#solución-de-problemas)
+11. [Buenas prácticas y siguientes pasos](#buenas-prácticas-y-siguientes-pasos)
+12. [FAQ](#faq)
 
 ---
 
 ## Arquitectura y flujo
 
 ```
-┌────────────┐   make   ┌────────────┐   terraform   ┌──────────────┐
-│  Desarroll│──────────▶│  Packaging │──────────────▶│  LocalStack  │
-│   ador    │           │   (ZIP)    │               │ (AWS emulado)│
-└────────────┘          └────────────┘               └──────┬───────┘
-         ▲                         │                           │
-         │        pytest (unit)    │                           │
-         │        pytest (integ)   │  boto3 invoke/logs        │
-         └─────────────────────────┴───────────────────────────┘
+┌──────────┐  make/package  ┌────────────┐   terraform   ┌──────────────┐
+│ Dev local│ ─────────────▶ │   ZIP(s)   │ ─────────────▶│  LocalStack  │
+└────▲─────┘                └─────┬──────┘               └──────┬───────┘
+     │ pytest (unit/integration)  │  boto3 invoke/logs           │
+     └────────────────────────────┴───────────────────────────────┘
 ```
 
-* **Local**: editas código, empaquetas (`dist.zip`), despliegas con Terraform a **LocalStack**, ejecutas **tests** (unit e integración), ves **logs**.
-* **Sin AWS real**: LocalStack emula Lambda, CloudWatch Logs, IAM, STS, S3, API Gateway, EventBridge, etc.
+* Editas código → `build.sh` empaqueta cada Lambda a `dist.zip`.
+* Terraform despliega a **LocalStack** (Lambda, IAM, CloudWatch Logs, etc.)
+* Tests de integración invocan Lambdas reales (emuladas).
+* **Smoke** invoca y guarda logs en `logs/*.log` con rotación.
 
 ---
 
@@ -58,316 +51,239 @@ Ambiente reproducible para **probar funciones AWS Lambda en local**, con:
 
 ```
 localstack-lambda-lab/
-├─ docker-compose.yml              # LocalStack
-├─ Makefile                        # Automatizaciones
-├─ README.md                       # Este documento
-├─ pyproject.toml                  # Config de pytest/formatters
-├─ .pre-commit-config.yaml         # Hooks de calidad
-├─ .gitignore
-├─ dev-requirements.txt            # Dependencias de dev
-├─ infra/
-│  └─ terraform/
-│     ├─ main.tf                   # Provider AWS y endpoints a LocalStack
-│     ├─ variables.tf
-│     ├─ iam.tf                    # Rol básico para Lambda
-│     ├─ lambda_hello.tf           # Recurso Lambda de ejemplo
-│     └─ outputs.tf
+├─ docker-compose.yml
+├─ Makefile
+├─ README.md
+├─ pyproject.toml
+├─ dev-requirements.txt
+├─ infra/terraform/
+│  ├─ main.tf, variables.tf, iam.tf
+│  ├─ lambda_*.tf                 # recursos Lambda
+│  └─ outputs.tf                  # lista de lambdas: lambda_names
 ├─ lambdas/
-│  └─ hello_world/
-│     ├─ src/handler.py            # Código Lambda
-│     ├─ requirements.txt          # Deps runtime (si aplica)
-│     └─ build.sh                  # Empaquetado a dist.zip
+│  ├─ hello_world/
+│  │  ├─ src/handler.py
+│  │  ├─ requirements.txt
+│  │  └─ build.sh                 # genera dist.zip
+│  └─ greeter/ ...
 ├─ scripts/
-│  ├─ invoke_hello.py              # Invocación de Lambda vía boto3
-│  └─ tail_logs.py                 # Tail de logs con rotación y auto-stop
+│  ├─ invoke.py                   # invoca cualquier Lambda
+│  └─ tail_logs.py                # tail CloudWatch (rotación y límites)
 └─ tests/
-   ├─ unit/test_hello_unit.py      # Tests unitarios
-   └─ integration/test_hello_integration.py # Tests integración (LocalStack)
+   ├─ unit/...
+   └─ integration/
+      ├─ test_all_lambdas.py      # parametriza sobre lambda_names
+      └─ test_hello_integration.py
 ```
 
 ---
 
 ## Requisitos
 
-* **Docker** y **Docker Compose** (últimas versiones)
-* **Python 3.11+** (sugerido)
+* **Docker** + **Docker Compose**
+* **Python 3.11+**
 * **make**
-* **Terraform 1.5+** (instalado o en Docker/alias)
-* (Opcional) **AWS CLI** / **awscli-local** (no obligatorio si usas scripts Python)
+* **Terraform 1.9.x** (instalado o se usa la imagen oficial automáticamente)
+* (Opcional) AWS CLI
 
-> **Tip Linux**: crea venv en una ruta **sin espacios** para evitar problemas con shebangs (`~/.venvs/ls-lab`).
+> El Makefile detecta `terraform` local o usa `hashicorp/terraform:1.9.5` en Docker con `--network host`.
 
 ---
 
 ## Instalación y primer arranque
 
 ```bash
-# 1) Clonar el repo
 git clone <tu_repo>.git
 cd localstack-lambda-lab
 
-# 2) Entorno Python
 python -m venv .venv
 source .venv/bin/activate
 pip install -r dev-requirements.txt
 
-# 3) Levantar LocalStack
-make up
+# Pipeline completo, por defecto RUN=smoke:
+make all
 
-# 4) Empaquetar Lambda de ejemplo
-make package-hello
-
-# 5) Desplegar infraestructura a LocalStack (Terraform init + apply)
-make deploy
-
-# 6) Probar:
-make invoke-hello         # Invocación directa con boto3
-make test-unit            # Tests unitarios (cobertura local)
-make test-integration     # Tests de integración (LocalStack)
-
-# 7) Ver logs (últimos 120s y sale)
-make logs-hello
+# Variante “todo + tests verbosos”
+make all-verbose
 ```
 
 ---
 
 ## Comandos Make (guía rápida)
 
-| Comando                  | Descripción                                              |
-| ------------------------ | -------------------------------------------------------- |
-| `make up`                | Levanta LocalStack (docker compose)                      |
-| `make down`              | Apaga y limpia contenedores                              |
-| `make package-hello`     | Empaqueta la Lambda `hello_world` a `dist.zip`           |
-| `make plan`              | `terraform init && plan` contra LocalStack               |
-| `make deploy`            | `terraform init -upgrade && apply -auto-approve`         |
-| `make nuke`              | `terraform destroy -auto-approve`                        |
-| `make test-unit`         | Ejecuta tests unitarios con cobertura (local)            |
-| `make test-integration`  | Ejecuta tests de integración (LocalStack, sin cobertura) |
-| `make security-scan`     | Bandit + pip-audit (código y dependencias)               |
-| `make invoke-hello`      | Invoca la Lambda `hello_world` con boto3                 |
-| `make logs-hello`        | Imprime últimos logs (120s) y termina                    |
-| `make logs-hello-follow` | Tail vivo con auto-stop por inactividad o tiempo máx     |
-| `make logs-hello-quick`  | Tail rápido (ventanas cortas)                            |
+### Core
 
-> Ejecuta `make help` para ver descripciones embebidas.
+| Comando             | Descripción                                                         |
+| ------------------- | ------------------------------------------------------------------- |
+| `make up`           | Levanta LocalStack (`docker compose up -d`).                        |
+| `make down`         | Apaga LocalStack y limpia volúmenes.                                |
+| `make package-%`    | Empaqueta la Lambda `%` (ej: `package-hello_world`).                |
+| `make package-all`  | Empaqueta **todas** las Lambdas (carpetas en `lambdas/`).           |
+| `make plan`         | `terraform init && plan` contra LocalStack.                         |
+| `make deploy`       | `terraform init -upgrade && apply -auto-approve` (no re-empaqueta). |
+| `make nuke`         | `terraform destroy -auto-approve` (con `init -upgrade`).            |
+| `make list-lambdas` | Lista nombres de Lambdas desde `terraform output lambda_names`.     |
+
+### Invocación y logs
+
+| Comando                                  | Descripción                                                           |
+| ---------------------------------------- | --------------------------------------------------------------------- |
+| `make invoke-%`                          | Invoca Lambda `%` con payload de ejemplo.                             |
+| `make invoke FN=... PAYLOAD='{"k":"v"}'` | Invocación arbitraria.                                                |
+| `make logs-%`                            | Guarda en `logs/%.log` los **últimos N s** (usa `SMOKE_SINCE`).       |
+| `make logs-follow-%`                     | Tail “follow” (corta por inactividad o max time).                     |
+| `make logs-quick-%`                      | Tail rápido (ventanas cortas).                                        |
+| `make smoke`                             | Invoca **todas** las Lambdas y guarda logs recientes en `logs/*.log`. |
+
+### Tests
+
+| Comando                         | Descripción                              |
+| ------------------------------- | ---------------------------------------- |
+| `make test-unit`                | Unit tests (local, cobertura).           |
+| `make test-integration`         | Integración (LocalStack, sin cobertura). |
+| `make test-integration-verbose` | Integración verbosa (prints/duraciones). |
+
+### Pipelines “one-shot”
+
+| Comando            | Descripción                                                                        |
+| ------------------ | ---------------------------------------------------------------------------------- |
+| `make all`         | `up → package-all → deploy → list-lambdas → run-suite` (por defecto `RUN=smoke`).  |
+| `make all-verbose` | Igual que `all` pero ejecuta **ambas suites** y además `test-integration-verbose`. |
+| `make all-down`    | `make all` y luego `down`.                                                         |
+| `make all-nuke`    | `nuke` + `down`.                                                                   |
+
+> **Tip**: `make help` lista todos los targets con descripción.
 
 ---
 
-## Servicios y herramientas usadas
+## Parámetros útiles (`RUN`, `SMOKE_SINCE`, `LOG_WINDOW`)
 
-* **LocalStack**: emula AWS (Lambda, CloudWatch Logs, IAM, STS, S3, API Gateway, Events).
-* **Terraform**: define y despliega recursos en LocalStack.
-* **Pytest**: framework de pruebas (unitarias/integración).
-* **boto3**: SDK AWS para Python, se usa en tests/invocaciones.
-* **Bandit / pip-audit / detect-secrets**: seguridad.
-* **pre-commit**: formateo (Black, isort), linting (flake8) y escaneo de secretos.
+* `RUN` selecciona qué suite corre en `run-suite`:
+
+  * `RUN=smoke` *(default)* → solo invoca y guarda logs.
+  * `RUN=tests` → solo integración.
+  * `RUN=both` → integración **y** smoke.
+
+* `SMOKE_SINCE` (segundos): ventana corta para `logs-%` dentro de `smoke`.
+  Por defecto 5 s para minimizar arrastre de corridas previas.
+
+* `LOG_WINDOW` (segundos): ventana general para `smoke` si se usa esa variable en lugar de `SMOKE_SINCE` (el Makefile soporta ambos enfoques; por defecto usamos `SMOKE_SINCE` en `smoke`).
+
+Ejemplos:
+
+```bash
+make all RUN=both
+make smoke SMOKE_SINCE=3
+make logs-hello_world SMOKE_SINCE=10
+```
 
 ---
 
 ## Cómo funciona cada pieza
 
-### LocalStack
+### Packaging de Lambdas
 
-* **`docker-compose.yml`** ejecuta `localstack/localstack` y expone **puerto 4566** (edge).
-* Variables:
+Cada carpeta en `lambdas/<name>/` tiene un `build.sh` que:
 
-  * `SERVICES=lambda,logs,iam,sts,cloudwatch,events,apigateway,s3`
-  * `LAMBDA_EXECUTOR=docker-reuse` (rápido para desarrollo)
-  * `PERSISTENCE=1` (estado persistente en `.localstack/`)
-* Monta `docker.sock` para ejecutar runtimes de Lambda en contenedores.
+* crea `build/` y `build/python`,
+* instala `requirements.txt` en `build/python`,
+* copia `src/*` a `build/`,
+* genera `dist.zip`.
+
+`package-all` descubre automáticamente los módulos por subcarpeta.
 
 ### Terraform
 
-* **Provider AWS v5** apuntando a LocalStack con `endpoints` y flags:
+* Provider AWS v5 apuntado a `http://localhost:4566` con flags de LocalStack.
+* IAM Role básico + CloudWatch Log Groups `/aws/lambda/<fn>` + `aws_lambda_function`.
+* `outputs.tf` expone `lambda_names` para listar e iterar (smoke/tests).
 
-  ```hcl
-  provider "aws" {
-    region                     = var.region
-    s3_use_path_style          = true
-    skip_credentials_validation = true
-    skip_requesting_account_id  = true
-    skip_metadata_api_check     = true
-    endpoints { ... http://localhost:4566 ... }
-  }
-  ```
-* Recursos:
+### Pruebas
 
-  * **IAM role** básico para Lambda.
-  * **CloudWatch Log Group** `/aws/lambda/hello_world`.
-  * **Lambda** `hello_world` con `runtime=python3.11`, `handler=handler.handler`, `environment` (p.ej. `STAGE=local`).
+* **Unit**: importan el handler, sin AWS.
+* **Integración**: usan **boto3** contra LocalStack; verifican que la Lambda existe e invoca OK (200, `ok=True`), y que el `message` retorne string.
 
-### Lambda (packaging y handler)
+### Logs
 
-* **Packaging** (`lambdas/hello_world/build.sh`):
+* `scripts/tail_logs.py` usa CloudWatch Logs (LocalStack) con:
 
-  * Instala dependencias de `requirements.txt` en `build/python` (patrón de layer compatible).
-  * Copia `src/*` a `build/`.
-  * Empaqueta `build/` → `dist.zip` (usado por Terraform).
-* **Handler** (`src/handler.py`):
-
-  * Retorna un JSON con `ok`, `message` y `stage`.
-  * Soporta invocación directa con `boto3`.
-    *(Si se integra API Gateway, puede incluir rama para proxy events).*
-
-### Testing
-
-* **Unit tests**:
-
-  * Importan el handler directamente.
-  * Verifican lógica de negocio pura (sin AWS).
-  * **Cobertura**: configurada en `pyproject.toml` (`--cov-fail-under=80`).
-* **Integration tests**:
-
-  * Ejecutan contra LocalStack con `boto3` (invocación real).
-  * **Sin cobertura** (`--no-cov`) porque el código corre en otro proceso (no instrumentable localmente).
-
-### Seguridad
-
-* **Bandit**: análisis estático (buenas prácticas y patrones de riesgo).
-* **pip-audit**: CVEs en dependencias de `requirements.txt`.
-* **detect-secrets**: (pre-commit) evita subir credenciales.
-
-### Logs y observabilidad
-
-* `scripts/tail_logs.py` usa `boto3` contra **CloudWatch Logs** en LocalStack:
-
-  * Modo “pasada única” o “follow”.
-  * **Auto-stop** por inactividad y/o tiempo máximo.
-  * **Rotación** a archivo (`logs/hello_world.log`) con backups configurables.
+  * modo “una pasada” o “follow”,
+  * **rotación** a `logs/<fn>.log` (`--max-bytes` y `--backup-count`),
+  * límites de tiempo/inactividad para evitar quedarse colgado.
 
 ---
 
 ## Extender el proyecto
 
-### Agregar una nueva Lambda
-
-1. Crea carpeta `lambdas/<mi_lambda>/` con:
-
-   * `src/handler.py`
-   * `requirements.txt`
-   * `build.sh` (puedes copiar el existente)
-2. Añade un `.tf` en `infra/terraform/` (p.ej. `lambda_mi_lambda.tf`) apuntando al ZIP `lambdas/<mi_lambda>/dist.zip`.
-3. Crea tests:
-
-   * `tests/unit/test_mi_lambda_unit.py`
-   * `tests/integration/test_mi_lambda_integration.py`
-4. Opcional: añade `package-mi-lambda` al `Makefile` para empaquetado específico.
-
-### Exponer por API Gateway (REST)
-
-* Añade recursos `aws_api_gateway_*` + `aws_lambda_permission` y un `deployment`.
-* Construye URL de invocación `http://localhost:4566/restapis/{apiId}/{stage}/_user_request_/path`.
-
-### Flujos asíncronos
-
-* **SQS/SNS/EventBridge**: crea recursos en Terraform y tests que publiquen eventos y verifiquen efectos.
-
-### CI/CD (GitHub Actions)
-
-* Servicio LocalStack como `services:` en el job.
-* Steps: instalar deps, `make package-*`, instalar Terraform, `make deploy`, `make test-*`.
+1. **Agregar una Lambda**: crea `lambdas/<nueva>/` con `src/`, `requirements.txt`, `build.sh`.
+2. **Infra**: añade `infra/terraform/lambda_<nueva>.tf` apuntando a `lambdas/<nueva>/dist.zip`.
+3. **Pruebas**: crea `tests/unit/...` y `tests/integration/...`.
+4. **Servicios adicionales**: añade `aws_s3_bucket`, `aws_cloudwatch_*`, `aws_sqs_queue`, etc., y cubre con tests.
+5. **CI**: monta un pipeline que haga `package → deploy (LocalStack) → tests → smoke → artifacts`.
 
 ---
 
-## Solución de problemas comunes
+## **Notas importantes sobre logs “Smoke”**
 
-**`make: *** falta un separador`**
+> **Smoke lee los últimos N segundos** (configurable con `SMOKE_SINCE`/`LOG_WINDOW`).
+> Si ejecutas `make all` varias veces en menos de **N** segundos, **verás en consola y en los archivos líneas repetidas** que pertenecen a la corrida anterior. **No** son dobles invocaciones; es el mismo evento que sigue dentro de la ventana temporal consultada.
 
-* Las líneas de comandos en el `Makefile` **deben** comenzar con **TAB**, no espacios.
+Sugerencias:
 
-**`terraform: command not found`**
+* Mantén N pequeño (5–10 s) y deja un `sleep 2–3 s` tras invocar para dar tiempo a que CloudWatch “publique” el log.
+* Si quieres traer **solo** la invocación “de esta ronda”, cambia el tail para filtrar desde un timestamp capturado justo antes/tras invocar (requeriría extender `tail_logs.py` para aceptar un `--start-ts` o un patrón de correlación).
 
-* Instala Terraform o usa alias Docker:
+---
 
-  ```bash
-  alias terraform='docker run --rm -it -v "$PWD":/workspace -w /workspace --network host -u $(id -u):$(id -g) hashicorp/terraform:1.9.5'
-  ```
+## Solución de problemas
 
-**`Unsupported argument: s3_force_path_style`**
+**No veo archivos en `logs/`**
 
-* En provider AWS v5 es `s3_use_path_style`.
+* Asegúrate de que el target que corre logs **depende** de `ensure-dirs` (el Makefile lo hace).
+* Verifica permisos de escritura en la carpeta del repo.
+* Revisa consola: `tail_logs.py` imprime el contenido y **también** lo guarda en `logs/<fn>.log` (con rotación). Busca `logs/hello_world.log`.
 
-**Heredoc en `make invoke-hello` no cierra**
+**“Parece que invoca dos veces”**
 
-* Evita heredocs en Make (sensibles a TAB). Usa el script `scripts/invoke_hello.py`.
+* Revisa la [nota de Smoke](#notas-importantes-sobre-logs-smoke): son líneas de la corrida anterior aún dentro de la ventana de tiempo.
 
-**`awslocal` falla / shebang con espacios en ruta**
+**Terraform siempre “modifica”**
 
-* Solución rápida:
+* Es normal si el `dist.zip` cambia (hash nuevo). Para evitar “falsos diffs”, procura builds deterministas (timestamps fijos, orden de archivos) o solo empaquetar cuando cambie el código (locks/flags).
 
-  ```bash
-  python "$(which awslocal)" <comando aws...>
-  ```
+**`terraform` no instalado**
 
-  o cambia la primera línea de `.venv/bin/awslocal` a `#!/usr/bin/env python3`, o usa el **script con boto3** (recomendado).
+* El Makefile usa automáticamente la imagen oficial (Docker). Asegura `docker` corriendo y `--network host` disponible.
 
-**Cobertura 0% en integración**
+**Tests de integración sin cobertura**
 
-* Normal: el código corre en LocalStack (otro proceso). Se desactiva con `--no-cov` para tests de integración.
+* Es lo esperado: la Lambda corre dentro de LocalStack (otro proceso). Por eso `--no-cov`.
 
 ---
 
 ## Buenas prácticas y siguientes pasos
 
-* **Pirámide de pruebas**: más unitarias que integración; e2e solo para flujos críticos.
-* **Principio de mínimos privilegios**: ajustar políticas IAM (y escanear IaC con Checkov si añades más recursos).
-* **Layers**: mover dependencias pesadas a layers para acelerar empaquetado/despliegue.
-* **CI en PRs**: todo PR debería correr `package -> deploy(LocalStack) -> tests -> security`.
-* **Observabilidad**: estandariza logs JSON y IDs de correlación si agregas más servicios.
+* **Pirámide de pruebas**: mayoría unitarias; integración solo para contratos con AWS; e2e para flujos críticos.
+* **Mocks “behind the scenes”**: para la mayoría de tests, simula AWS (moto/fixtures) y deja LocalStack para pocas integraciones.
+* **CI**: pipeline por PR con `make all RUN=both`, subiendo `logs/*.log` y reportes como artifacts.
+* **Observabilidad**: estandariza logs JSON + `correlation_id` para trazabilidad; filtra por patrón en tail cuando lo añadamos.
+* **Reutilización**: convierte el repo en “harness” invocable desde otros repos, apuntando a su `lambdas/`.
 
 ---
 
 ## FAQ
 
-**¿Esto usa AWS real?**
-No. Todo corre en **LocalStack**, de forma local, sin costos.
+**¿Usa AWS real?**
+No. Todo corre en **LocalStack**.
+
+**¿Puedo añadir S3/SQS/SNS/API Gateway?**
+Sí. Añade recursos Terraform y tests. LocalStack los soporta.
 
 **¿Puedo usar Node.js/Go/Java?**
-Sí. Replica el patrón: `build.sh` para empaquetar, `runtime/handler` adecuados y ajusta tests.
+Sí. Replica el patrón de `build.sh` y ajusta `runtime/handler`.
 
-**¿Cómo actualizo LocalStack?**
-Edita `docker-compose.yml` con la versión deseada y `make down && make up`.
-
-**¿Se puede probar API Gateway, SQS, SNS, EventBridge?**
-Sí. Agrega los recursos en Terraform y tests de integración; LocalStack los soporta.
-
----
-
-### Créditos / Licencia
-
-* Este repo es una plantilla didáctica para equipos que trabajan con AWS Lambda y buscan **ciclos de feedback rápidos** en local.
-* Licencia sugerida: MIT (ajústalo a las políticas de tu empresa).
-
----
-
-## Anexos (snippets clave)
-
-**Empaquetado (build.sh)**
-
-```bash
-#!/usr/bin/env bash
-set -euo pipefail
-rm -rf build dist.zip
-mkdir -p build/python
-pip install -r requirements.txt -t build/python
-cp -r src/* build/
-cd build && zip -r ../dist.zip . >/dev/null && cd -
-```
-
-**Invocación (scripts/invoke_hello.py)**
-
-```python
-import json, boto3, os
-AWS_ENDPOINT = os.environ.get("AWS_ENDPOINT","http://localhost:4566")
-REGION = os.environ.get("REGION","us-east-1")
-client = boto3.client("lambda", endpoint_url=AWS_ENDPOINT, region_name=REGION,
-                      aws_access_key_id="test", aws_secret_access_key="test")
-resp = client.invoke(FunctionName="hello_world",
-                     Payload=json.dumps({"name":"Camilo"}).encode())
-print(resp["StatusCode"], resp.get("FunctionError"))
-print(resp["Payload"].read().decode())
-```
-
-**Tail con rotación (scripts/tail_logs.py)** → *ver sección [Logs y observabilidad](#logs-y-observabilidad)*.
+**¿Cómo ajusto la “ventana” de logs?**
+Pasa `SMOKE_SINCE` o `LOG_WINDOW`:
+`make smoke SMOKE_SINCE=3` — **menos arrastre** de corridas previas.
 
 ---

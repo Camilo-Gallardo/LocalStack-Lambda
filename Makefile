@@ -1,59 +1,210 @@
+# =========================
+# Configuración base
+# =========================
 SHELL := /bin/bash
-AWS_ENDPOINT=http://localhost:4566
-REGION=us-east-1
+.DEFAULT_GOAL := help
 
+AWS_ENDPOINT ?= http://localhost:4566
+REGION       ?= us-east-1
+
+PY     := $(shell command -v python)
+PYTEST := $(shell command -v pytest)
+
+TF_DOCKER = docker run --rm \
+  -v "$(PWD)":/workspace -w /workspace \
+  --network host \
+  -u $$(id -u):$$(id -g) \
+  -e AWS_ACCESS_KEY_ID=test -e AWS_SECRET_ACCESS_KEY=test -e AWS_DEFAULT_REGION=$(REGION) \
+  hashicorp/terraform:1.9.5
+TF := $(shell command -v terraform 2>/dev/null || echo $(TF_DOCKER))
+
+# Descubrir lambdas por carpeta
+LAMBDA_DIRS := $(shell find lambdas -mindepth 1 -maxdepth 1 -type d -printf "%f\n" | sort)
+REQ_FILES   := $(shell find lambdas -mindepth 2 -maxdepth 2 -name requirements.txt | sort)
+
+# === Selector de suite ===
+# RUN = smoke | tests | both
+RUN ?= smoke
+
+# Ventana de logs para SMOKE (segundos, pequeña para no traer invocaciones viejas)
+SMOKE_SINCE ?= 5
+
+# =========================
+# Ayuda
+# =========================
 .PHONY: help
-help:
-	@grep -E '^[a-zA-Z_-]+:.*?##' Makefile | sort | awk 'BEGIN {FS = ":.*?##"}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
+help: ## Muestra esta ayuda
+	@grep -E '^[a-zA-Z0-9_.-]+:.*?##' $(lastword $(MAKEFILE_LIST)) | sort | \
+		awk 'BEGIN {FS = ":.*?##"}; {printf "\033[36m%-22s\033[0m %s\n", $$1, $$2}'
 
+# =========================
+# Bootstrap / LocalStack
+# =========================
+.PHONY: bootstrap up down
 bootstrap: ## Instala herramientas de desarrollo
-	pip install -r dev-requirements.txt
+	$(PY) -m pip install -r dev-requirements.txt
 	pre-commit install
 
 up: ## Levanta LocalStack
 	docker compose up -d
 
-down: ## Apaga LocalStack
+down: ## Apaga LocalStack y limpia volúmenes
 	docker compose down -v
 
-package-hello: ## Empaqueta lambda hello_world
-	cd lambdas/hello_world && bash build.sh
+# =========================
+# Empaquetado
+# =========================
+.PHONY: package-% package-all
+package-%: ## Empaqueta lambda %
+	cd lambdas/$* && bash build.sh
 
-plan: ## Terraform plan contra LocalStack
-	cd infra/terraform && terraform init && terraform plan
+package-all: $(addprefix package-,$(LAMBDA_DIRS)) ## Empaqueta todas las lambdas
+	@echo "✅ Lambdas empaquetadas: $(LAMBDA_DIRS)"
 
-deploy: package-hello ## Despliega recursos a LocalStack
-	cd infra/terraform && terraform init -upgrade && terraform apply -auto-approve
+# =========================
+# Terraform
+# =========================
+.PHONY: plan deploy nuke
+plan: ## Terraform plan contra LocalStack (requiere dist.zip listo)
+	cd infra/terraform && $(TF) init && $(TF) plan
 
-nuke: ## Elimina recursos
-	cd infra/terraform && terraform destroy -auto-approve || true
+deploy: ## Despliega recursos a LocalStack (no re-empaqueta)
+	cd infra/terraform && $(TF) init -upgrade && $(TF) apply -auto-approve
 
-test-unit: ## Ejecuta tests unitarios
-	pytest -q tests/unit
+nuke: ## Destroy + init (para asegurar proveedor)
+	cd infra/terraform && $(TF) init -upgrade && $(TF) destroy -auto-approve || true
 
-test-integration: ## Ejecuta tests de integración contra LocalStack (sin cobertura)
-	pytest -q --no-cov tests/integration
+# =========================
+# Dirs utilitarios
+# =========================
+.PHONY: ensure-dirs
+ensure-dirs:
+	mkdir -p logs
 
-security-scan: ## Scanners de seguridad (código y dependencias)
+# =========================
+# Invocación y Logs
+# =========================
+.PHONY: invoke-% invoke logs-% logs-follow-% logs-quick-%
+invoke-%: ## Invoca lambda % con payload de ejemplo
+	$(PY) scripts/invoke.py --function $* --payload '{"name":"Camilo"}'
+
+invoke: ## FN=<nombre> PAYLOAD='{"k":"v"}'
+	$(PY) scripts/invoke.py --function "$(FN)" --payload '$(PAYLOAD)'
+
+logs-%: ensure-dirs ## Últimos logs (ventana corta) y guarda en logs/%.log
+	@rm -f logs/$*.log
+	$(PY) scripts/tail_logs.py --log-group /aws/lambda/$* --since-seconds $(SMOKE_SINCE) \
+	  --output-file logs/$*.log --max-bytes 2000000 --backup-count 5 || true
+
+logs-follow-%: ensure-dirs
+	$(PY) scripts/tail_logs.py --log-group /aws/lambda/$* --follow --idle-exit 15 --max-seconds 300 \
+	  --output-file logs/$*.log || true
+
+logs-quick-%: ensure-dirs
+	$(PY) scripts/tail_logs.py --log-group /aws/lambda/$* --follow --since-seconds 30 --idle-exit 5 --max-seconds 60 \
+	  --output-file logs/$*.log || true
+
+# Ventana configurable para smoke (en segundos)
+LOG_WINDOW ?= 60
+
+# =========================
+# Listados / utilidades
+# =========================
+.PHONY: smoke
+list-lambdas:
+	@cd infra/terraform && $(TF) output -json lambda_names | jq -r '.[]' || echo "Aún no hay output. Corre 'make deploy'."
+
+smoke: ensure-dirs
+	@names=$$(cd infra/terraform && $(TF) output -json lambda_names 2>/dev/null | jq -r '.[]'); \
+	if [ -z "$$names" ] || [ "$$names" = "null" ]; then \
+	  echo "No hay output de Terraform; usando carpetas con dist.zip"; \
+	  names=$$(find lambdas -mindepth 1 -maxdepth 1 -type d -printf "%f\n"); \
+	fi; \
+	for fn in $$names; do \
+	  echo "==> Invoke $$fn"; \
+	  $(PY) scripts/invoke.py --function $$fn --payload '{"name":"Smoke"}' || exit 1; \
+	  echo "==> Logs $$fn (últimos $(LOG_WINDOW)s)"; \
+	  $(PY) scripts/tail_logs.py \
+	    --log-group /aws/lambda/$$fn \
+	    --since-seconds $(LOG_WINDOW) \
+	    --output-file logs/$$fn.log \
+	    --max-bytes 2000000 \
+	    --backup-count 5 || true; \
+	  echo ""; \
+	done
+
+
+# =========================
+# Tests
+# =========================
+.PHONY: test-unit test-integration test-integration-verbose
+test-unit: ## Unit tests
+	$(PYTEST) -q tests/unit
+
+test-integration: ## Integración contra LocalStack
+	$(PYTEST) -q --no-cov tests/integration
+
+test-integration-verbose: ## Integración verbosa
+	$(PYTEST) -vv -s --no-cov -rA --durations=5 tests/integration
+
+# =========================
+# Suite selector (RUN = smoke|tests|both)
+# =========================
+.PHONY: run-suite
+run-suite:
+	@if [ "$(RUN)" = "tests" ]; then \
+	  $(MAKE) test-integration; \
+	elif [ "$(RUN)" = "smoke" ]; then \
+	  $(MAKE) smoke; \
+	else \
+	  $(MAKE) test-integration && $(MAKE) smoke; \
+	fi
+
+# =========================
+# Seguridad / calidad
+# =========================
+.PHONY: security-scan
+security-scan: ## Bandit + pip-audit
 	bandit -q -r lambdas -f txt || true
-	pip-audit -r lambdas/hello_world/requirements.txt || true
+	@set -e; \
+	for f in $(REQ_FILES); do \
+	  echo "==> pip-audit $$f"; \
+	  pip-audit -r "$$f" || true; \
+	done
 
-invoke-hello: ## Invoca la Lambda hello_world en LocalStack
-	python scripts/invoke_hello.py
+# =========================
+# Alias (legacy)
+# =========================
+.PHONY: package-hello invoke-hello logs-hello logs-hello-follow logs-hello-quick
+package-hello: package-hello_world
+invoke-hello:  invoke-hello_world
+logs-hello:    logs-hello_world
+logs-hello-follow: logs-follow-hello_world
+logs-hello-quick:  logs-quick-hello_world
 
+# =========================
+# Pipelines "one-shot"
+# =========================
+.PHONY: all all-verbose all-down all-nuke
+all: ## up -> package-all -> deploy -> list -> (smoke/tests/both)
+	$(MAKE) up
+	$(MAKE) package-all
+	$(MAKE) deploy
+	$(MAKE) list-lambdas
+	$(MAKE) run-suite
+	@echo "✅ ALL OK. RUN=$(RUN). Sugerencia: 'make test-integration-verbose' o 'make logs-<fn>'"
 
-# Últimos 120s y sale, guardando en logs/hello_world.log con rotación
-logs-hello: ## Muestra últimos logs (120s) y los guarda con rotación
-	python scripts/tail_logs.py --since-seconds 120 --output-file logs/hello_world.log --max-bytes 2000000 --backup-count 5 || true
+all-verbose: ## all (both) + integración verbosa
+	$(MAKE) RUN=both up package-all deploy list-lambdas run-suite
+	$(MAKE) test-integration-verbose
 
-# Sigue en vivo, corta si no hay nuevos eventos por 15s o a los 5 min máx; guarda en archivo
-logs-hello-follow: ## Sigue logs y corta solo (idle=15s, max=300s), guarda con rotación
-	python scripts/tail_logs.py --follow --since-seconds 60 --idle-exit 15 --max-seconds 300 --output-file logs/hello_world.log || true
+all-down: ## all y luego apaga LocalStack
+	$(MAKE) all
+	$(MAKE) down
 
-# Tail rápido, corta por inactividad 5s o 60s máx; guarda en archivo
-logs-hello-quick: ## Sigue logs y corta si no hay eventos por 5s (máx 60s), guarda con rotación
-	python scripts/tail_logs.py --follow --since-seconds 30 --idle-exit 5 --max-seconds 60 --output-file logs/hello_world.log || true
-
-
-
-
+all-nuke: ## destroy + down
+	$(MAKE) nuke
+	$(MAKE) down
+# =========================
+# Fin del Makefile
+# =========================
