@@ -122,16 +122,17 @@ smoke: ensure-dirs
 	fi; \
 	for fn in $$names; do \
 	  echo "==> Invoke $$fn"; \
-	  $(PY) scripts/invoke.py --function $$fn --payload '{"name":"Smoke"}' || exit 1; \
+	  "$(PY)" "scripts/invoke.py" --function "$$fn" --payload '{"name":"Smoke"}' || exit 1; \
 	  echo "==> Logs $$fn (últimos $(LOG_WINDOW)s)"; \
-	  $(PY) scripts/tail_logs.py \
-	    --log-group /aws/lambda/$$fn \
-	    --since-seconds $(LOG_WINDOW) \
-	    --output-file logs/$$fn.log \
-	    --max-bytes 2000000 \
-	    --backup-count 5 || true; \
+	  "$(PY)" "scripts/tail_logs.py" \
+	    --log-group "/aws/lambda/$$fn" \
+	    --since-seconds "$(LOG_WINDOW)" \
+	    --output-file "logs/$$fn.log" \
+	    --max-bytes "2000000" \
+	    --backup-count "5" || true; \
 	  echo ""; \
 	done
+
 
 
 # =========================
