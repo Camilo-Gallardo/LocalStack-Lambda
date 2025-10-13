@@ -1,4 +1,7 @@
-import argparse, json, os, boto3
+import argparse
+import json
+import os
+import boto3
 
 def parse():
     p = argparse.ArgumentParser()

@@ -55,10 +55,15 @@ down: ## Apaga LocalStack y limpia volúmenes
 # Empaquetado
 # =========================
 .PHONY: package-% package-all
-package-%: ## Empaqueta lambda %
-	cd lambdas/$* && bash build.sh
+SCRIPTS_DIR := scripts
 
-package-all: $(addprefix package-,$(LAMBDA_DIRS)) ## Empaqueta todas las lambdas
+package-%: ## Empaqueta lambda %
+	@echo "==> Packaging lambda: $*"
+	@PYTHON=$(PY) $(SCRIPTS_DIR)/package_all_lambdas.sh $*
+
+package-all: ## Empaqueta todas las lambdas
+	@echo "==> Packaging all lambdas"
+	@PYTHON=$(PY) $(SCRIPTS_DIR)/package_all_lambdas.sh
 	@echo "✅ Lambdas empaquetadas: $(LAMBDA_DIRS)"
 
 # =========================
