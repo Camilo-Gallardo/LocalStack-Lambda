@@ -10,5 +10,7 @@ terraform.tfstate*
 .dist/
 logs/
 *.log
+lambdas/*/build/
+
 
 
