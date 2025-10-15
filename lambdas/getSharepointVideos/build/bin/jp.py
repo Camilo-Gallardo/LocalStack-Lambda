@@ -1,4 +1,4 @@
-#!/home/fabio/retos/LocalStack-Lambda/.venv/bin/python
+#!/home/adminblend/Documentos/Chamba/LocalStack-Lambda/.venv/bin/python
 
 import sys
 import json
