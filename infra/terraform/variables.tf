@@ -6,7 +6,7 @@ variable "region" {
 # mapa opcional: por función -> mapa de env vars
 variable "function_env" {
   type = map(map(string))
-  default = {} # sin override, usa solo STAGE=local
+  default = {}
 }
 
 variable "memory" {
@@ -16,5 +16,5 @@ variable "memory" {
 
 variable "timeout" {
   type    = number
-  default = 90000
+  default = 900
 }

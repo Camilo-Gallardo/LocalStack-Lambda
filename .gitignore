@@ -14,3 +14,7 @@ lambdas/*/build/
 
 
 
+
+# Lambda local artifacts
+lambdas/*/build/
+*.env

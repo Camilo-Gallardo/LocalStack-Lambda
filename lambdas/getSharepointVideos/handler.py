@@ -1,205 +1,189 @@
-import datetime
-import json
 import os
-import re
-import time
-from typing import Dict, List, Optional, Set
-import logging
-
+import json
 import boto3
 import requests
-from botocore.exceptions import ClientError
+from typing import Dict, List, Any
 from unidecode import unidecode
 
-# Set up logging for Lambda
-logger = logging.getLogger()
-logger.setLevel(logging.INFO)
+# Environment variables
+CLIENT_ID = os.environ.get("CLIENT_ID")
+CLIENT_SECRET = os.environ.get("CLIENT_SECRET")
+TENANT_ID = os.environ.get("TENANT_ID")
+SITE_ID = os.environ.get("SITE_ID")
+DRIVE_ID = os.environ.get("DRIVE_ID")
+FOLDER_ID = os.environ.get("FOLDER_ID")
+BUCKET_NAME = os.environ.get("BUCKET_NAME")
+PREFIX_JSON_FOLDER = os.environ.get("PREFIX_JSON_FOLDER")
 
-# Initialize AWS S3 client
 s3_client = boto3.client("s3")
 
-# Load environment variables con valores por defecto para seguridad
-CLIENT_ID = os.getenv("CLIENT_ID", "")
-CLIENT_SECRET = os.getenv("CLIENT_SECRET", "")
-TENANT_ID = os.getenv("TENANT_ID", "")
-SITE_ID = os.getenv("SITE_ID", "")
-DRIVE_ID = os.getenv("DRIVE_ID", "")
-FOLDER_ID_GENERAL = os.getenv("FOLDER_ID_GENERAL", "")
-S3_BUCKET_NAME = "nuv-test-experto-nuvu-cv"
-S3_FOLDER_PREFIX_JSON = os.getenv("PREFIX_JSON_FOLDER", "")
-S3_FOLDER_PREFIX_JSON_VIDEOS = os.getenv("PREFIX_JSON_FOLDERVIDEOS", "")
 
+def get_access_token() -> str:
+    """Obtain Microsoft Graph API access token."""
+    token_url = f"https://login.microsoftonline.com/{TENANT_ID}/oauth2/v2.0/token"
 
-
-
-# Definir cabeceras CORS
-CORS_HEADERS = {
-    "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Headers": "Content-Type,Authorization",
-    "Access-Control-Allow-Methods": "GET,OPTIONS"
-}
-
-# Cache para guardar resultados de llamadas a la API y evitar llamadas repetidas
-api_request_cache = {}
-def get_access_token() -> Optional[str]:
-    print("TENANT_ID", TENANT_ID)
-    print("CLIENT_ID", CLIENT_ID)
-    print("CLIENT_SECRET", CLIENT_SECRET)
-    """Obtain an access token for Microsoft Graph API."""
-    url = f"https://login.microsoftonline.com/b1aae949-a5ef-4815-b7af-f7c4aa546b28/oauth2/v2.0/token"
-    data = {
+    token_data = {
         "grant_type": "client_credentials",
-        "client_id": "5c27b365-1057-4158-92b0-af737d1165a8",
-        "client_secret": ".cf8Q~BRCXtF40s2eziQCGCQmSJ25xp2-zn2Obx~",
+        "client_id": CLIENT_ID,
+        "client_secret": CLIENT_SECRET,
         "scope": "https://graph.microsoft.com/.default",
     }
-    try:
-        response = requests.post(url, data=data, timeout=10)
-        response.raise_for_status()
-        return response.json().get("access_token")
-    except requests.exceptions.RequestException as e:
-        logger.error(f"Error getting access token: {e}")
-        return None
+
+    response = requests.post(token_url, data=token_data)
+    response.raise_for_status()
+    return response.json()["access_token"]
 
 
-def make_graph_api_request(url: str, access_token: str) -> Optional[Dict]:
-    """Realiza una solicitud a Microsoft Graph API con caché."""
-    # Verificar que la URL sea válida
-    if not url or not isinstance(url, str):
-        logger.error(f"URL inválida para la solicitud a Graph API: {url}")
-        return None
-    
-    # Verificar si hay caracteres que no deberían estar en una URL
-    if '{' in url or '}' in url:
-        logger.error(f"URL contiene caracteres JSON inválidos: {url}")
-        # Intenta limpiar la URL si es posible
-        url = re.sub(r'\{[^}]*\}', '', url)
-        logger.info(f"URL limpiada: {url}")
-    
-    # Si la URL ya está en caché, devolver el resultado directamente
-    if url in api_request_cache:
-        logger.debug(f"Using cached result for {url}")
-        return api_request_cache[url]
-    
+def list_mission_folders(access_token: str) -> List[Dict[str, Any]]:
+    """List all mission folders (immediate children of root folder)."""
     headers = {"Authorization": f"Bearer {access_token}"}
+
+    # Get children of the root folder
+    url = f"https://graph.microsoft.com/v1.0/sites/{SITE_ID}/drives/{DRIVE_ID}/items/{FOLDER_ID}/children"
+
+    response = requests.get(url, headers=headers)
+    response.raise_for_status()
+    items = response.json().get("value", [])
+
+    # Filter only folders
+    mission_folders = [item for item in items if item.get("folder") is not None]
+
+    return mission_folders
+
+
+def count_folder_items(access_token: str, folder_id: str) -> int:
+    """Count items in a folder."""
+    headers = {"Authorization": f"Bearer {access_token}"}
+
+    url = f"https://graph.microsoft.com/v1.0/sites/{SITE_ID}/drives/{DRIVE_ID}/items/{folder_id}/children"
+
     try:
-        logger.debug(f"Realizando solicitud a: {url}")
-        response = requests.get(url, headers=headers, timeout=10)
+        response = requests.get(url, headers=headers)
         response.raise_for_status()
-        result = response.json()
-        
-        # Guardar en caché para futuras solicitudes
-        api_request_cache[url] = result
-        return result
-    except requests.exceptions.RequestException as e:
-        logger.error(f"Error en solicitud a Graph API {url}: {e}")
-        return None
-    except ValueError as e:
-        logger.error(f"Error al procesar respuesta JSON: {e}")
-        return None
+        items = response.json().get("value", [])
+        # Count only files, not subfolders
+        return len([item for item in items if item.get("file") is not None])
+    except Exception as e:
+        print(f"Error counting items in folder {folder_id}: {str(e)}")
+        return 0
 
 
+def get_mission_subfolders(access_token: str, mission_id: str) -> Dict[str, str]:
+    """Get video and transcript subfolder IDs for a mission."""
+    headers = {"Authorization": f"Bearer {access_token}"}
+
+    url = f"https://graph.microsoft.com/v1.0/sites/{SITE_ID}/drives/{DRIVE_ID}/items/{mission_id}/children"
+
+    try:
+        response = requests.get(url, headers=headers)
+        response.raise_for_status()
+        items = response.json().get("value", [])
+
+        subfolders = {}
+        for item in items:
+            if item.get("folder"):
+                folder_name = item.get("name", "").lower()
+                if folder_name == "video":
+                    subfolders["video_folder_id"] = item.get("id")
+                elif folder_name == "transcript":
+                    subfolders["transcript_folder_id"] = item.get("id")
+
+        return subfolders
+    except Exception as e:
+        print(f"Error getting subfolders for mission {mission_id}: {str(e)}")
+        return {}
 
 
-def get_first_level_folders_metadata(access_token, folder_id, site_id, drive_id):
-    """Get metadata only for folders directly under FOLDER_ID_GENERAL - only name and creation date."""
-    url = f"https://graph.microsoft.com/v1.0/sites/wgcp.sharepoint.com,a99fc879-51bf-44fe-bd4b-c50d618623c6,b51ed564-f2f8-468f-a388-e07184f1c0a6/drives/b!ecifqb9R_kS9S8UNYYYjxmTVHrX48o9Go4jgcYTxwKYGElwne6MiT4jJo9tfzq3i/items/01S4OGLW7U3VTA4VNR55FYZ6ZN2766YZ35/children"
-    result = make_graph_api_request(url, access_token)
-    folders_metadata = []
+def count_processed_videos(mission_name: str) -> int:
+    """Count processed videos for a mission by checking S3 JSON folder."""
+    try:
+        # Normalize mission name for S3 path
+        normalized_name = unidecode(mission_name.lower().replace(" ", "_"))
+        prefix = f"{PREFIX_JSON_FOLDER}{normalized_name}/"
 
-    if not result:
-        logger.error("Failed to get first level folders")
-        return []
+        response = s3_client.list_objects_v2(
+            Bucket=BUCKET_NAME,
+            Prefix=prefix,
+        )
 
-    items = result.get("value", [])
+        # Count .json files
+        json_files = [
+            obj
+            for obj in response.get("Contents", [])
+            if obj["Key"].endswith(".json") and not obj["Key"].endswith(".gitkeep")
+        ]
 
-    for item in items:
-        if item.get("folder"):  # Solo si es una carpeta
-            subfolder_id = item.get("id")
-            if not subfolder_id:
-                continue
+        return len(json_files)
+    except Exception as e:
+        print(f"Error counting processed videos for {mission_name}: {str(e)}")
+        return 0
 
-            # Solo recolectar nombre y fecha de creación, sin contar videos
-            folders_metadata.append({
-                "id": subfolder_id,
-                "name": item.get("name"),
-                "createdDateTime": item.get("createdDateTime"),
-                "createdBy": item.get("createdBy", {}).get("user", {}).get("displayName")
-            })
-
-    logger.info(f"Collected metadata for {len(folders_metadata)} mission folders")
-    return folders_metadata
 
 def handler(event, context):
-    """
-    Lambda handler to collect mission folder names and creation dates from SharePoint.
-    """
-    start_time = time.perf_counter()
-    logger.info(f"Received event: {json.dumps(event)}")
-
-    # Inicializar el cache de API antes de comenzar
-    global api_request_cache
-    api_request_cache = {}
-
-    # Obtener token de acceso
-    access_token = get_access_token()
-    if not access_token:
-        return {
-            "statusCode": 500,
-            "body": json.dumps({"error": "Could not obtain access token"}),
-            "headers": CORS_HEADERS
-        }
-
-    elapsed = time.perf_counter() - start_time
-    logger.info(f"Successfully obtained access token in {elapsed:.4f} seconds")
-
-    # Obtener metadatos de carpetas de primer nivel (solo nombre y fecha de creación)
-    folders_metadata = get_first_level_folders_metadata(access_token, FOLDER_ID_GENERAL, SITE_ID, DRIVE_ID)
-
-    elapsed = time.perf_counter() - start_time
-    logger.info(f"Collected {len(folders_metadata)} mission folders in {elapsed:.4f} seconds")
-
-    # Guardar los metadatos de carpetas en S3
+    """Lambda handler to list all SharePoint mission folders."""
     try:
-        # Save folders metadata JSON
-        metadata_key = f"{S3_FOLDER_PREFIX_JSON_VIDEOS}folders_metadata.json"
-        s3_client.put_object(
-            Bucket=S3_BUCKET_NAME,
-            Key=metadata_key,
-            Body=json.dumps(folders_metadata),
-            ContentType='application/json'
-        )
-        logger.info(f"Successfully saved folders metadata to s3://{S3_BUCKET_NAME}/{metadata_key}")
+        print(f"Event: {json.dumps(event)}")
 
-        end_time = time.perf_counter()
-        total_elapsed = end_time - start_time
-        logger.info(f"Total execution time: {total_elapsed:.4f} seconds")
+        # Get access token
+        access_token = get_access_token()
+
+        # List mission folders
+        mission_folders = list_mission_folders(access_token)
+
+        # Build response with mission metadata
+        missions = []
+        for folder in mission_folders:
+            mission_id = folder.get("id")
+            mission_name = folder.get("name")
+
+            # Get subfolders (video and transcript)
+            subfolders = get_mission_subfolders(access_token, mission_id)
+
+            # Count videos
+            video_count = 0
+            if "video_folder_id" in subfolders:
+                video_count = count_folder_items(
+                    access_token, subfolders["video_folder_id"]
+                )
+
+            # Count processed videos from S3
+            processed_count = count_processed_videos(mission_name)
+
+            missions.append(
+                {
+                    "missionId": mission_id,
+                    "missionName": mission_name,
+                    "folderPath": f"{FOLDER_ID}/{mission_name}",
+                    "createdDate": folder.get("createdDateTime", ""),
+                    "modifiedDate": folder.get("lastModifiedDateTime", ""),
+                    "videoCount": video_count,
+                    "processedCount": processed_count,
+                }
+            )
 
         return {
             "statusCode": 200,
-            "headers": CORS_HEADERS,
-            "body": json.dumps({
-                "message": "Mission folders collected successfully",
-                "locations": {
-                    "metadata": f"s3://{S3_BUCKET_NAME}/{metadata_key}"
-                },
-                "executionTime": f"{total_elapsed:.4f} seconds",
-                "folderCount": len(folders_metadata)
-            })
+            "headers": {
+                "Content-Type": "application/json",
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Allow-Headers": "Content-Type,Authorization",
+                "Access-Control-Allow-Methods": "GET,OPTIONS",
+            },
+            "body": json.dumps({"missions": missions}),
         }
 
-    except ClientError as e:
-        logger.error(f"Error saving to S3: {e}")
-        end_time = time.perf_counter()
-        total_elapsed = end_time - start_time
-        logger.error(f"Total failed execution time: {total_elapsed:.4f} seconds")
+    except Exception as e:
+        print(f"Error: {str(e)}")
         return {
             "statusCode": 500,
-            "headers": CORS_HEADERS,
-            "body": json.dumps({
-                "error": "Failed to save folders metadata to S3",
-                "executionTime": f"{total_elapsed:.4f} seconds"
-            })
+            "headers": {
+                "Content-Type": "application/json",
+                "Access-Control-Allow-Origin": "*",
+            },
+            "body": json.dumps(
+                {
+                    "error": "Internal server error",
+                    "message": str(e),
+                }
+            ),
         }
-
-
