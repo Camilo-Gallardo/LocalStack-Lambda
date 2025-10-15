@@ -171,12 +171,15 @@ run-suite:
 # =========================
 .PHONY: security-scan
 security-scan: ## Bandit + pip-audit
-	bandit -q -r lambdas -f txt || true
+	mkdir -p reports
+	bandit -r lambdas -f json -o reports/bandit_report.json --quiet || true
 	@set -e; \
 	for f in $(REQ_FILES); do \
 	  echo "==> pip-audit $$f"; \
 	  pip-audit -r "$$f" || true; \
 	done
+	@echo "✅ Bandit report guardado en: reports/bandit_report.json"
+
 
 # =========================
 # Alias (legacy)
@@ -191,13 +194,14 @@ logs-hello-quick:  logs-quick-hello_world
 # =========================
 # Pipelines "one-shot"
 # =========================
-.PHONY: all all-verbose all-down all-nuke
+.PHONY: all all-verbose all-down all-nuke security-scan
 all: ## up -> package-all -> deploy -> list -> (smoke/tests/both)
 	$(MAKE) up
 	$(MAKE) package-all
 	$(MAKE) deploy
 	$(MAKE) list-lambdas
 	$(MAKE) run-suite
+	$(MAKE) security-scan
 	@echo "✅ ALL OK. RUN=$(RUN). Sugerencia: 'make test-integration-verbose' o 'make logs-<fn>'"
 
 all-verbose: ## all (both) + integración verbosa

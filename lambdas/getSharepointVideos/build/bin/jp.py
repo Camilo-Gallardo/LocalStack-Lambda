@@ -1,4 +1,4 @@
-#!/home/adminblend/Documentos/Chamba/LocalStack-Lambda/.venv/bin/python
+#!/home/adminblend/Programming/tech_home/Blend360_Proyects/empty/LocalStack-Lambda/.venv/bin/python
 
 import sys
 import json
