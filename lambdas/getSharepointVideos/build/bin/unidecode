@@ -1,4 +1,4 @@
-#!/home/adminblend/Programming/tech_home/Blend360_Proyects/empty/LocalStack-Lambda/.venv/bin/python
+#!/home/adminblend/.pyenv/versions/3.12.7/bin/python
 # -*- coding: utf-8 -*-
 import re
 import sys
