@@ -219,7 +219,7 @@ def main():
 
     for fname in sorted(per_file.keys()):
         data = per_file[fname]
-        if not data['bandit'] and not data['heuristics']:
+        if not data['bandit']:
             continue
         report_lines.append(f'-- {fname} --')
         if data['bandit']:
@@ -238,15 +238,39 @@ def main():
             'by_severity': dict(dep_severity_counts),
             'by_lambda': dep_vulns_by_lambda
         },
-        'files': {k: v for k, v in per_file.items() if v['bandit'] or v['heuristics']}
+        'files': {k: v for k, v in per_file.items() if v['bandit']}
     }
 
     REPORTS_DIR.mkdir(parents=True, exist_ok=True)
+    # Write full structured report to JSON only. The console receives a short summary.
     OUT_JSON.write_text(json.dumps(summary, indent=2), encoding='utf-8')
 
-    # Print concise summary to console
-    print('\n'.join(report_lines))
-    print(f"\nReports written to: {OUT_JSON}")
+    # Build concise summary for console
+    summary_lines = []
+    summary_lines.append(f"{COL['bold']}{COL['cyan']}Security console summary{COL['reset']}")
+    summary_lines.append(f"Total files scanned (python under lambdas/): {len(files)}")
+    summary_lines.append(f"Total Bandit issues (filtered): {total_bandit}")
+
+    # Severity summary (Bandit): show counts with bars
+    summary_lines.append('Severity summary (Bandit):')
+    max_sev = max(severity_counts.values()) if severity_counts else 0
+    for sev in ['HIGH', 'MEDIUM', 'LOW', 'UNDEFINED']:
+        count = severity_counts.get(sev, 0)
+        color = COL['red'] if sev == 'HIGH' else (COL['yellow'] if sev == 'MEDIUM' else COL['green'])
+        bar = render_bar(count, max_sev, width=args.width)
+        summary_lines.append(f"  {color}{sev:<9}{COL['reset']} : {bar}")
+
+    # Totals visual
+    total_max = max(max_sev, total_bandit, 1)
+    summary_lines.append('Totals:')
+    summary_lines.append(f"  Bandit issues : {render_bar(total_bandit, total_max, width=args.width)}")
+    summary_lines.append(f"  Dependency vulns: {render_bar(total_dep_vulns, total_max, width=args.width)}")
+
+    summary_lines.append("")
+    summary_lines.append(f"Full detailed report written to: {OUT_JSON}")
+
+    # Print concise summary to console only
+    print('\n'.join(summary_lines))
 
 
 if __name__ == '__main__':

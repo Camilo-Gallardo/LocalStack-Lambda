@@ -178,6 +178,7 @@ security-scan: ## Bandit + pip-audit
 	  echo "==> pip-audit $$f"; \
 	  pip-audit -r "$$f" || true; \
 	done
+	python3 scripts/security_console_report.py
 	@echo "✅ Bandit report guardado en: reports/bandit_report.json"
 
 
