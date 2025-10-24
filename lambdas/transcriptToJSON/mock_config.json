@@ -1,0 +1,11 @@
+{
+  "enabled": true,
+  "mock_external_apis": false,
+  "external_api_responses": {},
+  "custom_boto3_responses": {},
+  "_detected_services": [
+    "bedrock-runtime",
+    "s3"
+  ],
+  "_auto_generated": true
+}

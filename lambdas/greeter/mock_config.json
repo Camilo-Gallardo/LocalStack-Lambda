@@ -1,0 +1,8 @@
+{
+  "enabled": false,
+  "mock_external_apis": false,
+  "external_api_responses": {},
+  "custom_boto3_responses": {},
+  "_detected_services": [],
+  "_auto_generated": true
+}

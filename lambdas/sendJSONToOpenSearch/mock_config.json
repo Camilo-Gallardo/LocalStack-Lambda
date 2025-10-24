@@ -1,0 +1,21 @@
+{
+  "enabled": true,
+  "mock_external_apis": true,
+  "external_api_responses": {
+    "https://example.com/*": {
+      "status": 200,
+      "body": {
+        "message": "Mock response - Configure this in mock_config.json"
+      },
+      "headers": {
+        "Content-Type": "application/json"
+      }
+    }
+  },
+  "custom_boto3_responses": {},
+  "_detected_services": [
+    "external_http",
+    "s3"
+  ],
+  "_auto_generated": true
+}

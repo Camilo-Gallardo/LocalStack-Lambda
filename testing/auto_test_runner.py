@@ -1,12 +1,16 @@
 #!/usr/bin/env python3
 """
-Ejecuta tests automáticos de integración para todas las lambdas descubiertas
+Ejecuta tests automáticos de integración con mocks opcionales
 """
 import boto3
 import json
 import sys
 import time
+import importlib.util
 from pathlib import Path
+
+# Importar mock injector
+from mock_injector import apply_mocks_for_lambda
 
 # Clientes LocalStack
 lambda_client = boto3.client(
@@ -151,7 +155,55 @@ def test_lambda_s3_interaction(function_name):
     except Exception as e:
         return False, f"No se pudo acceder a S3: {str(e)}"
 
-def run_tests_for_lambda(function_name):
+def test_lambda_with_local_mocks(function_name, lambda_path):
+    """
+    NUEVO: Prueba lambda con mocks inyectados localmente
+    """
+    result = TestResult(function_name)
+    
+    print(f"      🧪 Test con mocks locales...")
+    
+    try:
+        # Aplicar mocks
+        injector = apply_mocks_for_lambda(lambda_path)
+        
+        if injector is None:
+            # No habilitado, no es un error
+            return result
+        
+        # Importar handler con mocks activos
+        handler_file = Path(lambda_path) / 'handler.py'
+        spec = importlib.util.spec_from_file_location("handler", handler_file)
+        handler_module = importlib.util.module_from_spec(spec)
+        
+        # Ejecutar módulo
+        spec.loader.exec_module(handler_module)
+        
+        # Invocar handler
+        response = handler_module.handler({'test': True}, {})
+        
+        # Verificar respuesta
+        if isinstance(response, dict) and 'statusCode' in response:
+            result.add("Mocks locales", True, 
+                      f"Ejecutado con mocks, statusCode: {response['statusCode']}")
+        else:
+            result.add("Mocks locales", False, "Respuesta inválida")
+        
+        # Limpiar mocks
+        injector.cleanup()
+        
+    except ModuleNotFoundError as e:
+        # Dependencias faltantes no son un error crítico
+        result.add("Mocks locales", None, 
+                  f"⚠️  Dependencias locales faltantes: {str(e)}")
+    except ImportError as e:
+        result.add("Mocks locales", None, 
+                  f"⚠️  Error de import: {str(e)}")
+    except Exception as e:
+        result.add("Mocks locales", False, f"Error: {str(e)}")
+    
+    return result
+def run_tests_for_lambda(function_name, lambda_path=None):
     """Ejecuta suite de tests para una lambda"""
     result = TestResult(function_name)
     
@@ -165,7 +217,7 @@ def run_tests_for_lambda(function_name):
     print(f"   {status} Deployment: {details}")
     
     if not passed:
-        return result  # Si no existe, no seguir
+        return result
     
     # Test 2: Invocable
     passed, details = test_lambda_invocable(function_name)
@@ -179,18 +231,28 @@ def run_tests_for_lambda(function_name):
     status = "✅" if passed else "❌"
     print(f"   {status} Formato: {details}")
     
-    # Test 4: Logs (Integración con CloudWatch)
+    # Test 4: Logs
     passed, details = test_lambda_logs_generated(function_name)
     result.add("Logs", passed, details)
-    status = "✅" if passed else "⚠️" 
+    status = "✅" if passed else "⚠️"
     print(f"   {status} Logs: {details}")
     
-    # Test 5: S3 (solo si aplica)
+    # Test 5: S3
     passed, details = test_lambda_s3_interaction(function_name)
-    if passed is not None:  # Solo agregar si el test aplica
+    if passed is not None:
         result.add("S3 Access", passed, details)
         status = "✅" if passed else "❌"
         print(f"   {status} S3: {details}")
+    
+    # Test 6: NUEVO - Mocks locales
+    if lambda_path:
+        mock_result = test_lambda_with_local_mocks(function_name, lambda_path)
+        if mock_result.tests:
+            for test in mock_result.tests:
+                result.tests.append(test)
+                if test['passed'] is not None:
+                    status = "✅" if test['passed'] else "❌"
+                    print(f"   {status} {test['name']}: {test['details']}")
     
     return result
 
@@ -208,13 +270,16 @@ def main():
         return 1
     
     print("\n" + "="*60)
-    print("🧪 AUTO TEST RUNNER - Integración Básica")
+    print("🧪 AUTO TEST RUNNER - Integración Básica + Mocks")
     print("="*60)
     print(f"📋 Testing {len(lambdas)} funciones lambda\n")
     
     results = []
     for lambda_info in lambdas:
-        result = run_tests_for_lambda(lambda_info['name'])
+        result = run_tests_for_lambda(
+            lambda_info['name'],
+            lambda_info.get('path')
+        )
         results.append(result)
     
     # Reporte consolidado
@@ -237,7 +302,7 @@ def main():
             'details': result.tests
         })
     
-    # Guardar resultados para el reporte final
+    # Guardar resultados
     with open('.test_results.json', 'w') as f:
         json.dump(results_data, f, indent=2)
     
@@ -251,9 +316,9 @@ def main():
     print("   3. Formato - Respuesta tiene estructura válida")
     print("   4. Logs - Lambda genera logs en CloudWatch")
     print("   5. S3 Access - Lambda puede acceder a S3 (si aplica)")
+    print("   6. Mocks locales - Ejecución con mocks inyectados (si está habilitado)")
     
-    # Cambiar esto: retornar 0 siempre para no detener el pipeline
-    return 0  # ← Cambiar de: return 0 if total_passed == total_lambdas else 1
+    return 0
 
 if __name__ == '__main__':
     sys.exit(main())

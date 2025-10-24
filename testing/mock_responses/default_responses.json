@@ -1,0 +1,100 @@
+{
+  "boto3_mocks": {
+    "bedrock-runtime": {
+      "invoke_model": {
+        "response": {
+          "body": "{\"completion\": \"Mock response from Bedrock\", \"stop_reason\": \"end_turn\"}",
+          "contentType": "application/json",
+          "ResponseMetadata": {
+            "HTTPStatusCode": 200,
+            "RequestId": "mock-request-id"
+          }
+        }
+      }
+    },
+    "s3": {
+      "put_object": {
+        "response": {
+          "ETag": "\"mock-etag-123456\"",
+          "ResponseMetadata": {
+            "HTTPStatusCode": 200,
+            "RequestId": "mock-s3-request"
+          }
+        }
+      },
+      "get_object": {
+        "response": {
+          "Body": "{\"mock\": \"data from S3\"}",
+          "ContentLength": 100,
+          "ContentType": "application/json",
+          "ResponseMetadata": {
+            "HTTPStatusCode": 200
+          }
+        }
+      },
+      "list_objects_v2": {
+        "response": {
+          "Contents": [
+            {
+              "Key": "mock-file.json",
+              "Size": 1024,
+              "LastModified": "2024-01-01T00:00:00Z"
+            }
+          ],
+          "ResponseMetadata": {
+            "HTTPStatusCode": 200
+          }
+        }
+      }
+    },
+    "dynamodb": {
+      "put_item": {
+        "response": {
+          "ResponseMetadata": {
+            "HTTPStatusCode": 200
+          }
+        }
+      },
+      "get_item": {
+        "response": {
+          "Item": {
+            "id": {"S": "mock-id"},
+            "data": {"S": "mock data"}
+          },
+          "ResponseMetadata": {
+            "HTTPStatusCode": 200
+          }
+        }
+      },
+      "query": {
+        "response": {
+          "Items": [],
+          "Count": 0,
+          "ResponseMetadata": {
+            "HTTPStatusCode": 200
+          }
+        }
+      }
+    },
+    "sqs": {
+      "send_message": {
+        "response": {
+          "MessageId": "mock-message-id",
+          "ResponseMetadata": {
+            "HTTPStatusCode": 200
+          }
+        }
+      }
+    },
+    "sns": {
+      "publish": {
+        "response": {
+          "MessageId": "mock-sns-message-id",
+          "ResponseMetadata": {
+            "HTTPStatusCode": 200
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,15 +1,16 @@
-# LocalStack Lambda Lab (Makefile-First)
+# LocalStack Lambda CI/CD Pipeline
 
 Entorno reproducible para **desarrollar y probar Lambdas de AWS en local**, con:
-
 * **LocalStack** (emula servicios AWS),
 * **Terraform** (infra como código),
-* **Pytest** (unit/integración),
-* **Makefile** (pipeline de “un botón”: `make all`),
-* **Tail de logs** con rotación,
-* **Scanners de seguridad** (Bandit, pip-audit).
+* **Auto-discovery** (detección automática de lambdas),
+* **Mock Injector** (mockea boto3 sin modificar código),
+* **Testing automático** (integración + mocks locales),
+* **Makefile** (pipeline de "un botón": `make all`),
+* **Logs** con rotación automática,
+* **Security scanning** (Bandit, pip-audit).
 
-> **Objetivo**: clonas el repo, corres `make all` y en minutos tienes Lambdas empaquetadas, desplegadas en LocalStack, invocadas, con pruebas y **logs guardados en archivos** — sin tocar AWS real.
+> **Objetivo**: clonas el repo, corres `make all` y en minutos tienes Lambdas auto-descubiertas, empaquetadas, desplegadas en LocalStack, testeadas con mocks, con análisis de seguridad y **logs guardados en archivos** — sin tocar AWS real.
 
 ---
 
@@ -20,69 +21,122 @@ Entorno reproducible para **desarrollar y probar Lambdas de AWS en local**, con:
 3. [Requisitos](#requisitos)
 4. [Instalación y primer arranque](#instalación-y-primer-arranque)
 5. [Comandos Make (guía rápida)](#comandos-make-guía-rápida)
-6. [Parámetros útiles (RUN, SMOKE_SINCE, LOG_WINDOW)](#parámetros-útiles-run-smoke_since-log_window)
-7. [Cómo funciona cada pieza](#cómo-funciona-cada-pieza)
-8. [Extender el proyecto](#extender-el-proyecto)
-9. [Notas importantes sobre logs “Smoke”](#notas-importantes-sobre-logs-smoke)
-10. [Solución de problemas](#solución-de-problemas)
-11. [Buenas prácticas y siguientes pasos](#buenas-prácticas-y-siguientes-pasos)
-12. [FAQ](#faq)
+6. [Sistema de Mocks](#sistema-de-mocks)
+7. [Testing automático](#testing-automático)
+8. [Parámetros útiles](#parámetros-útiles)
+9. [Cómo funciona cada pieza](#cómo-funciona-cada-pieza)
+10. [Security scanning](#security-scanning)
+11. [Solución de problemas](#solución-de-problemas)
+12. [Buenas prácticas y siguientes pasos](#buenas-prácticas-y-siguientes-pasos)
+13. [FAQ](#faq)
 
 ---
 
 ## Arquitectura y flujo
 
 ```
-┌──────────┐  make/package  ┌────────────┐   terraform   ┌──────────────┐
-│ Dev local│ ─────────────▶ │   ZIP(s)   │ ─────────────▶│  LocalStack  │
-└────▲─────┘                └─────┬──────┘               └──────┬───────┘
-     │ pytest (unit/integration)  │  boto3 invoke/logs           │
-     └────────────────────────────┴───────────────────────────────┘
-```
+┌─────────────────────────────────────────────────────────────────┐
+│                    PIPELINE CI/CD COMPLETO                      │
+└─────────────────────────────────────────────────────────────────┘
 
-* Editas código → `build.sh` empaqueta cada Lambda a `dist.zip`.
-* Terraform despliega a **LocalStack** (Lambda, IAM, CloudWatch Logs, etc.)
-* Tests de integración invocan Lambdas reales (emuladas).
-* **Smoke** invoca y guarda logs en `logs/*.log` con rotación.
+  Dev Local
+      │
+      ├─► Auto-Discovery      → Detecta lambdas automáticamente
+      │
+      ├─► Mock Generator      → Genera mock_config.json
+      │
+      ├─► Package             → Empaqueta lambdas con deps
+      │
+      ├─► Terraform Deploy    → Despliega a LocalStack
+      │
+      ├─► Auto Tests          → 6 tests por lambda (integración + mocks)
+      │   ├─ Deployment ✓
+      │   ├─ Invocación ✓
+      │   ├─ Formato ✓
+      │   ├─ Logs ✓
+      │   ├─ S3 Access ✓
+      │   └─ Mocks Locales ✓
+      │
+      ├─► Smoke Tests         → Invoca todas las lambdas
+      │
+      └─► Security Scan       → Bandit + pip-audit
+              │
+              ├─► Reports     → JSON consolidado
+              └─► Logs        → Archivos rotados
+
+LocalStack (AWS Emulado)
+  ├─ Lambda Functions
+  ├─ S3 Buckets
+  ├─ CloudWatch Logs
+  ├─ IAM Roles
+  └─ DynamoDB (opcional)
+```
 
 ---
 
 ## Estructura del repo
 
 ```
-localstack-lambda-lab/
+LocalStack-Lambda/
 ├─ docker-compose.yml
 ├─ Makefile
 ├─ README.md
 ├─ pyproject.toml
 ├─ dev-requirements.txt
+│
 ├─ infra/terraform/
 │  ├─ main.tf, variables.tf, iam.tf
-│  ├─ lambda_*.tf                 # recursos Lambda
+│  ├─ s3.tf                       # buckets S3
+│  ├─ lambdas.tf                  # todas las lambdas (dinámico)
 │  └─ outputs.tf                  # lista de lambdas: lambda_names
+│
 ├─ lambdas/
 │  ├─ hello_world/
-│  │  ├─ src/handler.py
-│  │  ├─ requirements.txt
-│  │  └─ build.sh                 # genera dist.zip
-│  └─ greeter/ ...
+│  │  ├─ handler.py               # código de la lambda
+│  │  ├─ requirements.txt         # dependencias
+│  │  ├─ dist.zip                 # package generado
+│  │  └─ mock_config.json         # config de mocks (auto-generado)
+│  ├─ greeter/
+│  ├─ getSharepointVideos/
+│  └─ ...
+│
 ├─ scripts/
-│  ├─ invoke.py                   # invoca cualquier Lambda
-│  └─ tail_logs.py                # tail CloudWatch (rotación y límites)
-└─ tests/
-   ├─ unit/...
-   └─ integration/
-      ├─ test_all_lambdas.py      # parametriza sobre lambda_names
-      └─ test_hello_integration.py
+│  ├─ invoke.py                   # invoca cualquier lambda
+│  ├─ tail_logs.py                # tail CloudWatch (rotación y límites)
+│  ├─ security_console_report.py  # reporte consolidado de seguridad
+│  └─ package_all_lambdas.sh      # script de empaquetado
+│
+├─ testing/
+│  ├─ auto_discovery.py           # auto-descubre lambdas
+│  ├─ generate_mock_configs.py    # genera mock_config.json
+│  ├─ mock_injector.py            # sistema de mock injection
+│  ├─ auto_test_runner.py         # runner de tests automáticos
+│  ├─ mock_responses/
+│  │  └─ default_responses.json   # respuestas mock por defecto
+│  └─ templates/
+│     └─ mock_config.template.json
+│
+├─ reports/                       # reportes de seguridad (generados)
+│  ├─ bandit_report.json
+│  ├─ pip_audit_report.txt
+│  └─ security_console_report.json
+│
+├─ logs/                          # logs de lambdas (generados)
+│  ├─ hello_world.log
+│  ├─ getSharepointVideos.log
+│  └─ ...
+│
+└─ .lambdas_discovered.json       # lambdas auto-descubiertas (generado)
 ```
 
 ---
 
 ## Requisitos
 
-* **Docker** + **Docker Compose**
+* **Docker** + **Docker Compose** 2.0+
 * **Python 3.11+**
 * **make**
+* **zip** (se instala con `make bootstrap`)
 * **Terraform 1.9.x** (instalado o se usa la imagen oficial automáticamente)
 * (Opcional) AWS CLI
 
@@ -94,18 +148,27 @@ localstack-lambda-lab/
 
 ```bash
 git clone <tu_repo>.git
-cd localstack-lambda-lab
+cd LocalStack-Lambda
 
-python -m venv .venv
+# Setup inicial
+python3 -m venv .venv
 source .venv/bin/activate
-pip install -r dev-requirements.txt
+make bootstrap
 
-# Pipeline completo, por defecto RUN=smoke:
+# Pipeline completo (todo automático)
 make all
-
-# Variante “todo + tests verbosos”
-make all-verbose
 ```
+
+El comando `make all` ejecuta automáticamente:
+1. Levanta LocalStack
+2. Auto-descubre lambdas
+3. Genera `mock_config.json` para cada lambda
+4. Empaqueta todas las lambdas
+5. Despliega con Terraform
+6. Ejecuta tests automáticos (6 tests por lambda)
+7. Ejecuta smoke tests
+8. Escanea seguridad (Bandit + pip-audit)
+9. Guarda logs y reportes
 
 ---
 
@@ -113,177 +176,402 @@ make all-verbose
 
 ### Core
 
-| Comando             | Descripción                                                         |
-| ------------------- | ------------------------------------------------------------------- |
-| `make up`           | Levanta LocalStack (`docker compose up -d`).                        |
-| `make down`         | Apaga LocalStack y limpia volúmenes.                                |
-| `make package-%`    | Empaqueta la Lambda `%` (ej: `package-hello_world`).                |
-| `make package-all`  | Empaqueta **todas** las Lambdas (carpetas en `lambdas/`).           |
-| `make plan`         | `terraform init && plan` contra LocalStack.                         |
-| `make deploy`       | `terraform init -upgrade && apply -auto-approve` (no re-empaqueta). |
-| `make nuke`         | `terraform destroy -auto-approve` (con `init -upgrade`).            |
-| `make list-lambdas` | Lista nombres de Lambdas desde `terraform output lambda_names`.     |
+| Comando                  | Descripción                                                          |
+| ------------------------ | -------------------------------------------------------------------- |
+| `make help`              | Muestra todos los comandos disponibles con descripción.              |
+| `make bootstrap`         | Instala herramientas de desarrollo (pip, zip, pre-commit).           |
+| `make up`                | Levanta LocalStack (`docker compose up -d`).                         |
+| `make down`              | Apaga LocalStack y limpia volúmenes.                                 |
+| `make restart`           | Reinicia LocalStack.                                                 |
+| `make status`            | Muestra estado de contenedores.                                      |
+| `make clean`             | Limpia archivos generados (dist.zip, logs, reports).                 |
+| `make clean-all`         | Limpieza total (incluye LocalStack data).                            |
 
-### Invocación y logs
+### Discovery y Mocks
 
-| Comando                                  | Descripción                                                           |
-| ---------------------------------------- | --------------------------------------------------------------------- |
-| `make invoke-%`                          | Invoca Lambda `%` con payload de ejemplo.                             |
-| `make invoke FN=... PAYLOAD='{"k":"v"}'` | Invocación arbitraria.                                                |
-| `make logs-%`                            | Guarda en `logs/%.log` los **últimos N s** (usa `SMOKE_SINCE`).       |
-| `make logs-follow-%`                     | Tail “follow” (corta por inactividad o max time).                     |
-| `make logs-quick-%`                      | Tail rápido (ventanas cortas).                                        |
-| `make smoke`                             | Invoca **todas** las Lambdas y guarda logs recientes en `logs/*.log`. |
+| Comando                      | Descripción                                                      |
+| ---------------------------- | ---------------------------------------------------------------- |
+| `make discover`              | Auto-descubre lambdas en `lambdas/`.                             |
+| `make generate-mock-configs` | Genera `mock_config.json` automáticamente para cada lambda.      |
 
-### Tests
+### Packaging y Deploy
 
-| Comando                         | Descripción                              |
-| ------------------------------- | ---------------------------------------- |
-| `make test-unit`                | Unit tests (local, cobertura).           |
-| `make test-integration`         | Integración (LocalStack, sin cobertura). |
-| `make test-integration-verbose` | Integración verbosa (prints/duraciones). |
+| Comando             | Descripción                                                                 |
+| ------------------- | --------------------------------------------------------------------------- |
+| `make package-%`    | Empaqueta la lambda `%` (ej: `package-hello_world`).                        |
+| `make package-all`  | Empaqueta **todas** las lambdas (auto-descubiertas).                        |
+| `make plan`         | `terraform init && plan` contra LocalStack.                                 |
+| `make deploy`       | `terraform init -upgrade && apply -auto-approve` (no re-empaqueta).         |
+| `make nuke`         | `terraform destroy -auto-approve` (destruye infraestructura).               |
+| `make list-lambdas` | Lista nombres de lambdas desde `terraform output lambda_names`.             |
 
-### Pipelines “one-shot”
+### Testing
 
-| Comando            | Descripción                                                                        |
-| ------------------ | ---------------------------------------------------------------------------------- |
-| `make all`         | `up → package-all → deploy → list-lambdas → run-suite` (por defecto `RUN=smoke`).  |
-| `make all-verbose` | Igual que `all` pero ejecuta **ambas suites** y además `test-integration-verbose`. |
-| `make all-down`    | `make all` y luego `down`.                                                         |
-| `make all-nuke`    | `nuke` + `down`.                                                                   |
+| Comando                         | Descripción                                                    |
+| ------------------------------- | -------------------------------------------------------------- |
+| `make test-auto`                | Tests automáticos (integración + mocks locales).               |
+| `make test-unit`                | Unit tests (local, con cobertura).                             |
+| `make test-integration`         | Tests de integración (LocalStack, sin cobertura).              |
+| `make test-integration-verbose` | Tests de integración verbosos (prints/duraciones).             |
+| `make smoke`                    | Invoca **todas** las lambdas y guarda logs en `logs/*.log`.    |
 
-> **Tip**: `make help` lista todos los targets con descripción.
+### Invocación y Logs
+
+| Comando                                  | Descripción                                                    |
+| ---------------------------------------- | -------------------------------------------------------------- |
+| `make invoke-%`                          | Invoca lambda `%` con payload de ejemplo.                      |
+| `make invoke FN=... PAYLOAD='{"k":"v"}'` | Invocación arbitraria.                                         |
+| `make logs-%`                            | Guarda en `logs/%.log` los últimos N segundos de logs.         |
+| `make logs-follow-%`                     | Tail "follow" (corta por inactividad o tiempo máximo).         |
+| `make logs-quick-%`                      | Tail rápido (últimos 30 segundos).                             |
+
+### Security
+
+| Comando              | Descripción                                                    |
+| -------------------- | -------------------------------------------------------------- |
+| `make security-scan` | Ejecuta Bandit + pip-audit, genera reportes en `reports/`.    |
+
+### Pipelines Completos
+
+| Comando         | Descripción                                                                |
+| --------------- | -------------------------------------------------------------------------- |
+| `make all`      | Pipeline completo (ver descripción en [Instalación](#instalación-y-primer-arranque)). |
+| `make all-down` | `make all` y luego `down`.                                                 |
+| `make all-nuke` | Destruye todo (infraestructura + LocalStack + archivos).                   |
+| `make dev`      | Setup rápido de desarrollo (`up` + `deploy`).                              |
+| `make quick`    | Deploy + smoke tests rápido.                                               |
+
+> **Tip**: `make help` muestra todos los comandos con formato visual mejorado.
 
 ---
 
-## Parámetros útiles (`RUN`, `SMOKE_SINCE`, `LOG_WINDOW`)
+## Sistema de Mocks
 
-* `RUN` selecciona qué suite corre en `run-suite`:
+### Funcionamiento
 
-  * `RUN=smoke` *(default)* → solo invoca y guarda logs.
-  * `RUN=tests` → solo integración.
-  * `RUN=both` → integración **y** smoke.
+El **Mock Injector** intercepta llamadas a `boto3.client()` y `requests` **sin modificar el código de las lambdas**:
 
-* `SMOKE_SINCE` (segundos): ventana corta para `logs-%` dentro de `smoke`.
-  Por defecto 5 s para minimizar arrastre de corridas previas.
+Durante los tests con mocks locales:
+1. El injector detecta `boto3.client('s3')`
+2. Retorna un mock client con respuestas predefinidas
+3. La lambda ejecuta normalmente con datos mock
 
-* `LOG_WINDOW` (segundos): ventana general para `smoke` si se usa esa variable en lugar de `SMOKE_SINCE` (el Makefile soporta ambos enfoques; por defecto usamos `SMOKE_SINCE` en `smoke`).
+---
 
-Ejemplos:
+## Testing automático
+
+El comando `make test-auto` ejecuta **6 tests diferentes** para cada lambda:
+
+### Suite de Tests
+
+| Test              | Descripción                                                    |
+| ----------------- | -------------------------------------------------------------- |
+| **Deployment**    | Verifica que la lambda fue desplegada correctamente.           |
+| **Invocación**    | Verifica que la lambda se puede invocar sin errores.           |
+| **Formato**       | Verifica que la respuesta tiene formato válido (statusCode + body). |
+| **Logs**          | Verifica que la lambda genera logs en CloudWatch.              |
+| **S3 Access**     | Verifica acceso a S3 (solo para lambdas que usan S3).          |
+| **Mocks Locales** | Ejecuta el handler localmente con mocks inyectados (si está habilitado). |
+
+### Resultados
+
+Los resultados se guardan en `.test_results.json`:
+
+```json
+{
+  "function": "hello_world",
+  "all_passed": true,
+  "passed_tests": 4,
+  "total_tests": 4,
+  "details": [
+    {"name": "Deployment", "passed": true, "details": "Lambda desplegada correctamente"},
+    {"name": "Invocación", "passed": true, "details": "Lambda invocable, statusCode: 200"},
+    {"name": "Formato", "passed": true, "details": "Formato válido (statusCode + body)"},
+    {"name": "Logs", "passed": true, "details": "Logs generados correctamente"}
+  ]
+}
+```
+
+### Interpretación de Resultados
+
+* ✓ **PASS**: Todos los tests pasaron para esa lambda
+* ✗ **FAIL**: Al menos un test falló
+* ⚠ **WARNING**: Test no aplicable o dependencias faltantes (no crítico)
+
+---
+
+## Parámetros útiles
+
+### `RUN` - Selector de suite
+
+Controla qué suite de tests ejecuta `run-suite`:
 
 ```bash
-make all RUN=both
-make smoke SMOKE_SINCE=3
-make logs-hello_world SMOKE_SINCE=10
+make all RUN=smoke   # Solo smoke tests (default)
+make all RUN=tests   # Solo integration tests
+make all RUN=both    # Ambas suites
 ```
+
+### `SMOKE_SINCE` - Ventana de logs para smoke
+
+Controla cuántos segundos hacia atrás buscar logs (default: 5s):
+
+```bash
+make smoke SMOKE_SINCE=3   # Menos arrastre de corridas previas
+make smoke SMOKE_SINCE=10  # Más contexto de logs
+```
+
+### `LOG_WINDOW` - Ventana general de logs
+
+Similar a `SMOKE_SINCE` pero para otros comandos:
+
+```bash
+make logs-hello_world LOG_WINDOW=30
+```
+
+> **Nota sobre logs repetidos**: Si ejecutas `make all` varias veces en menos de N segundos, verás líneas repetidas de corridas anteriores. No son dobles invocaciones, solo logs dentro de la ventana temporal. Usa ventanas pequeñas (5-10s) para minimizar esto.
 
 ---
 
 ## Cómo funciona cada pieza
 
+### Auto-Discovery
+
+`testing/auto_discovery.py` escanea `lambdas/` y genera `.lambdas_discovered.json`:
+
+```json
+[
+  {
+    "name": "hello_world",
+    "path": "lambdas/hello_world",
+    "has_requirements": true,
+    "has_handler": true
+  }
+]
+```
+
+Este archivo alimenta:
+* Packaging (`make package-all`)
+* Deployment (Terraform itera sobre la lista)
+* Testing (`make test-auto`)
+* Smoke tests (`make smoke`)
+
+### Mock Injector
+
+`testing/mock_injector.py` usa `unittest.mock.patch` para interceptar:
+
+```python
+# Intercepta boto3.client()
+with patch('boto3.client', side_effect=mock_boto3_client):
+    handler({'test': True}, {})
+
+# Intercepta requests.get/post/etc
+with patch('requests.get', side_effect=mock_request):
+    handler({'test': True}, {})
+```
+
+Lee configuración de `mock_config.json` y respuestas por defecto de `testing/mock_responses/default_responses.json`.
+
 ### Packaging de Lambdas
 
-Cada carpeta en `lambdas/<name>/` tiene un `build.sh` que:
-
-* crea `build/` y `build/python`,
-* instala `requirements.txt` en `build/python`,
-* copia `src/*` a `build/`,
-* genera `dist.zip`.
-
-`package-all` descubre automáticamente los módulos por subcarpeta.
+`scripts/package_all_lambdas.sh`:
+* Itera sobre lambdas auto-descubiertas
+* Crea entorno temporal
+* Instala `requirements.txt` en `python/` layer
+* Copia `handler.py` y `mock_config.json`
+* Genera `dist.zip`
 
 ### Terraform
 
-* Provider AWS v5 apuntado a `http://localhost:4566` con flags de LocalStack.
-* IAM Role básico + CloudWatch Log Groups `/aws/lambda/<fn>` + `aws_lambda_function`.
-* `outputs.tf` expone `lambda_names` para listar e iterar (smoke/tests).
-
-### Pruebas
-
-* **Unit**: importan el handler, sin AWS.
-* **Integración**: usan **boto3** contra LocalStack; verifican que la Lambda existe e invoca OK (200, `ok=True`), y que el `message` retorne string.
+* Provider AWS v5 apuntando a `http://localhost:4566`
+* Módulo dinámico en `infra/terraform/lambdas.tf` que itera sobre `.lambdas_discovered.json`
+* IAM Role básico + CloudWatch Log Groups `/aws/lambda/<fn>`
+* `outputs.tf` expone `lambda_names` para iteración
 
 ### Logs
 
-* `scripts/tail_logs.py` usa CloudWatch Logs (LocalStack) con:
+`scripts/tail_logs.py` usa CloudWatch Logs API con:
+* Modo "una pasada" o "follow"
+* **Rotación** a `logs/<fn>.log` (max 2MB, 5 backups)
+* Límites de tiempo/inactividad para evitar colgarse
+* Timestamps y formateo
 
-  * modo “una pasada” o “follow”,
-  * **rotación** a `logs/<fn>.log` (`--max-bytes` y `--backup-count`),
-  * límites de tiempo/inactividad para evitar quedarse colgado.
+### Security Scanning
 
----
-
-## Extender el proyecto
-
-1. **Agregar una Lambda**: crea `lambdas/<nueva>/` con `src/`, `requirements.txt`, `build.sh`.
-2. **Infra**: añade `infra/terraform/lambda_<nueva>.tf` apuntando a `lambdas/<nueva>/dist.zip`.
-3. **Pruebas**: crea `tests/unit/...` y `tests/integration/...`.
-4. **Servicios adicionales**: añade `aws_s3_bucket`, `aws_cloudwatch_*`, `aws_sqs_queue`, etc., y cubre con tests.
-5. **CI**: monta un pipeline que haga `package → deploy (LocalStack) → tests → smoke → artifacts`.
+* **Bandit**: Análisis estático de código Python (busca vulnerabilidades comunes)
+* **pip-audit**: Escanea dependencias contra base de datos de CVEs
+* `scripts/security_console_report.py`: Consolida ambos reportes en JSON
 
 ---
 
-## **Notas importantes sobre logs “Smoke”**
+## Security scanning
 
-> **Smoke lee los últimos N segundos** (configurable con `SMOKE_SINCE`/`LOG_WINDOW`).
-> Si ejecutas `make all` varias veces en menos de **N** segundos, **verás en consola y en los archivos líneas repetidas** que pertenecen a la corrida anterior. **No** son dobles invocaciones; es el mismo evento que sigue dentro de la ventana temporal consultada.
+### Ejecutar Scan
 
-Sugerencias:
+```bash
+make security-scan
+```
 
-* Mantén N pequeño (5–10 s) y deja un `sleep 2–3 s` tras invocar para dar tiempo a que CloudWatch “publique” el log.
-* Si quieres traer **solo** la invocación “de esta ronda”, cambia el tail para filtrar desde un timestamp capturado justo antes/tras invocar (requeriría extender `tail_logs.py` para aceptar un `--start-ts` o un patrón de correlación).
+### Reportes Generados
+
+```
+reports/
+├─ bandit_report.json          # Reporte detallado de Bandit
+├─ pip_audit_report.txt        # Output de pip-audit
+└─ security_console_report.json # Consolidado con estadísticas
+```
+
+### Ver Resumen
+
+```bash
+cat reports/security_console_report.json | jq .summary
+```
+
+**Output ejemplo:**
+
+```json
+{
+  "total_files": 829,
+  "bandit_issues": {
+    "HIGH": 9,
+    "MEDIUM": 10,
+    "LOW": 161,
+    "TOTAL": 180
+  },
+  "dependency_vulnerabilities": 0
+}
+```
+
+### Integración CI/CD
+
+```yaml
+# .github/workflows/ci.yml
+- name: Security Scan
+  run: |
+    make security-scan
+    # Fallar si hay issues HIGH
+    if [ $(jq '.summary.bandit_issues.HIGH' reports/security_console_report.json) -gt 0 ]; then
+      exit 1
+    fi
+```
 
 ---
 
 ## Solución de problemas
 
-**No veo archivos en `logs/`**
+### No veo archivos en `logs/`
 
-* Asegúrate de que el target que corre logs **depende** de `ensure-dirs` (el Makefile lo hace).
-* Verifica permisos de escritura en la carpeta del repo.
-* Revisa consola: `tail_logs.py` imprime el contenido y **también** lo guarda en `logs/<fn>.log` (con rotación). Busca `logs/hello_world.log`.
+* Verifica que el target depende de `ensure-dirs` (el Makefile lo hace)
+* Comprueba permisos de escritura
+* Revisa consola: `tail_logs.py` imprime **y** guarda en archivo
 
-**“Parece que invoca dos veces”**
+### "Parece que invoca dos veces"
 
-* Revisa la [nota de Smoke](#notas-importantes-sobre-logs-smoke): son líneas de la corrida anterior aún dentro de la ventana de tiempo.
+* Son logs de corridas anteriores dentro de la ventana temporal
+* Usa `SMOKE_SINCE=3` para ventanas más cortas
+* Ver [Parámetros útiles](#parámetros-útiles)
 
-**Terraform siempre “modifica”**
+### Terraform siempre "modifica"
 
-* Es normal si el `dist.zip` cambia (hash nuevo). Para evitar “falsos diffs”, procura builds deterministas (timestamps fijos, orden de archivos) o solo empaquetar cuando cambie el código (locks/flags).
+* Normal si `dist.zip` cambia (hash nuevo)
+* Para builds deterministas: timestamps fijos, orden de archivos
+* Alternativa: solo empaquetar cuando cambie código
 
-**`terraform` no instalado**
+### `terraform` no instalado
 
-* El Makefile usa automáticamente la imagen oficial (Docker). Asegura `docker` corriendo y `--network host` disponible.
+* El Makefile usa automáticamente imagen Docker oficial
+* Asegura `docker` corriendo y `--network host` disponible
 
-**Tests de integración sin cobertura**
+### Tests de integración sin cobertura
 
-* Es lo esperado: la Lambda corre dentro de LocalStack (otro proceso). Por eso `--no-cov`.
+* Es esperado: la lambda corre en LocalStack (otro proceso)
+* Por eso `pytest --no-cov` en integración
+
+### Mock no funciona
+
+```bash
+# Verificar configuración
+cat lambdas/mi_lambda/mock_config.json
+
+# Regenerar configs
+rm lambdas/*/mock_config.json
+make generate-mock-configs
+```
+
+### Dependencias locales faltantes en tests de mocks
+
+* Los tests de mocks locales requieren deps instaladas en tu venv
+* Si faltan, el test lo marca como warning (no crítico)
+* Instala deps: `pip install -r lambdas/mi_lambda/requirements.txt`
 
 ---
 
 ## Buenas prácticas y siguientes pasos
 
-* **Pirámide de pruebas**: mayoría unitarias; integración solo para contratos con AWS; e2e para flujos críticos.
-* **Mocks “behind the scenes”**: para la mayoría de tests, simula AWS (moto/fixtures) y deja LocalStack para pocas integraciones.
-* **CI**: pipeline por PR con `make all RUN=both`, subiendo `logs/*.log` y reportes como artifacts.
-* **Observabilidad**: estandariza logs JSON + `correlation_id` para trazabilidad; filtra por patrón en tail cuando lo añadamos.
-* **Reutilización**: convierte el repo en “harness” invocable desde otros repos, apuntando a su `lambdas/`.
+### Pirámide de Pruebas
+
+* **Mayoría unitarias**: rápidas, sin AWS
+* **Integración**: solo para contratos con AWS
+* **E2E**: flujos críticos completos
+
+### Mocks
+
+* Deja que el sistema genere configs automáticamente
+* Personaliza solo cuando sea necesario
+* Usa `enabled: false` para deshabilitar
+
+### CI/CD
+
+* Pipeline por PR: `make all RUN=both`
+* Sube `logs/*.log` y `reports/` como artifacts
+* Falla build si security scan encuentra HIGH issues
+* Ejecuta en contenedor Docker para reproducibilidad
+
+### Observabilidad
+
+* Estandariza logs JSON + `correlation_id`
+* Filtra por patrón en tail (extender `tail_logs.py`)
+* Agrega métricas custom (CloudWatch Metrics)
+
+### Reutilización
+
+* Convierte el repo en "harness" invocable desde otros repos
+* Usa como template para nuevos proyectos Lambda
 
 ---
 
 ## FAQ
 
-**¿Usa AWS real?**
-No. Todo corre en **LocalStack**.
+**¿Usa AWS real?**  
+No. Todo corre en **LocalStack** (emulador local). No necesitas credenciales AWS.
 
-**¿Puedo añadir S3/SQS/SNS/API Gateway?**
-Sí. Añade recursos Terraform y tests. LocalStack los soporta.
+**¿Puedo añadir S3/SQS/SNS/API Gateway?**  
+Sí. Añade recursos Terraform. LocalStack los soporta.
 
-**¿Puedo usar Node.js/Go/Java?**
-Sí. Replica el patrón de `build.sh` y ajusta `runtime/handler`.
+**¿Puedo usar Node.js/Go/Java?**  
+Sí. Replica el patrón de packaging y ajusta `runtime/handler` en Terraform.
 
-**¿Cómo ajusto la “ventana” de logs?**
+**¿Cómo ajusto la "ventana" de logs?**  
 Pasa `SMOKE_SINCE` o `LOG_WINDOW`:
-`make smoke SMOKE_SINCE=3` — **menos arrastre** de corridas previas.
+```bash
+make smoke SMOKE_SINCE=3  # Menos arrastre
+make logs-hello_world LOG_WINDOW=30
+```
+
+**¿Los mocks son necesarios?**  
+No. Si `enabled: false` en `mock_config.json`, se ejecutan tests sin mocks.
+
+**¿Cuánto tarda el pipeline completo?**  
+Aproximadamente 2-5 minutos dependiendo del número de lambdas.
+
+**¿Funciona en CI/CD?**  
+Sí. Usa `make all` en GitHub Actions, GitLab CI, Jenkins, etc.
+
+**¿Cómo debuggeo una lambda?**  
+```bash
+make logs-hello_world                # Ver logs
+make invoke FN=hello_world PAYLOAD='{"debug":true}'  # Invocar con payload
+make logs-follow-hello_world         # Seguir logs en tiempo real
+```
 
 ---

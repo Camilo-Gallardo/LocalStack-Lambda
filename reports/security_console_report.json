@@ -15,14 +15,6 @@
         "error": null,
         "vulnerabilities": []
       },
-      "hello_world": {
-        "error": null,
-        "vulnerabilities": []
-      },
-      "sendJSONToOpenSearch": {
-        "error": null,
-        "vulnerabilities": []
-      },
       "greeter": {
         "error": null,
         "vulnerabilities": []
@@ -31,7 +23,15 @@
         "error": null,
         "vulnerabilities": []
       },
+      "sendJSONToOpenSearch": {
+        "error": null,
+        "vulnerabilities": []
+      },
       "sendVideoToS3": {
+        "error": null,
+        "vulnerabilities": []
+      },
+      "hello_world": {
         "error": null,
         "vulnerabilities": []
       }
