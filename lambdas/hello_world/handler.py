@@ -1,11 +1,7 @@
-import os
-
+import json
 
 def handler(event, context):
-    name = (event or {}).get("name", "world")
-    stage = os.getenv("STAGE", "local")
     return {
-   	"ok": True,
-    	"message": f"Hello, {name}!",
-    	"stage": stage,
+        'statusCode': 200,
+        'body': json.dumps({'message': 'Hello World'})
     }

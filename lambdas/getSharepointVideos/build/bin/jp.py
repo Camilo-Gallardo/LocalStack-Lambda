@@ -1,4 +1,4 @@
-#!/home/adminblend/.pyenv/versions/3.12.7/bin/python
+#!/home/fabio/retos/LocalStack-Lambda/.venv/bin/python3
 
 import sys
 import json

@@ -11,14 +11,6 @@
     "total": 0,
     "by_severity": {},
     "by_lambda": {
-      "greeter": {
-        "error": null,
-        "vulnerabilities": []
-      },
-      "sendVideoToS3": {
-        "error": null,
-        "vulnerabilities": []
-      },
       "transcriptToJSON": {
         "error": null,
         "vulnerabilities": []
@@ -27,11 +19,19 @@
         "error": null,
         "vulnerabilities": []
       },
+      "sendJSONToOpenSearch": {
+        "error": null,
+        "vulnerabilities": []
+      },
+      "greeter": {
+        "error": null,
+        "vulnerabilities": []
+      },
       "getSharepointVideos": {
         "error": null,
         "vulnerabilities": []
       },
-      "sendJSONToOpenSearch": {
+      "sendVideoToS3": {
         "error": null,
         "vulnerabilities": []
       }

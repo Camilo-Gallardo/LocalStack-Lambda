@@ -1,0 +1,180 @@
+[
+  {
+    "function": "transcriptToJSON",
+    "all_passed": false,
+    "passed_tests": 1,
+    "total_tests": 4,
+    "details": [
+      {
+        "name": "Deployment",
+        "passed": true,
+        "details": "Lambda desplegada correctamente"
+      },
+      {
+        "name": "Invocaci\u00f3n",
+        "passed": false,
+        "details": "Error en ejecuci\u00f3n: Unable to import module 'handler': No module named 'prompt_to_json'"
+      },
+      {
+        "name": "Formato",
+        "passed": false,
+        "details": "Formato inv\u00e1lido"
+      },
+      {
+        "name": "Logs",
+        "passed": false,
+        "details": "No se encontraron logs"
+      }
+    ]
+  },
+  {
+    "function": "hello_world",
+    "all_passed": true,
+    "passed_tests": 4,
+    "total_tests": 4,
+    "details": [
+      {
+        "name": "Deployment",
+        "passed": true,
+        "details": "Lambda desplegada correctamente"
+      },
+      {
+        "name": "Invocaci\u00f3n",
+        "passed": true,
+        "details": "Lambda invocable, statusCode: 200"
+      },
+      {
+        "name": "Formato",
+        "passed": true,
+        "details": "Formato v\u00e1lido (statusCode + body)"
+      },
+      {
+        "name": "Logs",
+        "passed": true,
+        "details": "Logs generados correctamente"
+      }
+    ]
+  },
+  {
+    "function": "sendJSONToOpenSearch",
+    "all_passed": false,
+    "passed_tests": 1,
+    "total_tests": 4,
+    "details": [
+      {
+        "name": "Deployment",
+        "passed": true,
+        "details": "Lambda desplegada correctamente"
+      },
+      {
+        "name": "Invocaci\u00f3n",
+        "passed": false,
+        "details": "Error en ejecuci\u00f3n: Unable to import module 'handler': No module named 'unidecode'"
+      },
+      {
+        "name": "Formato",
+        "passed": false,
+        "details": "Formato inv\u00e1lido"
+      },
+      {
+        "name": "Logs",
+        "passed": false,
+        "details": "No se encontraron logs"
+      }
+    ]
+  },
+  {
+    "function": "greeter",
+    "all_passed": true,
+    "passed_tests": 4,
+    "total_tests": 4,
+    "details": [
+      {
+        "name": "Deployment",
+        "passed": true,
+        "details": "Lambda desplegada correctamente"
+      },
+      {
+        "name": "Invocaci\u00f3n",
+        "passed": true,
+        "details": "Lambda invocable, statusCode: 201"
+      },
+      {
+        "name": "Formato",
+        "passed": true,
+        "details": "Formato v\u00e1lido (statusCode + body)"
+      },
+      {
+        "name": "Logs",
+        "passed": true,
+        "details": "Logs generados correctamente"
+      }
+    ]
+  },
+  {
+    "function": "getSharepointVideos",
+    "all_passed": true,
+    "passed_tests": 5,
+    "total_tests": 5,
+    "details": [
+      {
+        "name": "Deployment",
+        "passed": true,
+        "details": "Lambda desplegada correctamente"
+      },
+      {
+        "name": "Invocaci\u00f3n",
+        "passed": true,
+        "details": "Lambda ejecutable (statusCode: 500 - esperado sin datos reales)"
+      },
+      {
+        "name": "Formato",
+        "passed": true,
+        "details": "Formato v\u00e1lido (statusCode + body)"
+      },
+      {
+        "name": "Logs",
+        "passed": true,
+        "details": "Logs generados correctamente"
+      },
+      {
+        "name": "S3 Access",
+        "passed": true,
+        "details": "Bucket S3 accesible"
+      }
+    ]
+  },
+  {
+    "function": "sendVideoToS3",
+    "all_passed": true,
+    "passed_tests": 5,
+    "total_tests": 5,
+    "details": [
+      {
+        "name": "Deployment",
+        "passed": true,
+        "details": "Lambda desplegada correctamente"
+      },
+      {
+        "name": "Invocaci\u00f3n",
+        "passed": true,
+        "details": "Lambda invocable, statusCode: 400"
+      },
+      {
+        "name": "Formato",
+        "passed": true,
+        "details": "Formato v\u00e1lido (statusCode + body)"
+      },
+      {
+        "name": "Logs",
+        "passed": true,
+        "details": "Logs generados correctamente"
+      },
+      {
+        "name": "S3 Access",
+        "passed": true,
+        "details": "Bucket S3 accesible"
+      }
+    ]
+  }
+]

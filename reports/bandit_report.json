@@ -1,6 +1,6 @@
 {
   "errors": [],
-  "generated_at": "2025-10-23T21:14:25Z",
+  "generated_at": "2025-10-24T04:54:40Z",
   "metrics": {
     "_totals": {
       "CONFIDENCE.HIGH": 462,
@@ -11,7 +11,7 @@
       "SEVERITY.LOW": 490,
       "SEVERITY.MEDIUM": 28,
       "SEVERITY.UNDEFINED": 0,
-      "loc": 762706,
+      "loc": 762694,
       "nosec": 0,
       "skipped_tests": 0
     },
@@ -11178,11 +11178,11 @@
       "SEVERITY.LOW": 0,
       "SEVERITY.MEDIUM": 0,
       "SEVERITY.UNDEFINED": 0,
-      "loc": 9,
+      "loc": 6,
       "nosec": 0,
       "skipped_tests": 0
     },
-    "lambdas/greeter/handle.py": {
+    "lambdas/greeter/handler.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -11191,7 +11191,7 @@
       "SEVERITY.LOW": 0,
       "SEVERITY.MEDIUM": 0,
       "SEVERITY.UNDEFINED": 0,
-      "loc": 9,
+      "loc": 6,
       "nosec": 0,
       "skipped_tests": 0
     },
@@ -11204,7 +11204,7 @@
       "SEVERITY.LOW": 0,
       "SEVERITY.MEDIUM": 0,
       "SEVERITY.UNDEFINED": 0,
-      "loc": 9,
+      "loc": 6,
       "nosec": 0,
       "skipped_tests": 0
     },
@@ -11217,7 +11217,7 @@
       "SEVERITY.LOW": 0,
       "SEVERITY.MEDIUM": 0,
       "SEVERITY.UNDEFINED": 0,
-      "loc": 9,
+      "loc": 6,
       "nosec": 0,
       "skipped_tests": 0
     },

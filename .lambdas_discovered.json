@@ -1,0 +1,38 @@
+[
+  {
+    "name": "transcriptToJSON",
+    "path": "lambdas/transcriptToJSON",
+    "handler_file": "lambdas/transcriptToJSON/handler.py",
+    "has_requirements": true
+  },
+  {
+    "name": "hello_world",
+    "path": "lambdas/hello_world",
+    "handler_file": "lambdas/hello_world/handler.py",
+    "has_requirements": true
+  },
+  {
+    "name": "sendJSONToOpenSearch",
+    "path": "lambdas/sendJSONToOpenSearch",
+    "handler_file": "lambdas/sendJSONToOpenSearch/handler.py",
+    "has_requirements": true
+  },
+  {
+    "name": "greeter",
+    "path": "lambdas/greeter",
+    "handler_file": "lambdas/greeter/handler.py",
+    "has_requirements": true
+  },
+  {
+    "name": "getSharepointVideos",
+    "path": "lambdas/getSharepointVideos",
+    "handler_file": "lambdas/getSharepointVideos/handler.py",
+    "has_requirements": true
+  },
+  {
+    "name": "sendVideoToS3",
+    "path": "lambdas/sendVideoToS3",
+    "handler_file": "lambdas/sendVideoToS3/handler.py",
+    "has_requirements": true
+  }
+]
