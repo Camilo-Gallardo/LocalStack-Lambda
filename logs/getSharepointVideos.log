@@ -1,0 +1,35 @@
+2025-10-23 23:53:32 [1761281603360] START RequestId: ad7770c2-4616-4de3-8819-322e18a777ee Version: $LATEST
+2025-10-23 23:53:32 [1761281603360] Event: {"test": true}
+2025-10-23 23:53:32 [1761281603360] Error: 401 Client Error: Unauthorized for url: https://login.microsoftonline.com/None/oauth2/v2.0/token
+2025-10-23 23:53:32 [1761281603360] END RequestId: ad7770c2-4616-4de3-8819-322e18a777ee
+2025-10-23 23:53:32 [1761281603360] REPORT RequestId: ad7770c2-4616-4de3-8819-322e18a777ee	Duration: 733.71 ms	Billed Duration: 734 ms	Memory Size: 128 MB	Max Memory Used: 128 MB
+2025-10-23 23:53:32 [1761281604181] START RequestId: 05bb8679-68a1-416f-8376-4ece35656afb Version: $LATEST
+2025-10-23 23:53:32 [1761281604181] Event: {"test": true}
+2025-10-23 23:53:32 [1761281604181] Error: 401 Client Error: Unauthorized for url: https://login.microsoftonline.com/None/oauth2/v2.0/token
+2025-10-23 23:53:32 [1761281604181] END RequestId: 05bb8679-68a1-416f-8376-4ece35656afb
+2025-10-23 23:53:32 [1761281604181] REPORT RequestId: 05bb8679-68a1-416f-8376-4ece35656afb	Duration: 787.03 ms	Billed Duration: 788 ms	Memory Size: 128 MB	Max Memory Used: 128 MB
+2025-10-23 23:53:32 [1761281604898] START RequestId: 23ae7f52-815f-49bd-a71f-3b0f4a9ac7b4 Version: $LATEST
+2025-10-23 23:53:32 [1761281604898] Event: {"test": true}
+2025-10-23 23:53:32 [1761281604898] Error: 401 Client Error: Unauthorized for url: https://login.microsoftonline.com/None/oauth2/v2.0/token
+2025-10-23 23:53:32 [1761281604898] END RequestId: 23ae7f52-815f-49bd-a71f-3b0f4a9ac7b4
+2025-10-23 23:53:32 [1761281604898] REPORT RequestId: 23ae7f52-815f-49bd-a71f-3b0f4a9ac7b4	Duration: 689.83 ms	Billed Duration: 690 ms	Memory Size: 128 MB	Max Memory Used: 128 MB
+2025-10-23 23:53:35 [1761281603360] START RequestId: ad7770c2-4616-4de3-8819-322e18a777ee Version: $LATEST
+2025-10-23 23:53:35 [1761281603360] Event: {"test": true}
+2025-10-23 23:53:35 [1761281603360] Error: 401 Client Error: Unauthorized for url: https://login.microsoftonline.com/None/oauth2/v2.0/token
+2025-10-23 23:53:35 [1761281603360] END RequestId: ad7770c2-4616-4de3-8819-322e18a777ee
+2025-10-23 23:53:35 [1761281603360] REPORT RequestId: ad7770c2-4616-4de3-8819-322e18a777ee	Duration: 733.71 ms	Billed Duration: 734 ms	Memory Size: 128 MB	Max Memory Used: 128 MB
+2025-10-23 23:53:35 [1761281604181] START RequestId: 05bb8679-68a1-416f-8376-4ece35656afb Version: $LATEST
+2025-10-23 23:53:35 [1761281604181] Event: {"test": true}
+2025-10-23 23:53:35 [1761281604181] Error: 401 Client Error: Unauthorized for url: https://login.microsoftonline.com/None/oauth2/v2.0/token
+2025-10-23 23:53:35 [1761281604181] END RequestId: 05bb8679-68a1-416f-8376-4ece35656afb
+2025-10-23 23:53:35 [1761281604181] REPORT RequestId: 05bb8679-68a1-416f-8376-4ece35656afb	Duration: 787.03 ms	Billed Duration: 788 ms	Memory Size: 128 MB	Max Memory Used: 128 MB
+2025-10-23 23:53:35 [1761281604898] START RequestId: 23ae7f52-815f-49bd-a71f-3b0f4a9ac7b4 Version: $LATEST
+2025-10-23 23:53:35 [1761281604898] Event: {"test": true}
+2025-10-23 23:53:35 [1761281604898] Error: 401 Client Error: Unauthorized for url: https://login.microsoftonline.com/None/oauth2/v2.0/token
+2025-10-23 23:53:35 [1761281604898] END RequestId: 23ae7f52-815f-49bd-a71f-3b0f4a9ac7b4
+2025-10-23 23:53:35 [1761281604898] REPORT RequestId: 23ae7f52-815f-49bd-a71f-3b0f4a9ac7b4	Duration: 689.83 ms	Billed Duration: 690 ms	Memory Size: 128 MB	Max Memory Used: 128 MB
+2025-10-23 23:53:35 [1761281615214] START RequestId: e13dd3b3-3235-440f-9532-a1718bb05462 Version: $LATEST
+2025-10-23 23:53:35 [1761281615214] Event: {"name": "Smoke"}
+2025-10-23 23:53:35 [1761281615214] Error: 401 Client Error: Unauthorized for url: https://login.microsoftonline.com/None/oauth2/v2.0/token
+2025-10-23 23:53:35 [1761281615214] END RequestId: e13dd3b3-3235-440f-9532-a1718bb05462
+2025-10-23 23:53:35 [1761281615214] REPORT RequestId: e13dd3b3-3235-440f-9532-a1718bb05462	Duration: 773.29 ms	Billed Duration: 774 ms	Memory Size: 128 MB	Max Memory Used: 128 MB

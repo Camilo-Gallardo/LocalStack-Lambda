@@ -1,0 +1,32 @@
+2025-10-23 23:53:33 [1761281609082] [INFO]	2025-10-24T04:53:28.998Z		Found credentials in environment variables.
+2025-10-23 23:53:33 [1761281609082] [INFO]	2025-10-24T04:53:29.067Z		Found endpoint for s3 via: environment_global.
+2025-10-23 23:53:33 [1761281609082] START RequestId: 1c9d695a-b8e3-4826-b06e-73287db6efac Version: $LATEST
+2025-10-23 23:53:33 [1761281609082] [INFO]	2025-10-24T04:53:29.076Z	1c9d695a-b8e3-4826-b06e-73287db6efac	Received event: {"test": true}
+2025-10-23 23:53:33 [1761281609082] END RequestId: 1c9d695a-b8e3-4826-b06e-73287db6efac
+2025-10-23 23:53:33 [1761281609082] REPORT RequestId: 1c9d695a-b8e3-4826-b06e-73287db6efac	Duration: 2.01 ms	Billed Duration: 3 ms	Memory Size: 128 MB	Max Memory Used: 128 MB
+2025-10-23 23:53:33 [1761281609123] START RequestId: 00c4d6ab-603f-4ddf-85b3-6208ba5eddaf Version: $LATEST
+2025-10-23 23:53:33 [1761281609123] [INFO]	2025-10-24T04:53:29.111Z	00c4d6ab-603f-4ddf-85b3-6208ba5eddaf	Received event: {"test": true}
+2025-10-23 23:53:33 [1761281609123] END RequestId: 00c4d6ab-603f-4ddf-85b3-6208ba5eddaf
+2025-10-23 23:53:33 [1761281609123] REPORT RequestId: 00c4d6ab-603f-4ddf-85b3-6208ba5eddaf	Duration: 1.52 ms	Billed Duration: 2 ms	Memory Size: 128 MB	Max Memory Used: 128 MB
+2025-10-23 23:53:33 [1761281609160] START RequestId: 1af221c0-3692-4f5c-b57f-1ede012342ed Version: $LATEST
+2025-10-23 23:53:33 [1761281609160] [INFO]	2025-10-24T04:53:29.145Z	1af221c0-3692-4f5c-b57f-1ede012342ed	Received event: {"test": true}
+2025-10-23 23:53:33 [1761281609160] END RequestId: 1af221c0-3692-4f5c-b57f-1ede012342ed
+2025-10-23 23:53:33 [1761281609160] REPORT RequestId: 1af221c0-3692-4f5c-b57f-1ede012342ed	Duration: 1.57 ms	Billed Duration: 2 ms	Memory Size: 128 MB	Max Memory Used: 128 MB
+2025-10-23 23:53:40 [1761281609082] [INFO]	2025-10-24T04:53:28.998Z		Found credentials in environment variables.
+2025-10-23 23:53:40 [1761281609082] [INFO]	2025-10-24T04:53:29.067Z		Found endpoint for s3 via: environment_global.
+2025-10-23 23:53:40 [1761281609082] START RequestId: 1c9d695a-b8e3-4826-b06e-73287db6efac Version: $LATEST
+2025-10-23 23:53:40 [1761281609082] [INFO]	2025-10-24T04:53:29.076Z	1c9d695a-b8e3-4826-b06e-73287db6efac	Received event: {"test": true}
+2025-10-23 23:53:40 [1761281609082] END RequestId: 1c9d695a-b8e3-4826-b06e-73287db6efac
+2025-10-23 23:53:40 [1761281609082] REPORT RequestId: 1c9d695a-b8e3-4826-b06e-73287db6efac	Duration: 2.01 ms	Billed Duration: 3 ms	Memory Size: 128 MB	Max Memory Used: 128 MB
+2025-10-23 23:53:40 [1761281609123] START RequestId: 00c4d6ab-603f-4ddf-85b3-6208ba5eddaf Version: $LATEST
+2025-10-23 23:53:40 [1761281609123] [INFO]	2025-10-24T04:53:29.111Z	00c4d6ab-603f-4ddf-85b3-6208ba5eddaf	Received event: {"test": true}
+2025-10-23 23:53:40 [1761281609123] END RequestId: 00c4d6ab-603f-4ddf-85b3-6208ba5eddaf
+2025-10-23 23:53:40 [1761281609123] REPORT RequestId: 00c4d6ab-603f-4ddf-85b3-6208ba5eddaf	Duration: 1.52 ms	Billed Duration: 2 ms	Memory Size: 128 MB	Max Memory Used: 128 MB
+2025-10-23 23:53:40 [1761281609160] START RequestId: 1af221c0-3692-4f5c-b57f-1ede012342ed Version: $LATEST
+2025-10-23 23:53:40 [1761281609160] [INFO]	2025-10-24T04:53:29.145Z	1af221c0-3692-4f5c-b57f-1ede012342ed	Received event: {"test": true}
+2025-10-23 23:53:40 [1761281609160] END RequestId: 1af221c0-3692-4f5c-b57f-1ede012342ed
+2025-10-23 23:53:40 [1761281609160] REPORT RequestId: 1af221c0-3692-4f5c-b57f-1ede012342ed	Duration: 1.57 ms	Billed Duration: 2 ms	Memory Size: 128 MB	Max Memory Used: 128 MB
+2025-10-23 23:53:40 [1761281620160] START RequestId: be261256-a85a-4938-a708-1cae636577c6 Version: $LATEST
+2025-10-23 23:53:40 [1761281620160] [INFO]	2025-10-24T04:53:40.154Z	be261256-a85a-4938-a708-1cae636577c6	Received event: {"name": "Smoke"}
+2025-10-23 23:53:40 [1761281620160] END RequestId: be261256-a85a-4938-a708-1cae636577c6
+2025-10-23 23:53:40 [1761281620160] REPORT RequestId: be261256-a85a-4938-a708-1cae636577c6	Duration: 1.21 ms	Billed Duration: 2 ms	Memory Size: 128 MB	Max Memory Used: 128 MB
