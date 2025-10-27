@@ -36,11 +36,21 @@ client = boto3.client(
 def test_invoke(fn):
     for _ in range(10):
         try:
-            client.get_function(FunctionName=fn); break
+            client.get_function(FunctionName=fn)
+            break
         except Exception:
             time.sleep(1)
-    resp = client.invoke(FunctionName=fn, Payload=json.dumps({"name":"Equipo QA"}).encode())
+
+    resp = client.invoke(FunctionName=fn, Payload=json.dumps({"name": "Equipo QA"}).encode())
     assert resp["StatusCode"] == 200
-    body = json.loads(resp["Payload"].read())
-    assert body.get("ok") is True
-    assert isinstance(body.get("message",""), str)
+
+    payload = json.loads(resp["Payload"].read())
+
+    # 🔍 Adaptar si es API Gateway-style
+    if "body" in payload and isinstance(payload["body"], str):
+        inner = json.loads(payload["body"])
+        assert "missions" in inner
+    else:
+        # para lambdas tipo greeter o hello_world
+        assert payload.get("ok") is True
+        assert isinstance(payload.get("message", ""), str)
