@@ -302,6 +302,7 @@ all: ## Pipeline completo (up → package → deploy → tests → security)
 	@echo "║  🚀 PIPELINE                                                 ║"
 	@echo "╚══════════════════════════════════════════════════════════════╝"
 	@echo ""
+	@$(MAKE) --no-print-directory bootstrap
 	@$(MAKE) --no-print-directory up
 	@$(MAKE) --no-print-directory package-all
 	@$(MAKE) --no-print-directory deploy
