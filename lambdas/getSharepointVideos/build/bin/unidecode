@@ -1,4 +1,4 @@
-#!/home/adminblend/.pyenv/versions/3.12.7/bin/python
+#!/home/adminblend/Documentos/Chamba/LocalStack-Lambda/.venv/bin/python
 # -*- coding: utf-8 -*-
 import re
 import sys

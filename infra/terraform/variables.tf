@@ -11,7 +11,7 @@ variable "function_env" {
 
 variable "memory" {
   type    = number
-  default = 128
+  default = 2048
 }
 
 variable "timeout" {

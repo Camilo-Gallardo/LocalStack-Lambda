@@ -1,0 +1,22 @@
+
+Found 1 known vulnerability in 1 package
+Name    Version ID                  Fix Versions
+------- ------- ------------------- ------------
+urllib3 1.26.20 GHSA-pq67-6m6q-mj2v 2.5.0
+No known vulnerabilities found
+No known vulnerabilities found
+Found 2 known vulnerabilities in 1 package
+Name    Version ID                  Fix Versions
+------- ------- ------------------- -------------
+urllib3 2.0.7   GHSA-34jh-p97f-mpxf 1.26.19,2.2.2
+urllib3 2.0.7   GHSA-pq67-6m6q-mj2v 2.5.0
+Found 2 known vulnerabilities in 1 package
+Name    Version ID                  Fix Versions
+------- ------- ------------------- -------------
+urllib3 2.0.7   GHSA-34jh-p97f-mpxf 1.26.19,2.2.2
+urllib3 2.0.7   GHSA-pq67-6m6q-mj2v 2.5.0
+Found 2 known vulnerabilities in 1 package
+Name    Version ID                  Fix Versions
+------- ------- ------------------- -------------
+urllib3 2.0.7   GHSA-34jh-p97f-mpxf 1.26.19,2.2.2
+urllib3 2.0.7   GHSA-pq67-6m6q-mj2v 2.5.0

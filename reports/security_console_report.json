@@ -11,19 +11,11 @@
     "total": 0,
     "by_severity": {},
     "by_lambda": {
-      "greeter": {
-        "error": null,
-        "vulnerabilities": []
-      },
-      "sendVideoToS3": {
-        "error": null,
-        "vulnerabilities": []
-      },
       "transcriptToJSON": {
         "error": null,
         "vulnerabilities": []
       },
-      "hello_world": {
+      "greeter": {
         "error": null,
         "vulnerabilities": []
       },
@@ -32,6 +24,14 @@
         "vulnerabilities": []
       },
       "sendJSONToOpenSearch": {
+        "error": null,
+        "vulnerabilities": []
+      },
+      "sendVideoToS3": {
+        "error": null,
+        "vulnerabilities": []
+      },
+      "hello_world": {
         "error": null,
         "vulnerabilities": []
       }
