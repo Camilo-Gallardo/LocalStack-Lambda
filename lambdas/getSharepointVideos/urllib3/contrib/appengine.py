@@ -38,7 +38,9 @@ urllib3 on Google App Engine:
 :class:`PoolManager` without any configuration or special environment variables.
 """
 
-from __future__ import absolute_import
+from __future__ import (
+    absolute_import,
+)
 
 import io
 import logging
@@ -52,15 +54,29 @@ from ..exceptions import (
     SSLError,
     TimeoutError,
 )
-from ..packages.six.moves.urllib.parse import urljoin
-from ..request import RequestMethods
-from ..response import HTTPResponse
-from ..util.retry import Retry
-from ..util.timeout import Timeout
-from . import _appengine_environ
+from ..packages.six.moves.urllib.parse import (
+    urljoin,
+)
+from ..request import (
+    RequestMethods,
+)
+from ..response import (
+    HTTPResponse,
+)
+from ..util.retry import (
+    Retry,
+)
+from ..util.timeout import (
+    Timeout,
+)
+from . import (
+    _appengine_environ,
+)
 
 try:
-    from google.appengine.api import urlfetch
+    from google.appengine.api import (
+        urlfetch,
+    )
 except ImportError:
     urlfetch = None
 
@@ -115,16 +131,26 @@ class AppEngineManager(RequestMethods):
             AppEnginePlatformWarning,
         )
 
-        RequestMethods.__init__(self, headers)
+        RequestMethods.__init__(
+            self,
+            headers,
+        )
         self.validate_certificate = validate_certificate
         self.urlfetch_retries = urlfetch_retries
 
         self.retries = retries or Retry.DEFAULT
 
-    def __enter__(self):
+    def __enter__(
+        self,
+    ):
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(
+        self,
+        exc_type,
+        exc_val,
+        exc_tb,
+    ):
         # Return False to re-raise any potential exceptions
         return False
 
@@ -140,7 +166,10 @@ class AppEngineManager(RequestMethods):
         **response_kw
     ):
 
-        retries = self._get_retries(retries, redirect)
+        retries = self._get_retries(
+            retries,
+            redirect,
+        )
 
         try:
             follow_redirects = redirect and retries.redirect != 0 and retries.total
@@ -155,7 +184,10 @@ class AppEngineManager(RequestMethods):
                 validate_certificate=self.validate_certificate,
             )
         except urlfetch.DeadlineExceededError as e:
-            raise TimeoutError(self, e)
+            raise TimeoutError(
+                self,
+                e,
+            )
 
         except urlfetch.InvalidURLError as e:
             if "too large" in str(e):
@@ -168,7 +200,11 @@ class AppEngineManager(RequestMethods):
 
         except urlfetch.DownloadError as e:
             if "Too many redirects" in str(e):
-                raise MaxRetryError(self, url, reason=e)
+                raise MaxRetryError(
+                    self,
+                    url,
+                    reason=e,
+                )
             raise ProtocolError(e)
 
         except urlfetch.ResponseTooLargeError as e:
@@ -183,7 +219,8 @@ class AppEngineManager(RequestMethods):
 
         except urlfetch.InvalidMethodError as e:
             raise AppEnginePlatformError(
-                "URLFetch does not support method: %s" % method, e
+                "URLFetch does not support method: %s" % method,
+                e,
             )
 
         http_response = self._urlfetch_response_to_http_response(
@@ -195,23 +232,41 @@ class AppEngineManager(RequestMethods):
         if redirect_location:
             # Check for redirect response
             if self.urlfetch_retries and retries.raise_on_redirect:
-                raise MaxRetryError(self, url, "too many redirects")
+                raise MaxRetryError(
+                    self,
+                    url,
+                    "too many redirects",
+                )
             else:
                 if http_response.status == 303:
                     method = "GET"
 
                 try:
                     retries = retries.increment(
-                        method, url, response=http_response, _pool=self
+                        method,
+                        url,
+                        response=http_response,
+                        _pool=self,
                     )
                 except MaxRetryError:
                     if retries.raise_on_redirect:
-                        raise MaxRetryError(self, url, "too many redirects")
+                        raise MaxRetryError(
+                            self,
+                            url,
+                            "too many redirects",
+                        )
                     return http_response
 
                 retries.sleep_for_retry(http_response)
-                log.debug("Redirecting %s -> %s", url, redirect_location)
-                redirect_url = urljoin(url, redirect_location)
+                log.debug(
+                    "Redirecting %s -> %s",
+                    url,
+                    redirect_location,
+                )
+                redirect_url = urljoin(
+                    url,
+                    redirect_location,
+                )
                 return self.urlopen(
                     method,
                     redirect_url,
@@ -225,9 +280,21 @@ class AppEngineManager(RequestMethods):
 
         # Check if we should retry the HTTP response.
         has_retry_after = bool(http_response.headers.get("Retry-After"))
-        if retries.is_retry(method, http_response.status, has_retry_after):
-            retries = retries.increment(method, url, response=http_response, _pool=self)
-            log.debug("Retry: %s", url)
+        if retries.is_retry(
+            method,
+            http_response.status,
+            has_retry_after,
+        ):
+            retries = retries.increment(
+                method,
+                url,
+                response=http_response,
+                _pool=self,
+            )
+            log.debug(
+                "Retry: %s",
+                url,
+            )
             retries.sleep(http_response)
             return self.urlopen(
                 method,
@@ -278,10 +345,16 @@ class AppEngineManager(RequestMethods):
             **response_kw
         )
 
-    def _get_absolute_timeout(self, timeout):
+    def _get_absolute_timeout(
+        self,
+        timeout,
+    ):
         if timeout is Timeout.DEFAULT_TIMEOUT:
             return None  # Defer to URLFetch's default.
-        if isinstance(timeout, Timeout):
+        if isinstance(
+            timeout,
+            Timeout,
+        ):
             if timeout._read is not None or timeout._connect is not None:
                 warnings.warn(
                     "URLFetch does not support granular timeout settings, "
@@ -291,9 +364,20 @@ class AppEngineManager(RequestMethods):
             return timeout.total
         return timeout
 
-    def _get_retries(self, retries, redirect):
-        if not isinstance(retries, Retry):
-            retries = Retry.from_int(retries, redirect=redirect, default=self.retries)
+    def _get_retries(
+        self,
+        retries,
+        redirect,
+    ):
+        if not isinstance(
+            retries,
+            Retry,
+        ):
+            retries = Retry.from_int(
+                retries,
+                redirect=redirect,
+                default=self.retries,
+            )
 
         if retries.connect or retries.read or retries.redirect:
             warnings.warn(

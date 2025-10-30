@@ -12,10 +12,16 @@
 # language governing permissions and limitations under the License.
 """Binary Event Stream Decoding """
 
-from binascii import crc32
-from struct import unpack
+from binascii import (
+    crc32,
+)
+from struct import (
+    unpack,
+)
 
-from botocore.exceptions import EventStreamError
+from botocore.exceptions import (
+    EventStreamError,
+)
 
 # byte length of the prelude (total_length + header_length + prelude_crc)
 _PRELUDE_LENGTH = 12
@@ -32,7 +38,10 @@ class ParserError(Exception):
 class DuplicateHeader(ParserError):
     """Duplicate header found in the event."""
 
-    def __init__(self, header):
+    def __init__(
+        self,
+        header,
+    ):
         message = 'Duplicate header present: "%s"' % header
         super().__init__(message)
 
@@ -40,8 +49,11 @@ class DuplicateHeader(ParserError):
 class InvalidHeadersLength(ParserError):
     """Headers length is longer than the maximum."""
 
-    def __init__(self, length):
-        message = 'Header length of {} exceeded the maximum of {}'.format(
+    def __init__(
+        self,
+        length,
+    ):
+        message = "Header length of {} exceeded the maximum of {}".format(
             length,
             _MAX_HEADERS_LENGTH,
         )
@@ -51,8 +63,11 @@ class InvalidHeadersLength(ParserError):
 class InvalidPayloadLength(ParserError):
     """Payload length is longer than the maximum."""
 
-    def __init__(self, length):
-        message = 'Payload length of {} exceeded the maximum of {}'.format(
+    def __init__(
+        self,
+        length,
+    ):
+        message = "Payload length of {} exceeded the maximum of {}".format(
             length,
             _MAX_PAYLOAD_LENGTH,
         )
@@ -62,12 +77,14 @@ class InvalidPayloadLength(ParserError):
 class ChecksumMismatch(ParserError):
     """Calculated checksum did not match the expected checksum."""
 
-    def __init__(self, expected, calculated):
-        message = (
-            'Checksum mismatch: expected 0x{:08x}, calculated 0x{:08x}'.format(
-                expected,
-                calculated,
-            )
+    def __init__(
+        self,
+        expected,
+        calculated,
+    ):
+        message = "Checksum mismatch: expected 0x{:08x}, calculated 0x{:08x}".format(
+            expected,
+            calculated,
         )
         super().__init__(message)
 
@@ -79,8 +96,10 @@ class NoInitialResponseError(ParserError):
     the first event in the stream was not of the initial-response type.
     """
 
-    def __init__(self):
-        message = 'First event was not of the initial-response type'
+    def __init__(
+        self,
+    ):
+        message = "First event was not of the initial-response type"
         super().__init__(message)
 
 
@@ -92,14 +111,14 @@ class DecodeUtils:
     that value.
     """
 
-    UINT8_BYTE_FORMAT = '!B'
-    UINT16_BYTE_FORMAT = '!H'
-    UINT32_BYTE_FORMAT = '!I'
-    INT8_BYTE_FORMAT = '!b'
-    INT16_BYTE_FORMAT = '!h'
-    INT32_BYTE_FORMAT = '!i'
-    INT64_BYTE_FORMAT = '!q'
-    PRELUDE_BYTE_FORMAT = '!III'
+    UINT8_BYTE_FORMAT = "!B"
+    UINT16_BYTE_FORMAT = "!H"
+    UINT32_BYTE_FORMAT = "!I"
+    INT8_BYTE_FORMAT = "!b"
+    INT16_BYTE_FORMAT = "!h"
+    INT32_BYTE_FORMAT = "!i"
+    INT64_BYTE_FORMAT = "!q"
+    PRELUDE_BYTE_FORMAT = "!III"
 
     # uint byte size to unpack format
     UINT_BYTE_FORMAT = {
@@ -109,7 +128,9 @@ class DecodeUtils:
     }
 
     @staticmethod
-    def unpack_true(data):
+    def unpack_true(
+        data,
+    ):
         """This method consumes none of the provided bytes and returns True.
 
         :type data: bytes
@@ -119,10 +140,15 @@ class DecodeUtils:
         :rtype: (bool, int)
         :returns: The tuple (True, 0)
         """
-        return True, 0
+        return (
+            True,
+            0,
+        )
 
     @staticmethod
-    def unpack_false(data):
+    def unpack_false(
+        data,
+    ):
         """This method consumes none of the provided bytes and returns False.
 
         :type data: bytes
@@ -132,10 +158,15 @@ class DecodeUtils:
         :rtype: (bool, int)
         :returns: The tuple (False, 0)
         """
-        return False, 0
+        return (
+            False,
+            0,
+        )
 
     @staticmethod
-    def unpack_uint8(data):
+    def unpack_uint8(
+        data,
+    ):
         """Parse an unsigned 8-bit integer from the bytes.
 
         :type data: bytes
@@ -144,11 +175,19 @@ class DecodeUtils:
         :rtype: (int, int)
         :returns: A tuple containing the (parsed integer value, bytes consumed)
         """
-        value = unpack(DecodeUtils.UINT8_BYTE_FORMAT, data[:1])[0]
-        return value, 1
+        value = unpack(
+            DecodeUtils.UINT8_BYTE_FORMAT,
+            data[:1],
+        )[0]
+        return (
+            value,
+            1,
+        )
 
     @staticmethod
-    def unpack_uint32(data):
+    def unpack_uint32(
+        data,
+    ):
         """Parse an unsigned 32-bit integer from the bytes.
 
         :type data: bytes
@@ -157,11 +196,19 @@ class DecodeUtils:
         :rtype: (int, int)
         :returns: A tuple containing the (parsed integer value, bytes consumed)
         """
-        value = unpack(DecodeUtils.UINT32_BYTE_FORMAT, data[:4])[0]
-        return value, 4
+        value = unpack(
+            DecodeUtils.UINT32_BYTE_FORMAT,
+            data[:4],
+        )[0]
+        return (
+            value,
+            4,
+        )
 
     @staticmethod
-    def unpack_int8(data):
+    def unpack_int8(
+        data,
+    ):
         """Parse a signed 8-bit integer from the bytes.
 
         :type data: bytes
@@ -170,11 +217,19 @@ class DecodeUtils:
         :rtype: (int, int)
         :returns: A tuple containing the (parsed integer value, bytes consumed)
         """
-        value = unpack(DecodeUtils.INT8_BYTE_FORMAT, data[:1])[0]
-        return value, 1
+        value = unpack(
+            DecodeUtils.INT8_BYTE_FORMAT,
+            data[:1],
+        )[0]
+        return (
+            value,
+            1,
+        )
 
     @staticmethod
-    def unpack_int16(data):
+    def unpack_int16(
+        data,
+    ):
         """Parse a signed 16-bit integer from the bytes.
 
         :type data: bytes
@@ -184,11 +239,19 @@ class DecodeUtils:
         :rtype: (int, int)
         :returns: A tuple containing the (parsed integer value, bytes consumed)
         """
-        value = unpack(DecodeUtils.INT16_BYTE_FORMAT, data[:2])[0]
-        return value, 2
+        value = unpack(
+            DecodeUtils.INT16_BYTE_FORMAT,
+            data[:2],
+        )[0]
+        return (
+            value,
+            2,
+        )
 
     @staticmethod
-    def unpack_int32(data):
+    def unpack_int32(
+        data,
+    ):
         """Parse a signed 32-bit integer from the bytes.
 
         :type data: bytes
@@ -198,11 +261,19 @@ class DecodeUtils:
         :rtype: (int, int)
         :returns: A tuple containing the (parsed integer value, bytes consumed)
         """
-        value = unpack(DecodeUtils.INT32_BYTE_FORMAT, data[:4])[0]
-        return value, 4
+        value = unpack(
+            DecodeUtils.INT32_BYTE_FORMAT,
+            data[:4],
+        )[0]
+        return (
+            value,
+            4,
+        )
 
     @staticmethod
-    def unpack_int64(data):
+    def unpack_int64(
+        data,
+    ):
         """Parse a signed 64-bit integer from the bytes.
 
         :type data: bytes
@@ -212,11 +283,20 @@ class DecodeUtils:
         :rtype: (int, int)
         :returns: A tuple containing the (parsed integer value, bytes consumed)
         """
-        value = unpack(DecodeUtils.INT64_BYTE_FORMAT, data[:8])[0]
-        return value, 8
+        value = unpack(
+            DecodeUtils.INT64_BYTE_FORMAT,
+            data[:8],
+        )[0]
+        return (
+            value,
+            8,
+        )
 
     @staticmethod
-    def unpack_byte_array(data, length_byte_size=2):
+    def unpack_byte_array(
+        data,
+        length_byte_size=2,
+    ):
         """Parse a variable length byte array from the bytes.
 
         The bytes are expected to be in the following format:
@@ -235,13 +315,22 @@ class DecodeUtils:
         :returns: A tuple containing the (parsed byte array, bytes consumed).
         """
         uint_byte_format = DecodeUtils.UINT_BYTE_FORMAT[length_byte_size]
-        length = unpack(uint_byte_format, data[:length_byte_size])[0]
+        length = unpack(
+            uint_byte_format,
+            data[:length_byte_size],
+        )[0]
         bytes_end = length + length_byte_size
         array_bytes = data[length_byte_size:bytes_end]
-        return array_bytes, bytes_end
+        return (
+            array_bytes,
+            bytes_end,
+        )
 
     @staticmethod
-    def unpack_utf8_string(data, length_byte_size=2):
+    def unpack_utf8_string(
+        data,
+        length_byte_size=2,
+    ):
         """Parse a variable length utf-8 string from the bytes.
 
         The bytes are expected to be in the following format:
@@ -260,13 +349,22 @@ class DecodeUtils:
         :rtype: (str, int)
         :returns: A tuple containing the (utf-8 string, bytes consumed).
         """
-        array_bytes, consumed = DecodeUtils.unpack_byte_array(
-            data, length_byte_size
+        (
+            array_bytes,
+            consumed,
+        ) = DecodeUtils.unpack_byte_array(
+            data,
+            length_byte_size,
         )
-        return array_bytes.decode('utf-8'), consumed
+        return (
+            array_bytes.decode("utf-8"),
+            consumed,
+        )
 
     @staticmethod
-    def unpack_uuid(data):
+    def unpack_uuid(
+        data,
+    ):
         """Parse a 16-byte uuid from the bytes.
 
         :type data: bytes
@@ -275,10 +373,15 @@ class DecodeUtils:
         :rtype: (bytes, int)
         :returns: A tuple containing the (uuid bytes, bytes consumed).
         """
-        return data[:16], 16
+        return (
+            data[:16],
+            16,
+        )
 
     @staticmethod
-    def unpack_prelude(data):
+    def unpack_prelude(
+        data,
+    ):
         """Parse the prelude for an event stream message from the bytes.
 
         The prelude for an event stream message has the following format:
@@ -289,27 +392,53 @@ class DecodeUtils:
         :returns: A tuple of ((total_length, headers_length, prelude_crc),
         consumed)
         """
-        return (unpack(DecodeUtils.PRELUDE_BYTE_FORMAT, data), _PRELUDE_LENGTH)
+        return (
+            unpack(
+                DecodeUtils.PRELUDE_BYTE_FORMAT,
+                data,
+            ),
+            _PRELUDE_LENGTH,
+        )
 
 
-def _validate_checksum(data, checksum, crc=0):
+def _validate_checksum(
+    data,
+    checksum,
+    crc=0,
+):
     # To generate the same numeric value across all Python versions and
     # platforms use crc32(data) & 0xffffffff.
-    computed_checksum = crc32(data, crc) & 0xFFFFFFFF
+    computed_checksum = (
+        crc32(
+            data,
+            crc,
+        )
+        & 0xFFFFFFFF
+    )
     if checksum != computed_checksum:
-        raise ChecksumMismatch(checksum, computed_checksum)
+        raise ChecksumMismatch(
+            checksum,
+            computed_checksum,
+        )
 
 
 class MessagePrelude:
     """Represents the prelude of an event stream message."""
 
-    def __init__(self, total_length, headers_length, crc):
+    def __init__(
+        self,
+        total_length,
+        headers_length,
+        crc,
+    ):
         self.total_length = total_length
         self.headers_length = headers_length
         self.crc = crc
 
     @property
-    def payload_length(self):
+    def payload_length(
+        self,
+    ):
         """Calculates the total payload length.
 
         The extra minus 4 bytes is for the message CRC.
@@ -320,7 +449,9 @@ class MessagePrelude:
         return self.total_length - self.headers_length - _PRELUDE_LENGTH - 4
 
     @property
-    def payload_end(self):
+    def payload_end(
+        self,
+    ):
         """Calculates the byte offset for the end of the message payload.
 
         The extra minus 4 bytes is for the message CRC.
@@ -332,7 +463,9 @@ class MessagePrelude:
         return self.total_length - 4
 
     @property
-    def headers_end(self):
+    def headers_end(
+        self,
+    ):
         """Calculates the byte offset for the end of the message headers.
 
         :rtype: int
@@ -345,20 +478,29 @@ class MessagePrelude:
 class EventStreamMessage:
     """Represents an event stream message."""
 
-    def __init__(self, prelude, headers, payload, crc):
+    def __init__(
+        self,
+        prelude,
+        headers,
+        payload,
+        crc,
+    ):
         self.prelude = prelude
         self.headers = headers
         self.payload = payload
         self.crc = crc
 
-    def to_response_dict(self, status_code=200):
-        message_type = self.headers.get(':message-type')
-        if message_type == 'error' or message_type == 'exception':
+    def to_response_dict(
+        self,
+        status_code=200,
+    ):
+        message_type = self.headers.get(":message-type")
+        if message_type == "error" or message_type == "exception":
             status_code = 400
         return {
-            'status_code': status_code,
-            'headers': self.headers,
-            'body': self.payload,
+            "status_code": status_code,
+            "headers": self.headers,
+            "body": self.payload,
         }
 
 
@@ -395,10 +537,15 @@ class EventStreamHeaderParser:
         9: DecodeUtils.unpack_uuid,
     }
 
-    def __init__(self):
+    def __init__(
+        self,
+    ):
         self._data = None
 
-    def parse(self, data):
+    def parse(
+        self,
+        data,
+    ):
         """Parses the event stream headers from an event stream message.
 
         :type data: bytes
@@ -411,38 +558,69 @@ class EventStreamHeaderParser:
         self._data = data
         return self._parse_headers()
 
-    def _parse_headers(self):
+    def _parse_headers(
+        self,
+    ):
         headers = {}
         while self._data:
-            name, value = self._parse_header()
+            (
+                name,
+                value,
+            ) = self._parse_header()
             if name in headers:
                 raise DuplicateHeader(name)
             headers[name] = value
         return headers
 
-    def _parse_header(self):
+    def _parse_header(
+        self,
+    ):
         name = self._parse_name()
         value = self._parse_value()
-        return name, value
+        return (
+            name,
+            value,
+        )
 
-    def _parse_name(self):
-        name, consumed = DecodeUtils.unpack_utf8_string(self._data, 1)
+    def _parse_name(
+        self,
+    ):
+        (
+            name,
+            consumed,
+        ) = DecodeUtils.unpack_utf8_string(
+            self._data,
+            1,
+        )
         self._advance_data(consumed)
         return name
 
-    def _parse_type(self):
-        type, consumed = DecodeUtils.unpack_uint8(self._data)
+    def _parse_type(
+        self,
+    ):
+        (
+            type,
+            consumed,
+        ) = DecodeUtils.unpack_uint8(self._data)
         self._advance_data(consumed)
         return type
 
-    def _parse_value(self):
+    def _parse_value(
+        self,
+    ):
         header_type = self._parse_type()
         value_unpacker = self._HEADER_TYPE_MAP[header_type]
-        value, consumed = value_unpacker(self._data)
+        (
+            value,
+            consumed,
+        ) = value_unpacker(self._data)
         self._advance_data(consumed)
         return value
 
-    def _advance_data(self, consumed):
+    def _advance_data(
+        self,
+        consumed,
+    ):
         self._data = self._data[consumed:]
 
 
@@ -453,12 +631,17 @@ class EventStreamBuffer:
     messages as they become available via an iterable interface.
     """
 
-    def __init__(self):
-        self._data = b''
+    def __init__(
+        self,
+    ):
+        self._data = b""
         self._prelude = None
         self._header_parser = EventStreamHeaderParser()
 
-    def add_data(self, data):
+    def add_data(
+        self,
+        data,
+    ):
         """Add data to the buffer.
 
         :type data: bytes
@@ -466,64 +649,101 @@ class EventStreamBuffer:
         """
         self._data += data
 
-    def _validate_prelude(self, prelude):
+    def _validate_prelude(
+        self,
+        prelude,
+    ):
         if prelude.headers_length > _MAX_HEADERS_LENGTH:
             raise InvalidHeadersLength(prelude.headers_length)
 
         if prelude.payload_length > _MAX_PAYLOAD_LENGTH:
             raise InvalidPayloadLength(prelude.payload_length)
 
-    def _parse_prelude(self):
+    def _parse_prelude(
+        self,
+    ):
         prelude_bytes = self._data[:_PRELUDE_LENGTH]
-        raw_prelude, _ = DecodeUtils.unpack_prelude(prelude_bytes)
+        (
+            raw_prelude,
+            _,
+        ) = DecodeUtils.unpack_prelude(prelude_bytes)
         prelude = MessagePrelude(*raw_prelude)
         self._validate_prelude(prelude)
         # The minus 4 removes the prelude crc from the bytes to be checked
-        _validate_checksum(prelude_bytes[: _PRELUDE_LENGTH - 4], prelude.crc)
+        _validate_checksum(
+            prelude_bytes[: _PRELUDE_LENGTH - 4],
+            prelude.crc,
+        )
         return prelude
 
-    def _parse_headers(self):
+    def _parse_headers(
+        self,
+    ):
         header_bytes = self._data[_PRELUDE_LENGTH : self._prelude.headers_end]
         return self._header_parser.parse(header_bytes)
 
-    def _parse_payload(self):
+    def _parse_payload(
+        self,
+    ):
         prelude = self._prelude
         payload_bytes = self._data[prelude.headers_end : prelude.payload_end]
         return payload_bytes
 
-    def _parse_message_crc(self):
+    def _parse_message_crc(
+        self,
+    ):
         prelude = self._prelude
         crc_bytes = self._data[prelude.payload_end : prelude.total_length]
-        message_crc, _ = DecodeUtils.unpack_uint32(crc_bytes)
+        (
+            message_crc,
+            _,
+        ) = DecodeUtils.unpack_uint32(crc_bytes)
         return message_crc
 
-    def _parse_message_bytes(self):
+    def _parse_message_bytes(
+        self,
+    ):
         # The minus 4 includes the prelude crc to the bytes to be checked
-        message_bytes = self._data[
-            _PRELUDE_LENGTH - 4 : self._prelude.payload_end
-        ]
+        message_bytes = self._data[_PRELUDE_LENGTH - 4 : self._prelude.payload_end]
         return message_bytes
 
-    def _validate_message_crc(self):
+    def _validate_message_crc(
+        self,
+    ):
         message_crc = self._parse_message_crc()
         message_bytes = self._parse_message_bytes()
-        _validate_checksum(message_bytes, message_crc, crc=self._prelude.crc)
+        _validate_checksum(
+            message_bytes,
+            message_crc,
+            crc=self._prelude.crc,
+        )
         return message_crc
 
-    def _parse_message(self):
+    def _parse_message(
+        self,
+    ):
         crc = self._validate_message_crc()
         headers = self._parse_headers()
         payload = self._parse_payload()
-        message = EventStreamMessage(self._prelude, headers, payload, crc)
+        message = EventStreamMessage(
+            self._prelude,
+            headers,
+            payload,
+            crc,
+        )
         self._prepare_for_next_message()
         return message
 
-    def _prepare_for_next_message(self):
+    def _prepare_for_next_message(
+        self,
+    ):
         # Advance the data and reset the current prelude
         self._data = self._data[self._prelude.total_length :]
         self._prelude = None
 
-    def next(self):
+    def next(
+        self,
+    ):
         """Provides the next available message parsed from the stream
 
         :rtype: EventStreamMessage
@@ -540,10 +760,14 @@ class EventStreamBuffer:
 
         return self._parse_message()
 
-    def __next__(self):
+    def __next__(
+        self,
+    ):
         return self.next()
 
-    def __iter__(self):
+    def __iter__(
+        self,
+    ):
         return self
 
 
@@ -591,43 +815,66 @@ class EventStream:
             raise Exception("End event not received, request incomplete.")
     """
 
-    def __init__(self, raw_stream, output_shape, parser, operation_name):
+    def __init__(
+        self,
+        raw_stream,
+        output_shape,
+        parser,
+        operation_name,
+    ):
         self._raw_stream = raw_stream
         self._output_shape = output_shape
         self._operation_name = operation_name
         self._parser = parser
         self._event_generator = self._create_raw_event_generator()
 
-    def __iter__(self):
+    def __iter__(
+        self,
+    ):
         for event in self._event_generator:
             parsed_event = self._parse_event(event)
             if parsed_event:
                 yield parsed_event
 
-    def _create_raw_event_generator(self):
+    def _create_raw_event_generator(
+        self,
+    ):
         event_stream_buffer = EventStreamBuffer()
         for chunk in self._raw_stream.stream():
             event_stream_buffer.add_data(chunk)
             yield from event_stream_buffer
 
-    def _parse_event(self, event):
+    def _parse_event(
+        self,
+        event,
+    ):
         response_dict = event.to_response_dict()
-        parsed_response = self._parser.parse(response_dict, self._output_shape)
-        if response_dict['status_code'] == 200:
+        parsed_response = self._parser.parse(
+            response_dict,
+            self._output_shape,
+        )
+        if response_dict["status_code"] == 200:
             return parsed_response
         else:
-            raise EventStreamError(parsed_response, self._operation_name)
+            raise EventStreamError(
+                parsed_response,
+                self._operation_name,
+            )
 
-    def get_initial_response(self):
+    def get_initial_response(
+        self,
+    ):
         try:
             initial_event = next(self._event_generator)
-            event_type = initial_event.headers.get(':event-type')
-            if event_type == 'initial-response':
+            event_type = initial_event.headers.get(":event-type")
+            if event_type == "initial-response":
                 return initial_event
         except StopIteration:
             pass
         raise NoInitialResponseError()
 
-    def close(self):
+    def close(
+        self,
+    ):
         """Closes the underlying streaming body."""
         self._raw_stream.close()

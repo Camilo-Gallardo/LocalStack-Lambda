@@ -13,14 +13,26 @@
 
 import logging
 
-from botocore import xform_name
+from boto3.docs.docstring import (
+    ActionDocstring,
+)
+from boto3.utils import (
+    inject_attribute,
+)
+from botocore import (
+    xform_name,
+)
 
-from boto3.docs.docstring import ActionDocstring
-from boto3.utils import inject_attribute
-
-from .model import Action
-from .params import create_request_parameters
-from .response import RawHandler, ResourceHandler
+from .model import (
+    Action,
+)
+from .params import (
+    create_request_parameters,
+)
+from .response import (
+    RawHandler,
+    ResourceHandler,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -43,7 +55,12 @@ class ServiceAction:
     :param service_context: Context about the AWS service
     """
 
-    def __init__(self, action_model, factory=None, service_context=None):
+    def __init__(
+        self,
+        action_model,
+        factory=None,
+        service_context=None,
+    ):
         self._action_model = action_model
 
         # In the simplest case we just return the response, but if a
@@ -75,21 +92,34 @@ class ServiceAction:
         # First, build predefined params and then update with the
         # user-supplied kwargs, which allows overriding the pre-built
         # params if needed.
-        params = create_request_parameters(parent, self._action_model.request)
+        params = create_request_parameters(
+            parent,
+            self._action_model.request,
+        )
         params.update(kwargs)
 
         logger.debug(
-            'Calling %s:%s with %r',
+            "Calling %s:%s with %r",
             parent.meta.service_name,
             operation_name,
             params,
         )
 
-        response = getattr(parent.meta.client, operation_name)(*args, **params)
+        response = getattr(
+            parent.meta.client,
+            operation_name,
+        )(*args, **params)
 
-        logger.debug('Response: %r', response)
+        logger.debug(
+            "Response: %r",
+            response,
+        )
 
-        return self._response_handler(parent, params, response)
+        return self._response_handler(
+            parent,
+            params,
+            response,
+        )
 
 
 class BatchAction(ServiceAction):
@@ -133,7 +163,10 @@ class BatchAction(ServiceAction):
         # the necessary parameters and call the batch operation.
         for page in parent.pages():
             params = {}
-            for index, resource in enumerate(page):
+            for (
+                index,
+                resource,
+            ) in enumerate(page):
                 # There is no public interface to get a service name
                 # or low-level client from a collection, so we get
                 # these from the first resource in the collection.
@@ -156,14 +189,29 @@ class BatchAction(ServiceAction):
             params.update(kwargs)
 
             logger.debug(
-                'Calling %s:%s with %r', service_name, operation_name, params
+                "Calling %s:%s with %r",
+                service_name,
+                operation_name,
+                params,
             )
 
-            response = getattr(client, operation_name)(*args, **params)
+            response = getattr(
+                client,
+                operation_name,
+            )(*args, **params)
 
-            logger.debug('Response: %r', response)
+            logger.debug(
+                "Response: %r",
+                response,
+            )
 
-            responses.append(self._response_handler(parent, params, response))
+            responses.append(
+                self._response_handler(
+                    parent,
+                    params,
+                    response,
+                )
+            )
 
         return responses
 
@@ -183,7 +231,11 @@ class WaiterAction:
                                  ``wait_until_``
     """
 
-    def __init__(self, waiter_model, waiter_resource_name):
+    def __init__(
+        self,
+        waiter_model,
+        waiter_resource_name,
+    ):
         self._waiter_model = waiter_model
         self._waiter_resource_name = waiter_resource_name
 
@@ -200,11 +252,14 @@ class WaiterAction:
         # First, build predefined params and then update with the
         # user-supplied kwargs, which allows overriding the pre-built
         # params if needed.
-        params = create_request_parameters(parent, self._waiter_model)
+        params = create_request_parameters(
+            parent,
+            self._waiter_model,
+        )
         params.update(kwargs)
 
         logger.debug(
-            'Calling %s:%s with %r',
+            "Calling %s:%s with %r",
             parent.meta.service_name,
             self._waiter_resource_name,
             params,
@@ -214,13 +269,22 @@ class WaiterAction:
         waiter = client.get_waiter(client_waiter_name)
         response = waiter.wait(**params)
 
-        logger.debug('Response: %r', response)
+        logger.debug(
+            "Response: %r",
+            response,
+        )
 
 
 class CustomModeledAction:
     """A custom, modeled action to inject into a resource."""
 
-    def __init__(self, action_name, action_model, function, event_emitter):
+    def __init__(
+        self,
+        action_name,
+        action_model,
+        function,
+        event_emitter,
+    ):
         """
         :type action_name: str
         :param action_name: The name of the action to inject, e.g.
@@ -245,7 +309,11 @@ class CustomModeledAction:
 
     def inject(self, class_attributes, service_context, event_name, **kwargs):
         resource_name = event_name.rsplit(".")[-1]
-        action = Action(self.name, self.model, {})
+        action = Action(
+            self.name,
+            self.model,
+            {},
+        )
         self.function.__name__ = self.name
         self.function.__doc__ = ActionDocstring(
             resource_name=resource_name,
@@ -254,4 +322,8 @@ class CustomModeledAction:
             service_model=service_context.service_model,
             include_signature=False,
         )
-        inject_attribute(class_attributes, self.name, self.function)
+        inject_attribute(
+            class_attributes,
+            self.name,
+            self.function,
+        )

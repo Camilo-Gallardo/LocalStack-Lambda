@@ -16,7 +16,9 @@ import errno
 import socket
 import warnings
 
-from boto3.exceptions import PythonDeprecationWarning
+from boto3.exceptions import (
+    PythonDeprecationWarning,
+)
 
 # In python3, socket.error is OSError, which is too general
 # for what we want (i.e FileNotFoundError is a subclass of OSError).
@@ -27,8 +29,12 @@ SOCKET_ERROR = ConnectionError
 import collections.abc as collections_abc
 
 
-if sys.platform.startswith('win'):
-    def rename_file(current_filename, new_filename):
+if sys.platform.startswith("win"):
+
+    def rename_file(
+        current_filename,
+        new_filename,
+    ):
         try:
             os.remove(new_filename)
         except OSError as e:
@@ -38,7 +44,11 @@ if sys.platform.startswith('win'):
                 # for any other reason we should be propagating
                 # that exception.
                 raise
-        os.rename(current_filename, new_filename)
+        os.rename(
+            current_filename,
+            new_filename,
+        )
+
 else:
     rename_file = os.rename
 
@@ -49,25 +59,28 @@ def filter_python_deprecation_warnings():
     at which time you will stop receiving all updates to your client.
     """
     warnings.filterwarnings(
-        'ignore',
+        "ignore",
         message=".*Boto3 will no longer support Python.*",
         category=PythonDeprecationWarning,
-        module=r".*boto3\.compat"
+        module=r".*boto3\.compat",
     )
 
 
 def _warn_deprecated_python():
     """Use this template for future deprecation campaigns as needed."""
     py_37_params = {
-        'date': 'December 13, 2023',
-        'blog_link': (
-            'https://aws.amazon.com/blogs/developer/'
-            'python-support-policy-updates-for-aws-sdks-and-tools/'
-        )
+        "date": "December 13, 2023",
+        "blog_link": (
+            "https://aws.amazon.com/blogs/developer/"
+            "python-support-policy-updates-for-aws-sdks-and-tools/"
+        ),
     }
     deprecated_versions = {
         # Example template for future deprecations
-        (3, 7): py_37_params,
+        (
+            3,
+            7,
+        ): py_37_params,
     }
     py_version = sys.version_info[:2]
 
@@ -78,5 +91,13 @@ def _warn_deprecated_python():
             "starting {}. To continue receiving service updates, "
             "bug fixes, and security updates please upgrade to Python 3.8 or "
             "later. More information can be found here: {}"
-        ).format(py_version[0], py_version[1], params['date'], params['blog_link'])
-        warnings.warn(warning, PythonDeprecationWarning)
+        ).format(
+            py_version[0],
+            py_version[1],
+            params["date"],
+            params["blog_link"],
+        )
+        warnings.warn(
+            warning,
+            PythonDeprecationWarning,
+        )

@@ -51,7 +51,10 @@ license and by oscrypto's:
     FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
     DEALINGS IN THE SOFTWARE.
 """
-from __future__ import absolute_import
+
+from __future__ import (
+    absolute_import,
+)
 
 import contextlib
 import ctypes
@@ -64,10 +67,20 @@ import struct
 import threading
 import weakref
 
-from .. import util
-from ..packages import six
-from ..util.ssl_ import PROTOCOL_TLS_CLIENT
-from ._securetransport.bindings import CoreFoundation, Security, SecurityConst
+from .. import (
+    util,
+)
+from ..packages import (
+    six,
+)
+from ..util.ssl_ import (
+    PROTOCOL_TLS_CLIENT,
+)
+from ._securetransport.bindings import (
+    CoreFoundation,
+    Security,
+    SecurityConst,
+)
 from ._securetransport.low_level import (
     _assert_no_error,
     _build_tls_unknown_ca_alert,
@@ -78,12 +91,19 @@ from ._securetransport.low_level import (
 )
 
 try:  # Platform-specific: Python 2
-    from socket import _fileobject
+    from socket import (
+        _fileobject,
+    )
 except ImportError:  # Platform-specific: Python 3
     _fileobject = None
-    from ..packages.backports.makefile import backport_makefile
+    from ..packages.backports.makefile import (
+        backport_makefile,
+    )
 
-__all__ = ["inject_into_urllib3", "extract_from_urllib3"]
+__all__ = [
+    "inject_into_urllib3",
+    "extract_from_urllib3",
+]
 
 # SNI always works
 HAS_SNI = True
@@ -154,31 +174,52 @@ CIPHER_SUITES = [
 # TLSv1 and a high of TLSv1.2. For everything else, we pin to that version.
 # TLSv1 to 1.2 are supported on macOS 10.8+
 _protocol_to_min_max = {
-    util.PROTOCOL_TLS: (SecurityConst.kTLSProtocol1, SecurityConst.kTLSProtocol12),
-    PROTOCOL_TLS_CLIENT: (SecurityConst.kTLSProtocol1, SecurityConst.kTLSProtocol12),
+    util.PROTOCOL_TLS: (
+        SecurityConst.kTLSProtocol1,
+        SecurityConst.kTLSProtocol12,
+    ),
+    PROTOCOL_TLS_CLIENT: (
+        SecurityConst.kTLSProtocol1,
+        SecurityConst.kTLSProtocol12,
+    ),
 }
 
-if hasattr(ssl, "PROTOCOL_SSLv2"):
+if hasattr(
+    ssl,
+    "PROTOCOL_SSLv2",
+):
     _protocol_to_min_max[ssl.PROTOCOL_SSLv2] = (
         SecurityConst.kSSLProtocol2,
         SecurityConst.kSSLProtocol2,
     )
-if hasattr(ssl, "PROTOCOL_SSLv3"):
+if hasattr(
+    ssl,
+    "PROTOCOL_SSLv3",
+):
     _protocol_to_min_max[ssl.PROTOCOL_SSLv3] = (
         SecurityConst.kSSLProtocol3,
         SecurityConst.kSSLProtocol3,
     )
-if hasattr(ssl, "PROTOCOL_TLSv1"):
+if hasattr(
+    ssl,
+    "PROTOCOL_TLSv1",
+):
     _protocol_to_min_max[ssl.PROTOCOL_TLSv1] = (
         SecurityConst.kTLSProtocol1,
         SecurityConst.kTLSProtocol1,
     )
-if hasattr(ssl, "PROTOCOL_TLSv1_1"):
+if hasattr(
+    ssl,
+    "PROTOCOL_TLSv1_1",
+):
     _protocol_to_min_max[ssl.PROTOCOL_TLSv1_1] = (
         SecurityConst.kTLSProtocol11,
         SecurityConst.kTLSProtocol11,
     )
-if hasattr(ssl, "PROTOCOL_TLSv1_2"):
+if hasattr(
+    ssl,
+    "PROTOCOL_TLSv1_2",
+):
     _protocol_to_min_max[ssl.PROTOCOL_TLSv1_2] = (
         SecurityConst.kTLSProtocol12,
         SecurityConst.kTLSProtocol12,
@@ -209,7 +250,11 @@ def extract_from_urllib3():
     util.ssl_.IS_SECURETRANSPORT = False
 
 
-def _read_callback(connection_id, data_buffer, data_length_pointer):
+def _read_callback(
+    connection_id,
+    data_buffer,
+    data_length_pointer,
+):
     """
     SecureTransport read callback. This is called by ST to request that data
     be returned from the socket.
@@ -230,20 +275,29 @@ def _read_callback(connection_id, data_buffer, data_length_pointer):
         try:
             while read_count < requested_length:
                 if timeout is None or timeout >= 0:
-                    if not util.wait_for_read(base_socket, timeout):
-                        raise socket.error(errno.EAGAIN, "timed out")
+                    if not util.wait_for_read(
+                        base_socket,
+                        timeout,
+                    ):
+                        raise socket.error(
+                            errno.EAGAIN,
+                            "timed out",
+                        )
 
                 remaining = requested_length - read_count
                 buffer = (ctypes.c_char * remaining).from_address(
                     data_buffer + read_count
                 )
-                chunk_size = base_socket.recv_into(buffer, remaining)
+                chunk_size = base_socket.recv_into(
+                    buffer,
+                    remaining,
+                )
                 read_count += chunk_size
                 if not chunk_size:
                     if not read_count:
                         return SecurityConst.errSSLClosedGraceful
                     break
-        except (socket.error) as e:
+        except socket.error as e:
             error = e.errno
 
             if error is not None and error != errno.EAGAIN:
@@ -264,7 +318,11 @@ def _read_callback(connection_id, data_buffer, data_length_pointer):
         return SecurityConst.errSSLInternal
 
 
-def _write_callback(connection_id, data_buffer, data_length_pointer):
+def _write_callback(
+    connection_id,
+    data_buffer,
+    data_length_pointer,
+):
     """
     SecureTransport write callback. This is called by ST to request that data
     actually be sent on the network.
@@ -277,7 +335,10 @@ def _write_callback(connection_id, data_buffer, data_length_pointer):
         base_socket = wrapped_socket.socket
 
         bytes_to_write = data_length_pointer[0]
-        data = ctypes.string_at(data_buffer, bytes_to_write)
+        data = ctypes.string_at(
+            data_buffer,
+            bytes_to_write,
+        )
 
         timeout = wrapped_socket.gettimeout()
         error = None
@@ -286,15 +347,21 @@ def _write_callback(connection_id, data_buffer, data_length_pointer):
         try:
             while sent < bytes_to_write:
                 if timeout is None or timeout >= 0:
-                    if not util.wait_for_write(base_socket, timeout):
-                        raise socket.error(errno.EAGAIN, "timed out")
+                    if not util.wait_for_write(
+                        base_socket,
+                        timeout,
+                    ):
+                        raise socket.error(
+                            errno.EAGAIN,
+                            "timed out",
+                        )
                 chunk_sent = base_socket.send(data)
                 sent += chunk_sent
 
                 # This has some needless copying here, but I'm not sure there's
                 # much value in optimising this data path.
                 data = data[chunk_sent:]
-        except (socket.error) as e:
+        except socket.error as e:
             error = e.errno
 
             if error is not None and error != errno.EAGAIN:
@@ -330,7 +397,10 @@ class WrappedSocket(object):
     collector of PyPy.
     """
 
-    def __init__(self, socket):
+    def __init__(
+        self,
+        socket,
+    ):
         self.socket = socket
         self.context = None
         self._makefile_refs = 0
@@ -349,7 +419,9 @@ class WrappedSocket(object):
         self.socket.settimeout(0)
 
     @contextlib.contextmanager
-    def _raise_on_error(self):
+    def _raise_on_error(
+        self,
+    ):
         """
         A context manager that can be used to wrap calls that do I/O from
         SecureTransport. If any of the I/O callbacks hit an exception, this
@@ -365,11 +437,19 @@ class WrappedSocket(object):
         # it.
         yield
         if self._exception is not None:
-            exception, self._exception = self._exception, None
+            (
+                exception,
+                self._exception,
+            ) = (
+                self._exception,
+                None,
+            )
             self.close()
             raise exception
 
-    def _set_ciphers(self):
+    def _set_ciphers(
+        self,
+    ):
         """
         Sets up the allowed ciphers. By default this matches the set in
         util.ssl_.DEFAULT_CIPHERS, at least as supported by macOS. This is done
@@ -378,11 +458,16 @@ class WrappedSocket(object):
         """
         ciphers = (Security.SSLCipherSuite * len(CIPHER_SUITES))(*CIPHER_SUITES)
         result = Security.SSLSetEnabledCiphers(
-            self.context, ciphers, len(CIPHER_SUITES)
+            self.context,
+            ciphers,
+            len(CIPHER_SUITES),
         )
         _assert_no_error(result)
 
-    def _set_alpn_protocols(self, protocols):
+    def _set_alpn_protocols(
+        self,
+        protocols,
+    ):
         """
         Sets up the ALPN protocols on the context.
         """
@@ -390,12 +475,19 @@ class WrappedSocket(object):
             return
         protocols_arr = _create_cfstring_array(protocols)
         try:
-            result = Security.SSLSetALPNProtocols(self.context, protocols_arr)
+            result = Security.SSLSetALPNProtocols(
+                self.context,
+                protocols_arr,
+            )
             _assert_no_error(result)
         finally:
             CoreFoundation.CFRelease(protocols_arr)
 
-    def _custom_validate(self, verify, trust_bundle):
+    def _custom_validate(
+        self,
+        verify,
+        trust_bundle,
+    ):
         """
         Called when we have set custom validation. We do this in two cases:
         first, when cert validation is entirely disabled; and second, when
@@ -425,15 +517,29 @@ class WrappedSocket(object):
         # close the connection immediately
         # l_onoff = 1, activate linger
         # l_linger = 0, linger for 0 seoncds
-        opts = struct.pack("ii", 1, 0)
-        self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_LINGER, opts)
+        opts = struct.pack(
+            "ii",
+            1,
+            0,
+        )
+        self.socket.setsockopt(
+            socket.SOL_SOCKET,
+            socket.SO_LINGER,
+            opts,
+        )
         self.close()
         raise ssl.SSLError("certificate verify failed, %s" % reason)
 
-    def _evaluate_trust(self, trust_bundle):
+    def _evaluate_trust(
+        self,
+        trust_bundle,
+    ):
         # We want data in memory, so load it up.
         if os.path.isfile(trust_bundle):
-            with open(trust_bundle, "rb") as f:
+            with open(
+                trust_bundle,
+                "rb",
+            ) as f:
                 trust_bundle = f.read()
 
         cert_array = None
@@ -447,19 +553,31 @@ class WrappedSocket(object):
             # created for this connection, shove our CAs into it, tell ST to
             # ignore everything else it knows, and then ask if it can build a
             # chain. This is a buuuunch of code.
-            result = Security.SSLCopyPeerTrust(self.context, ctypes.byref(trust))
+            result = Security.SSLCopyPeerTrust(
+                self.context,
+                ctypes.byref(trust),
+            )
             _assert_no_error(result)
             if not trust:
                 raise ssl.SSLError("Failed to copy trust reference")
 
-            result = Security.SecTrustSetAnchorCertificates(trust, cert_array)
+            result = Security.SecTrustSetAnchorCertificates(
+                trust,
+                cert_array,
+            )
             _assert_no_error(result)
 
-            result = Security.SecTrustSetAnchorCertificatesOnly(trust, True)
+            result = Security.SecTrustSetAnchorCertificatesOnly(
+                trust,
+                True,
+            )
             _assert_no_error(result)
 
             trust_result = Security.SecTrustResultType()
-            result = Security.SecTrustEvaluate(trust, ctypes.byref(trust_result))
+            result = Security.SecTrustEvaluate(
+                trust,
+                ctypes.byref(trust_result),
+            )
             _assert_no_error(result)
         finally:
             if trust:
@@ -489,10 +607,14 @@ class WrappedSocket(object):
         # First, we do the initial bits of connection setup. We need to create
         # a context, set its I/O funcs, and set the connection reference.
         self.context = Security.SSLCreateContext(
-            None, SecurityConst.kSSLClientSide, SecurityConst.kSSLStreamType
+            None,
+            SecurityConst.kSSLClientSide,
+            SecurityConst.kSSLStreamType,
         )
         result = Security.SSLSetIOFuncs(
-            self.context, _read_callback_pointer, _write_callback_pointer
+            self.context,
+            _read_callback_pointer,
+            _write_callback_pointer,
         )
         _assert_no_error(result)
 
@@ -505,16 +627,24 @@ class WrappedSocket(object):
                 handle = (handle + 1) % 2147483647
             _connection_refs[handle] = self
 
-        result = Security.SSLSetConnection(self.context, handle)
+        result = Security.SSLSetConnection(
+            self.context,
+            handle,
+        )
         _assert_no_error(result)
 
         # If we have a server hostname, we should set that too.
         if server_hostname:
-            if not isinstance(server_hostname, bytes):
+            if not isinstance(
+                server_hostname,
+                bytes,
+            ):
                 server_hostname = server_hostname.encode("utf-8")
 
             result = Security.SSLSetPeerDomainName(
-                self.context, server_hostname, len(server_hostname)
+                self.context,
+                server_hostname,
+                len(server_hostname),
             )
             _assert_no_error(result)
 
@@ -525,10 +655,16 @@ class WrappedSocket(object):
         self._set_alpn_protocols(alpn_protocols)
 
         # Set the minimum and maximum TLS versions.
-        result = Security.SSLSetProtocolVersionMin(self.context, min_version)
+        result = Security.SSLSetProtocolVersionMin(
+            self.context,
+            min_version,
+        )
         _assert_no_error(result)
 
-        result = Security.SSLSetProtocolVersionMax(self.context, max_version)
+        result = Security.SSLSetProtocolVersionMax(
+            self.context,
+            max_version,
+        )
         _assert_no_error(result)
 
         # If there's a trust DB, we need to use it. We do that by telling
@@ -537,17 +673,27 @@ class WrappedSocket(object):
         # authing in that case.
         if not verify or trust_bundle is not None:
             result = Security.SSLSetSessionOption(
-                self.context, SecurityConst.kSSLSessionOptionBreakOnServerAuth, True
+                self.context,
+                SecurityConst.kSSLSessionOptionBreakOnServerAuth,
+                True,
             )
             _assert_no_error(result)
 
         # If there's a client cert, we need to use it.
         if client_cert:
-            self._keychain, self._keychain_dir = _temporary_keychain()
+            (
+                self._keychain,
+                self._keychain_dir,
+            ) = _temporary_keychain()
             self._client_cert_chain = _load_client_cert_chain(
-                self._keychain, client_cert, client_key
+                self._keychain,
+                client_cert,
+                client_key,
             )
-            result = Security.SSLSetCertificate(self.context, self._client_cert_chain)
+            result = Security.SSLSetCertificate(
+                self.context,
+                self._client_cert_chain,
+            )
             _assert_no_error(result)
 
         while True:
@@ -557,29 +703,46 @@ class WrappedSocket(object):
                 if result == SecurityConst.errSSLWouldBlock:
                     raise socket.timeout("handshake timed out")
                 elif result == SecurityConst.errSSLServerAuthCompleted:
-                    self._custom_validate(verify, trust_bundle)
+                    self._custom_validate(
+                        verify,
+                        trust_bundle,
+                    )
                     continue
                 else:
                     _assert_no_error(result)
                     break
 
-    def fileno(self):
+    def fileno(
+        self,
+    ):
         return self.socket.fileno()
 
     # Copy-pasted from Python 3.5 source code
-    def _decref_socketios(self):
+    def _decref_socketios(
+        self,
+    ):
         if self._makefile_refs > 0:
             self._makefile_refs -= 1
         if self._closed:
             self.close()
 
-    def recv(self, bufsiz):
+    def recv(
+        self,
+        bufsiz,
+    ):
         buffer = ctypes.create_string_buffer(bufsiz)
-        bytes_read = self.recv_into(buffer, bufsiz)
+        bytes_read = self.recv_into(
+            buffer,
+            bufsiz,
+        )
         data = buffer[:bytes_read]
         return data
 
-    def recv_into(self, buffer, nbytes=None):
+    def recv_into(
+        self,
+        buffer,
+        nbytes=None,
+    ):
         # Read short on EOF.
         if self._closed:
             return 0
@@ -592,7 +755,10 @@ class WrappedSocket(object):
 
         with self._raise_on_error():
             result = Security.SSLRead(
-                self.context, buffer, nbytes, ctypes.byref(processed_bytes)
+                self.context,
+                buffer,
+                nbytes,
+                ctypes.byref(processed_bytes),
             )
 
         # There are some result codes that we want to treat as "not always
@@ -622,18 +788,29 @@ class WrappedSocket(object):
         # was actually read.
         return processed_bytes.value
 
-    def settimeout(self, timeout):
+    def settimeout(
+        self,
+        timeout,
+    ):
         self._timeout = timeout
 
-    def gettimeout(self):
+    def gettimeout(
+        self,
+    ):
         return self._timeout
 
-    def send(self, data):
+    def send(
+        self,
+        data,
+    ):
         processed_bytes = ctypes.c_size_t(0)
 
         with self._raise_on_error():
             result = Security.SSLWrite(
-                self.context, data, len(data), ctypes.byref(processed_bytes)
+                self.context,
+                data,
+                len(data),
+                ctypes.byref(processed_bytes),
             )
 
         if result == SecurityConst.errSSLWouldBlock and processed_bytes.value == 0:
@@ -645,17 +822,24 @@ class WrappedSocket(object):
         # We sent, and probably succeeded. Tell them how much we sent.
         return processed_bytes.value
 
-    def sendall(self, data):
+    def sendall(
+        self,
+        data,
+    ):
         total_sent = 0
         while total_sent < len(data):
             sent = self.send(data[total_sent : total_sent + SSL_WRITE_BLOCKSIZE])
             total_sent += sent
 
-    def shutdown(self):
+    def shutdown(
+        self,
+    ):
         with self._raise_on_error():
             Security.SSLClose(self.context)
 
-    def close(self):
+    def close(
+        self,
+    ):
         # TODO: should I do clean shutdown here? Do I have to?
         if self._makefile_refs < 1:
             self._closed = True
@@ -674,7 +858,10 @@ class WrappedSocket(object):
         else:
             self._makefile_refs -= 1
 
-    def getpeercert(self, binary_form=False):
+    def getpeercert(
+        self,
+        binary_form=False,
+    ):
         # Urgh, annoying.
         #
         # Here's how we do this:
@@ -702,7 +889,10 @@ class WrappedSocket(object):
 
         try:
             # Grab the trust store.
-            result = Security.SSLCopyPeerTrust(self.context, ctypes.byref(trust))
+            result = Security.SSLCopyPeerTrust(
+                self.context,
+                ctypes.byref(trust),
+            )
             _assert_no_error(result)
             if not trust:
                 # Probably we haven't done the handshake yet. No biggie.
@@ -714,7 +904,10 @@ class WrappedSocket(object):
                 # Handshook? Handshaken?
                 return None
 
-            leaf = Security.SecTrustGetCertificateAtIndex(trust, 0)
+            leaf = Security.SecTrustGetCertificateAtIndex(
+                trust,
+                0,
+            )
             assert leaf
 
             # Ok, now we want the DER bytes.
@@ -723,7 +916,10 @@ class WrappedSocket(object):
 
             data_length = CoreFoundation.CFDataGetLength(certdata)
             data_buffer = CoreFoundation.CFDataGetBytePtr(certdata)
-            der_bytes = ctypes.string_at(data_buffer, data_length)
+            der_bytes = ctypes.string_at(
+                data_buffer,
+                data_length,
+            )
         finally:
             if certdata:
                 CoreFoundation.CFRelease(certdata)
@@ -732,10 +928,13 @@ class WrappedSocket(object):
 
         return der_bytes
 
-    def version(self):
+    def version(
+        self,
+    ):
         protocol = Security.SSLProtocol()
         result = Security.SSLGetNegotiatedProtocolVersion(
-            self.context, ctypes.byref(protocol)
+            self.context,
+            ctypes.byref(protocol),
         )
         _assert_no_error(result)
         if protocol.value == SecurityConst.kTLSProtocol13:
@@ -753,10 +952,14 @@ class WrappedSocket(object):
         else:
             raise ssl.SSLError("Unknown TLS version: %r" % protocol)
 
-    def _reuse(self):
+    def _reuse(
+        self,
+    ):
         self._makefile_refs += 1
 
-    def _drop(self):
+    def _drop(
+        self,
+    ):
         if self._makefile_refs < 1:
             self.close()
         else:
@@ -765,9 +968,18 @@ class WrappedSocket(object):
 
 if _fileobject:  # Platform-specific: Python 2
 
-    def makefile(self, mode, bufsize=-1):
+    def makefile(
+        self,
+        mode,
+        bufsize=-1,
+    ):
         self._makefile_refs += 1
-        return _fileobject(self, mode, bufsize, close=True)
+        return _fileobject(
+            self,
+            mode,
+            bufsize,
+            close=True,
+        )
 
 else:  # Platform-specific: Python 3
 
@@ -788,8 +1000,14 @@ class SecureTransportContext(object):
     SecureTransport.
     """
 
-    def __init__(self, protocol):
-        self._min_version, self._max_version = _protocol_to_min_max[protocol]
+    def __init__(
+        self,
+        protocol,
+    ):
+        (
+            self._min_version,
+            self._max_version,
+        ) = _protocol_to_min_max[protocol]
         self._options = 0
         self._verify = False
         self._trust_bundle = None
@@ -799,7 +1017,9 @@ class SecureTransportContext(object):
         self._alpn_protocols = None
 
     @property
-    def check_hostname(self):
+    def check_hostname(
+        self,
+    ):
         """
         SecureTransport cannot have its hostname checking disabled. For more,
         see the comment on getpeercert() in this file.
@@ -807,7 +1027,10 @@ class SecureTransportContext(object):
         return True
 
     @check_hostname.setter
-    def check_hostname(self, value):
+    def check_hostname(
+        self,
+        value,
+    ):
         """
         SecureTransport cannot have its hostname checking disabled. For more,
         see the comment on getpeercert() in this file.
@@ -815,7 +1038,9 @@ class SecureTransportContext(object):
         pass
 
     @property
-    def options(self):
+    def options(
+        self,
+    ):
         # TODO: Well, crap.
         #
         # So this is the bit of the code that is the most likely to cause us
@@ -825,19 +1050,29 @@ class SecureTransportContext(object):
         return self._options
 
     @options.setter
-    def options(self, value):
+    def options(
+        self,
+        value,
+    ):
         # TODO: Update in line with above.
         self._options = value
 
     @property
-    def verify_mode(self):
+    def verify_mode(
+        self,
+    ):
         return ssl.CERT_REQUIRED if self._verify else ssl.CERT_NONE
 
     @verify_mode.setter
-    def verify_mode(self, value):
+    def verify_mode(
+        self,
+        value,
+    ):
         self._verify = True if value == ssl.CERT_REQUIRED else False
 
-    def set_default_verify_paths(self):
+    def set_default_verify_paths(
+        self,
+    ):
         # So, this has to do something a bit weird. Specifically, what it does
         # is nothing.
         #
@@ -849,15 +1084,25 @@ class SecureTransportContext(object):
         # ignoring it.
         pass
 
-    def load_default_certs(self):
+    def load_default_certs(
+        self,
+    ):
         return self.set_default_verify_paths()
 
-    def set_ciphers(self, ciphers):
+    def set_ciphers(
+        self,
+        ciphers,
+    ):
         # For now, we just require the default cipher string.
         if ciphers != util.ssl_.DEFAULT_CIPHERS:
             raise ValueError("SecureTransport doesn't support custom cipher strings")
 
-    def load_verify_locations(self, cafile=None, capath=None, cadata=None):
+    def load_verify_locations(
+        self,
+        cafile=None,
+        capath=None,
+        cadata=None,
+    ):
         # OK, we only really support cadata and cafile.
         if capath is not None:
             raise ValueError("SecureTransport does not support cert directories")
@@ -869,18 +1114,29 @@ class SecureTransportContext(object):
 
         self._trust_bundle = cafile or cadata
 
-    def load_cert_chain(self, certfile, keyfile=None, password=None):
+    def load_cert_chain(
+        self,
+        certfile,
+        keyfile=None,
+        password=None,
+    ):
         self._client_cert = certfile
         self._client_key = keyfile
         self._client_cert_passphrase = password
 
-    def set_alpn_protocols(self, protocols):
+    def set_alpn_protocols(
+        self,
+        protocols,
+    ):
         """
         Sets the ALPN protocols that will later be set on the context.
 
         Raises a NotImplementedError if ALPN is not supported.
         """
-        if not hasattr(Security, "SSLSetALPNProtocols"):
+        if not hasattr(
+            Security,
+            "SSLSetALPNProtocols",
+        ):
             raise NotImplementedError(
                 "SecureTransport supports ALPN only in macOS 10.12+"
             )

@@ -47,25 +47,36 @@ class ResourceMeta:
         # The resource model for that resource
         self.resource_model = resource_model
 
-    def __repr__(self):
-        return 'ResourceMeta(\'{}\', identifiers={})'.format(
-            self.service_name, self.identifiers
+    def __repr__(
+        self,
+    ):
+        return "ResourceMeta('{}', identifiers={})".format(
+            self.service_name,
+            self.identifiers,
         )
 
-    def __eq__(self, other):
+    def __eq__(
+        self,
+        other,
+    ):
         # Two metas are equal if their components are all equal
         if other.__class__.__name__ != self.__class__.__name__:
             return False
 
         return self.__dict__ == other.__dict__
 
-    def copy(self):
+    def copy(
+        self,
+    ):
         """
         Create a copy of this metadata object.
         """
         params = self.__dict__.copy()
-        service_name = params.pop('service_name')
-        return ResourceMeta(service_name, **params)
+        service_name = params.pop("service_name")
+        return ResourceMeta(
+            service_name,
+            **params,
+        )
 
 
 class ServiceResource:
@@ -92,50 +103,77 @@ class ServiceResource:
     See :py:class:`ResourceMeta` for more information.
     """
 
-    def __init__(self, *args, **kwargs):
+    def __init__(
+        self,
+        *args,
+        **kwargs,
+    ):
         # Always work on a copy of meta, otherwise we would affect other
         # instances of the same subclass.
         self.meta = self.meta.copy()
 
         # Create a default client if none was passed
-        if kwargs.get('client') is not None:
-            self.meta.client = kwargs.get('client')
+        if kwargs.get("client") is not None:
+            self.meta.client = kwargs.get("client")
         else:
             self.meta.client = boto3.client(self.meta.service_name)
 
         # Allow setting identifiers as positional arguments in the order
         # in which they were defined in the ResourceJSON.
-        for i, value in enumerate(args):
-            setattr(self, '_' + self.meta.identifiers[i], value)
+        for (
+            i,
+            value,
+        ) in enumerate(args):
+            setattr(
+                self,
+                "_" + self.meta.identifiers[i],
+                value,
+            )
 
         # Allow setting identifiers via keyword arguments. Here we need
         # extra logic to ignore other keyword arguments like ``client``.
-        for name, value in kwargs.items():
-            if name == 'client':
+        for (
+            name,
+            value,
+        ) in kwargs.items():
+            if name == "client":
                 continue
 
             if name not in self.meta.identifiers:
-                raise ValueError(f'Unknown keyword argument: {name}')
+                raise ValueError(f"Unknown keyword argument: {name}")
 
-            setattr(self, '_' + name, value)
+            setattr(
+                self,
+                "_" + name,
+                value,
+            )
 
         # Validate that all identifiers have been set.
         for identifier in self.meta.identifiers:
-            if getattr(self, identifier) is None:
-                raise ValueError(f'Required parameter {identifier} not set')
+            if (
+                getattr(
+                    self,
+                    identifier,
+                )
+                is None
+            ):
+                raise ValueError(f"Required parameter {identifier} not set")
 
-    def __repr__(self):
+    def __repr__(
+        self,
+    ):
         identifiers = []
         for identifier in self.meta.identifiers:
-            identifiers.append(
-                f'{identifier}={repr(getattr(self, identifier))}'
-            )
+            identifiers.append(f"{identifier}={repr(getattr(self, identifier))}")
         return "{}({})".format(
             self.__class__.__name__,
-            ', '.join(identifiers),
+            ", ".join(identifiers),
         )
 
-    def __eq__(self, other):
+    def __eq__(
+        self,
+        other,
+    ):
         # Should be instances of the same resource class
         if other.__class__.__name__ != self.__class__.__name__:
             return False
@@ -143,13 +181,31 @@ class ServiceResource:
         # Each of the identifiers should have the same value in both
         # instances, e.g. two buckets need the same name to be equal.
         for identifier in self.meta.identifiers:
-            if getattr(self, identifier) != getattr(other, identifier):
+            if getattr(
+                self,
+                identifier,
+            ) != getattr(
+                other,
+                identifier,
+            ):
                 return False
 
         return True
 
-    def __hash__(self):
+    def __hash__(
+        self,
+    ):
         identifiers = []
         for identifier in self.meta.identifiers:
-            identifiers.append(getattr(self, identifier))
-        return hash((self.__class__.__name__, tuple(identifiers)))
+            identifiers.append(
+                getattr(
+                    self,
+                    identifier,
+                )
+            )
+        return hash(
+            (
+                self.__class__.__name__,
+                tuple(identifiers),
+            )
+        )

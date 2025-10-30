@@ -1,11 +1,17 @@
-from __future__ import annotations
+from __future__ import (
+    annotations,
+)
 
 import typing
 
-from .url import Url
+from .url import (
+    Url,
+)
 
 if typing.TYPE_CHECKING:
-    from ..connection import ProxyConfig
+    from ..connection import (
+        ProxyConfig,
+    )
 
 
 def connection_requires_http_tunnel(

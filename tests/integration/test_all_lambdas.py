@@ -1,16 +1,22 @@
 # tests/integration/test_all_lambdas.py
-import json, os, time, subprocess, json as pyjson
-import boto3, pytest
+import json as pyjson
+import os
+import subprocess
+import time
 
-AWS_ENDPOINT = os.getenv("AWS_ENDPOINT","http://localhost:4566")
-REGION = os.getenv("REGION","us-east-1")
+import boto3
+import pytest
+
+AWS_ENDPOINT = os.getenv("AWS_ENDPOINT", "http://localhost:4566")
+REGION = os.getenv("REGION", "us-east-1")
+
 
 def _tf_lambda_names():
     try:
         out = subprocess.check_output(
-            ["bash","-lc","cd infra/terraform && terraform output -json lambda_names"],
+            ["bash", "-lc", "cd infra/terraform && terraform output -json lambda_names"],
             stderr=subprocess.STDOUT,
-            text=True
+            text=True,
         )
         return pyjson.loads(out)
     except Exception:
@@ -22,6 +28,7 @@ def _tf_lambda_names():
                 names.append(name)
         return names
 
+
 FN_NAMES = _tf_lambda_names()
 
 client = boto3.client(
@@ -31,6 +38,7 @@ client = boto3.client(
     aws_access_key_id="test",
     aws_secret_access_key="test",
 )
+
 
 @pytest.mark.parametrize("fn", FN_NAMES)
 def test_invoke(fn):

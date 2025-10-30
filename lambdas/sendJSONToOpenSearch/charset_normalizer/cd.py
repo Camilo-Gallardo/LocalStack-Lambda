@@ -1,10 +1,20 @@
-from __future__ import annotations
+from __future__ import (
+    annotations,
+)
 
 import importlib
-from codecs import IncrementalDecoder
-from collections import Counter
-from functools import lru_cache
-from typing import Counter as TypeCounter
+from codecs import (
+    IncrementalDecoder,
+)
+from collections import (
+    Counter,
+)
+from functools import (
+    lru_cache,
+)
+from typing import (
+    Counter as TypeCounter,
+)
 
 from .constant import (
     FREQUENCIES,
@@ -13,8 +23,12 @@ from .constant import (
     TOO_SMALL_SEQUENCE,
     ZH_NAMES,
 )
-from .md import is_suspiciously_successive_range
-from .models import CoherenceMatches
+from .md import (
+    is_suspiciously_successive_range,
+)
+from .models import (
+    CoherenceMatches,
+)
 from .utils import (
     is_accentuated,
     is_latin,
@@ -24,7 +38,9 @@ from .utils import (
 )
 
 
-def encoding_unicode_range(iana_name: str) -> list[str]:
+def encoding_unicode_range(
+    iana_name: str,
+) -> list[str]:
     """
     Return associated unicode ranges in a single byte code page.
     """
@@ -34,10 +50,16 @@ def encoding_unicode_range(iana_name: str) -> list[str]:
     decoder = importlib.import_module(f"encodings.{iana_name}").IncrementalDecoder
 
     p: IncrementalDecoder = decoder(errors="ignore")
-    seen_ranges: dict[str, int] = {}
+    seen_ranges: dict[
+        str,
+        int,
+    ] = {}
     character_count: int = 0
 
-    for i in range(0x40, 0xFF):
+    for i in range(
+        0x40,
+        0xFF,
+    ):
         chunk: str = p.decode(bytes([i]))
 
         if chunk:
@@ -61,13 +83,18 @@ def encoding_unicode_range(iana_name: str) -> list[str]:
     )
 
 
-def unicode_range_languages(primary_range: str) -> list[str]:
+def unicode_range_languages(
+    primary_range: str,
+) -> list[str]:
     """
     Return inferred languages used with a unicode range.
     """
     languages: list[str] = []
 
-    for language, characters in FREQUENCIES.items():
+    for (
+        language,
+        characters,
+    ) in FREQUENCIES.items():
         for character in characters:
             if unicode_range(character) == primary_range:
                 languages.append(language)
@@ -77,7 +104,9 @@ def unicode_range_languages(primary_range: str) -> list[str]:
 
 
 @lru_cache()
-def encoding_languages(iana_name: str) -> list[str]:
+def encoding_languages(
+    iana_name: str,
+) -> list[str]:
     """
     Single-byte encoding language association. Some code page are heavily linked to particular language(s).
     This function does the correspondence.
@@ -97,7 +126,9 @@ def encoding_languages(iana_name: str) -> list[str]:
 
 
 @lru_cache()
-def mb_encoding_languages(iana_name: str) -> list[str]:
+def mb_encoding_languages(
+    iana_name: str,
+) -> list[str]:
     """
     Multi-byte encoding language association. Some code page are heavily linked to particular language(s).
     This function does the correspondence.
@@ -118,7 +149,12 @@ def mb_encoding_languages(iana_name: str) -> list[str]:
 
 
 @lru_cache(maxsize=LANGUAGE_SUPPORTED_COUNT)
-def get_target_features(language: str) -> tuple[bool, bool]:
+def get_target_features(
+    language: str,
+) -> tuple[
+    bool,
+    bool,
+]:
     """
     Determine main aspects from a supported language if it contains accents and if is pure Latin.
     """
@@ -131,21 +167,36 @@ def get_target_features(language: str) -> tuple[bool, bool]:
         if target_pure_latin and is_latin(character) is False:
             target_pure_latin = False
 
-    return target_have_accents, target_pure_latin
+    return (
+        target_have_accents,
+        target_pure_latin,
+    )
 
 
 def alphabet_languages(
-    characters: list[str], ignore_non_latin: bool = False
+    characters: list[str],
+    ignore_non_latin: bool = False,
 ) -> list[str]:
     """
     Return associated languages associated to given characters.
     """
-    languages: list[tuple[str, float]] = []
+    languages: list[
+        tuple[
+            str,
+            float,
+        ]
+    ] = []
 
     source_have_accents = any(is_accentuated(character) for character in characters)
 
-    for language, language_characters in FREQUENCIES.items():
-        target_have_accents, target_pure_latin = get_target_features(language)
+    for (
+        language,
+        language_characters,
+    ) in FREQUENCIES.items():
+        (
+            target_have_accents,
+            target_pure_latin,
+        ) = get_target_features(language)
 
         if ignore_non_latin and target_pure_latin is False:
             continue
@@ -162,15 +213,25 @@ def alphabet_languages(
         ratio: float = character_match_count / character_count
 
         if ratio >= 0.2:
-            languages.append((language, ratio))
+            languages.append(
+                (
+                    language,
+                    ratio,
+                )
+            )
 
-    languages = sorted(languages, key=lambda x: x[1], reverse=True)
+    languages = sorted(
+        languages,
+        key=lambda x: x[1],
+        reverse=True,
+    )
 
     return [compatible_language[0] for compatible_language in languages]
 
 
 def characters_popularity_compare(
-    language: str, ordered_characters: list[str]
+    language: str,
+    ordered_characters: list[str],
 ) -> float:
     """
     Determine if a ordered characters list (by occurrence from most appearance to rarest) match a particular language.
@@ -188,8 +249,15 @@ def characters_popularity_compare(
 
     large_alphabet: bool = target_language_characters_count > 26
 
-    for character, character_rank in zip(
-        ordered_characters, range(0, ordered_characters_count)
+    for (
+        character,
+        character_rank,
+    ) in zip(
+        ordered_characters,
+        range(
+            0,
+            ordered_characters_count,
+        ),
     ):
         if character not in FREQUENCIES_language_set:
             continue
@@ -249,13 +317,18 @@ def characters_popularity_compare(
     return character_approved_count / len(ordered_characters)
 
 
-def alpha_unicode_split(decoded_sequence: str) -> list[str]:
+def alpha_unicode_split(
+    decoded_sequence: str,
+) -> list[str]:
     """
     Given a decoded text sequence, return a list of str. Unicode range / alphabet separation.
     Ex. a text containing English/Latin with a bit a Hebrew will return two items in the resulting list;
     One containing the latin letters and the other hebrew.
     """
-    layers: dict[str, str] = {}
+    layers: dict[
+        str,
+        str,
+    ] = {}
 
     for character in decoded_sequence:
         if character.isalpha() is False:
@@ -270,7 +343,10 @@ def alpha_unicode_split(decoded_sequence: str) -> list[str]:
 
         for discovered_range in layers:
             if (
-                is_suspiciously_successive_range(discovered_range, character_range)
+                is_suspiciously_successive_range(
+                    discovered_range,
+                    character_range,
+                )
                 is False
             ):
                 layer_target_range = discovered_range
@@ -288,15 +364,23 @@ def alpha_unicode_split(decoded_sequence: str) -> list[str]:
     return list(layers.values())
 
 
-def merge_coherence_ratios(results: list[CoherenceMatches]) -> CoherenceMatches:
+def merge_coherence_ratios(
+    results: list[CoherenceMatches],
+) -> CoherenceMatches:
     """
     This function merge results previously given by the function coherence_ratio.
     The return type is the same as coherence_ratio.
     """
-    per_language_ratios: dict[str, list[float]] = {}
+    per_language_ratios: dict[
+        str,
+        list[float],
+    ] = {}
     for result in results:
         for sub_result in result:
-            language, ratio = sub_result
+            (
+                language,
+                ratio,
+            ) = sub_result
             if language not in per_language_ratios:
                 per_language_ratios[language] = [ratio]
                 continue
@@ -313,19 +397,34 @@ def merge_coherence_ratios(results: list[CoherenceMatches]) -> CoherenceMatches:
         for language in per_language_ratios
     ]
 
-    return sorted(merge, key=lambda x: x[1], reverse=True)
+    return sorted(
+        merge,
+        key=lambda x: x[1],
+        reverse=True,
+    )
 
 
-def filter_alt_coherence_matches(results: CoherenceMatches) -> CoherenceMatches:
+def filter_alt_coherence_matches(
+    results: CoherenceMatches,
+) -> CoherenceMatches:
     """
     We shall NOT return "English—" in CoherenceMatches because it is an alternative
     of "English". This function only keeps the best match and remove the em-dash in it.
     """
-    index_results: dict[str, list[float]] = dict()
+    index_results: dict[
+        str,
+        list[float],
+    ] = dict()
 
     for result in results:
-        language, ratio = result
-        no_em_name: str = language.replace("—", "")
+        (
+            language,
+            ratio,
+        ) = result
+        no_em_name: str = language.replace(
+            "—",
+            "",
+        )
 
         if no_em_name not in index_results:
             index_results[no_em_name] = []
@@ -336,7 +435,12 @@ def filter_alt_coherence_matches(results: CoherenceMatches) -> CoherenceMatches:
         filtered_results: CoherenceMatches = []
 
         for language in index_results:
-            filtered_results.append((language, max(index_results[language])))
+            filtered_results.append(
+                (
+                    language,
+                    max(index_results[language]),
+                )
+            )
 
         return filtered_results
 
@@ -345,14 +449,21 @@ def filter_alt_coherence_matches(results: CoherenceMatches) -> CoherenceMatches:
 
 @lru_cache(maxsize=2048)
 def coherence_ratio(
-    decoded_sequence: str, threshold: float = 0.1, lg_inclusion: str | None = None
+    decoded_sequence: str,
+    threshold: float = 0.1,
+    lg_inclusion: str | None = None,
 ) -> CoherenceMatches:
     """
     Detect ANY language that can be identified in given sequence. The sequence will be analysed by layers.
     A layer = Character extraction by alphabets/ranges.
     """
 
-    results: list[tuple[str, float]] = []
+    results: list[
+        tuple[
+            str,
+            float,
+        ]
+    ] = []
     ignore_non_latin: bool = False
 
     sufficient_match_count: int = 0
@@ -374,10 +485,12 @@ def coherence_ratio(
         popular_character_ordered: list[str] = [c for c, o in most_common]
 
         for language in lg_inclusion_list or alphabet_languages(
-            popular_character_ordered, ignore_non_latin
+            popular_character_ordered,
+            ignore_non_latin,
         ):
             ratio: float = characters_popularity_compare(
-                language, popular_character_ordered
+                language,
+                popular_character_ordered,
             )
 
             if ratio < threshold:
@@ -385,11 +498,21 @@ def coherence_ratio(
             elif ratio >= 0.8:
                 sufficient_match_count += 1
 
-            results.append((language, round(ratio, 4)))
+            results.append(
+                (
+                    language,
+                    round(
+                        ratio,
+                        4,
+                    ),
+                )
+            )
 
             if sufficient_match_count >= 3:
                 break
 
     return sorted(
-        filter_alt_coherence_matches(results), key=lambda x: x[1], reverse=True
+        filter_alt_coherence_matches(results),
+        key=lambda x: x[1],
+        reverse=True,
     )

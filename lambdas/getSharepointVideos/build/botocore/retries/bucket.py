@@ -1,25 +1,40 @@
 """This module implements token buckets used for client side throttling."""
+
 import threading
 import time
 
-from botocore.exceptions import CapacityNotAvailableError
+from botocore.exceptions import (
+    CapacityNotAvailableError,
+)
 
 
 class Clock:
-    def __init__(self):
+    def __init__(
+        self,
+    ):
         pass
 
-    def sleep(self, amount):
+    def sleep(
+        self,
+        amount,
+    ):
         time.sleep(amount)
 
-    def current_time(self):
+    def current_time(
+        self,
+    ):
         return time.time()
 
 
 class TokenBucket:
     _MIN_RATE = 0.5
 
-    def __init__(self, max_rate, clock, min_rate=_MIN_RATE):
+    def __init__(
+        self,
+        max_rate,
+        clock,
+        min_rate=_MIN_RATE,
+    ):
         self._fill_rate = None
         self._max_capacity = None
         self._current_capacity = 0
@@ -31,11 +46,16 @@ class TokenBucket:
         self.max_rate = max_rate
 
     @property
-    def max_rate(self):
+    def max_rate(
+        self,
+    ):
         return self._fill_rate
 
     @max_rate.setter
-    def max_rate(self, value):
+    def max_rate(
+        self,
+        value,
+    ):
         with self._new_fill_rate_condition:
             # Before we can change the rate we need to fill any pending
             # tokens we might have based on the current rate.  If we don't
@@ -43,7 +63,10 @@ class TokenBucket:
             # will accumulate at the rate we're about to set which isn't
             # correct.
             self._refill()
-            self._fill_rate = max(value, self._min_rate)
+            self._fill_rate = max(
+                value,
+                self._min_rate,
+            )
             if value >= 1:
                 self._max_capacity = value
             else:
@@ -51,19 +74,28 @@ class TokenBucket:
             # If we're scaling down, we also can't have a capacity that's
             # more than our max_capacity.
             self._current_capacity = min(
-                self._current_capacity, self._max_capacity
+                self._current_capacity,
+                self._max_capacity,
             )
             self._new_fill_rate_condition.notify()
 
     @property
-    def max_capacity(self):
+    def max_capacity(
+        self,
+    ):
         return self._max_capacity
 
     @property
-    def available_capacity(self):
+    def available_capacity(
+        self,
+    ):
         return self._current_capacity
 
-    def acquire(self, amount=1, block=True):
+    def acquire(
+        self,
+        amount=1,
+        block=True,
+    ):
         """Acquire token or return amount of time until next token available.
 
         If block is True, then this method will block until there's sufficient
@@ -74,9 +106,16 @@ class TokenBucket:
 
         """
         with self._new_fill_rate_condition:
-            return self._acquire(amount=amount, block=block)
+            return self._acquire(
+                amount=amount,
+                block=block,
+            )
 
-    def _acquire(self, amount, block):
+    def _acquire(
+        self,
+        amount,
+        block,
+    ):
         self._refill()
         if amount <= self._current_capacity:
             self._current_capacity -= amount
@@ -99,16 +138,24 @@ class TokenBucket:
             self._current_capacity -= amount
             return True
 
-    def _sleep_amount(self, amount):
+    def _sleep_amount(
+        self,
+        amount,
+    ):
         return (amount - self._current_capacity) / self._fill_rate
 
-    def _refill(self):
+    def _refill(
+        self,
+    ):
         timestamp = self._clock.current_time()
         if self._last_timestamp is None:
             self._last_timestamp = timestamp
             return
         current_capacity = self._current_capacity
         fill_amount = (timestamp - self._last_timestamp) * self._fill_rate
-        new_capacity = min(self._max_capacity, current_capacity + fill_amount)
+        new_capacity = min(
+            self._max_capacity,
+            current_capacity + fill_amount,
+        )
         self._current_capacity = new_capacity
         self._last_timestamp = timestamp

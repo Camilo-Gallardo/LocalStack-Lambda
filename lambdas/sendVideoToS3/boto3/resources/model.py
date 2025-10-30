@@ -25,7 +25,9 @@ classes as well as by the documentation generator.
 
 import logging
 
-from botocore import xform_name
+from botocore import (
+    xform_name,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -38,7 +40,11 @@ class Identifier:
     :param name: The name of the identifier
     """
 
-    def __init__(self, name, member_name=None):
+    def __init__(
+        self,
+        name,
+        member_name=None,
+    ):
         #: (``string``) The name of the identifier
         self.name = name
         self.member_name = member_name
@@ -56,23 +62,37 @@ class Action:
     :param resource_defs: All resources defined in the service
     """
 
-    def __init__(self, name, definition, resource_defs):
+    def __init__(
+        self,
+        name,
+        definition,
+        resource_defs,
+    ):
         self._definition = definition
 
         #: (``string``) The name of the action
         self.name = name
         #: (:py:class:`Request`) This action's request or ``None``
         self.request = None
-        if 'request' in definition:
-            self.request = Request(definition.get('request', {}))
+        if "request" in definition:
+            self.request = Request(
+                definition.get(
+                    "request",
+                    {},
+                )
+            )
         #: (:py:class:`ResponseResource`) This action's resource or ``None``
         self.resource = None
-        if 'resource' in definition:
+        if "resource" in definition:
             self.resource = ResponseResource(
-                definition.get('resource', {}), resource_defs
+                definition.get(
+                    "resource",
+                    {},
+                ),
+                resource_defs,
             )
         #: (``string``) The JMESPath search path or ``None``
-        self.path = definition.get('path')
+        self.path = definition.get("path")
 
 
 class DefinitionWithParams:
@@ -85,11 +105,16 @@ class DefinitionWithParams:
     :param definition: The JSON definition
     """
 
-    def __init__(self, definition):
+    def __init__(
+        self,
+        definition,
+    ):
         self._definition = definition
 
     @property
-    def params(self):
+    def params(
+        self,
+    ):
         """
         Get a list of auto-filled parameters for this request.
 
@@ -97,7 +122,10 @@ class DefinitionWithParams:
         """
         params = []
 
-        for item in self._definition.get('params', []):
+        for item in self._definition.get(
+            "params",
+            [],
+        ):
             params.append(Parameter(**item))
 
         return params
@@ -118,7 +146,13 @@ class Parameter:
     """
 
     def __init__(
-        self, target, source, name=None, path=None, value=None, **kwargs
+        self,
+        target,
+        source,
+        name=None,
+        path=None,
+        value=None,
+        **kwargs,
     ):
         #: (``string``) The destination parameter name
         self.target = target
@@ -133,7 +167,10 @@ class Parameter:
 
         # Complain if we encounter any unknown values.
         if kwargs:
-            logger.warning('Unknown parameter options found: %s', kwargs)
+            logger.warning(
+                "Unknown parameter options found: %s",
+                kwargs,
+            )
 
 
 class Request(DefinitionWithParams):
@@ -144,11 +181,14 @@ class Request(DefinitionWithParams):
     :param definition: The JSON definition
     """
 
-    def __init__(self, definition):
+    def __init__(
+        self,
+        definition,
+    ):
         super().__init__(definition)
 
         #: (``string``) The name of the low-level service operation
-        self.operation = definition.get('operation')
+        self.operation = definition.get("operation")
 
 
 class Waiter(DefinitionWithParams):
@@ -161,16 +201,20 @@ class Waiter(DefinitionWithParams):
     :param definition: The JSON definition
     """
 
-    PREFIX = 'WaitUntil'
+    PREFIX = "WaitUntil"
 
-    def __init__(self, name, definition):
+    def __init__(
+        self,
+        name,
+        definition,
+    ):
         super().__init__(definition)
 
         #: (``string``) The name of this waiter
         self.name = name
 
         #: (``string``) The name of the underlying event waiter
-        self.waiter_name = definition.get('waiterName')
+        self.waiter_name = definition.get("waiterName")
 
 
 class ResponseResource:
@@ -183,18 +227,24 @@ class ResponseResource:
     :param resource_defs: All resources defined in the service
     """
 
-    def __init__(self, definition, resource_defs):
+    def __init__(
+        self,
+        definition,
+        resource_defs,
+    ):
         self._definition = definition
         self._resource_defs = resource_defs
 
         #: (``string``) The name of the response resource type
-        self.type = definition.get('type')
+        self.type = definition.get("type")
 
         #: (``string``) The JMESPath search query or ``None``
-        self.path = definition.get('path')
+        self.path = definition.get("path")
 
     @property
-    def identifiers(self):
+    def identifiers(
+        self,
+    ):
         """
         A list of resource identifiers.
 
@@ -202,20 +252,27 @@ class ResponseResource:
         """
         identifiers = []
 
-        for item in self._definition.get('identifiers', []):
+        for item in self._definition.get(
+            "identifiers",
+            [],
+        ):
             identifiers.append(Parameter(**item))
 
         return identifiers
 
     @property
-    def model(self):
+    def model(
+        self,
+    ):
         """
         Get the resource model for the response resource.
 
         :type: :py:class:`ResourceModel`
         """
         return ResourceModel(
-            self.type, self._resource_defs[self.type], self._resource_defs
+            self.type,
+            self._resource_defs[self.type],
+            self._resource_defs,
         )
 
 
@@ -232,7 +289,9 @@ class Collection(Action):
     """
 
     @property
-    def batch_actions(self):
+    def batch_actions(
+        self,
+    ):
         """
         Get a list of batch actions supported by the resource type
         contained in this action. This is a shortcut for accessing
@@ -258,7 +317,12 @@ class ResourceModel:
     :param resource_defs: All resources defined in the service
     """
 
-    def __init__(self, name, definition, resource_defs):
+    def __init__(
+        self,
+        name,
+        definition,
+        resource_defs,
+    ):
         self._definition = definition
         self._resource_defs = resource_defs
         self._renamed = {}
@@ -266,9 +330,12 @@ class ResourceModel:
         #: (``string``) The name of this resource
         self.name = name
         #: (``string``) The service shape name for this resource or ``None``
-        self.shape = definition.get('shape')
+        self.shape = definition.get("shape")
 
-    def load_rename_map(self, shape=None):
+    def load_rename_map(
+        self,
+        shape=None,
+    ):
         """
         Load a name translation map given a shape. This will set
         up renamed values for any collisions, e.g. if the shape,
@@ -306,47 +373,93 @@ class ResourceModel:
         :param shape: The underlying shape for this resource.
         """
         # Meta is a reserved name for resources
-        names = {'meta'}
+        names = {"meta"}
         self._renamed = {}
 
-        if self._definition.get('load'):
-            names.add('load')
+        if self._definition.get("load"):
+            names.add("load")
 
-        for item in self._definition.get('identifiers', []):
-            self._load_name_with_category(names, item['name'], 'identifier')
+        for item in self._definition.get(
+            "identifiers",
+            [],
+        ):
+            self._load_name_with_category(
+                names,
+                item["name"],
+                "identifier",
+            )
 
-        for name in self._definition.get('actions', {}):
-            self._load_name_with_category(names, name, 'action')
+        for name in self._definition.get(
+            "actions",
+            {},
+        ):
+            self._load_name_with_category(
+                names,
+                name,
+                "action",
+            )
 
-        for name, ref in self._get_has_definition().items():
+        for (
+            name,
+            ref,
+        ) in self._get_has_definition().items():
             # Subresources require no data members, just typically
             # identifiers and user input.
             data_required = False
-            for identifier in ref['resource']['identifiers']:
-                if identifier['source'] == 'data':
+            for identifier in ref["resource"]["identifiers"]:
+                if identifier["source"] == "data":
                     data_required = True
                     break
 
             if not data_required:
                 self._load_name_with_category(
-                    names, name, 'subresource', snake_case=False
+                    names,
+                    name,
+                    "subresource",
+                    snake_case=False,
                 )
             else:
-                self._load_name_with_category(names, name, 'reference')
+                self._load_name_with_category(
+                    names,
+                    name,
+                    "reference",
+                )
 
-        for name in self._definition.get('hasMany', {}):
-            self._load_name_with_category(names, name, 'collection')
-
-        for name in self._definition.get('waiters', {}):
+        for name in self._definition.get(
+            "hasMany",
+            {},
+        ):
             self._load_name_with_category(
-                names, Waiter.PREFIX + name, 'waiter'
+                names,
+                name,
+                "collection",
+            )
+
+        for name in self._definition.get(
+            "waiters",
+            {},
+        ):
+            self._load_name_with_category(
+                names,
+                Waiter.PREFIX + name,
+                "waiter",
             )
 
         if shape is not None:
             for name in shape.members.keys():
-                self._load_name_with_category(names, name, 'attribute')
+                self._load_name_with_category(
+                    names,
+                    name,
+                    "attribute",
+                )
 
-    def _load_name_with_category(self, names, name, category, snake_case=True):
+    def _load_name_with_category(
+        self,
+        names,
+        name,
+        category,
+        snake_case=True,
+    ):
         """
         Load a name with a given category, possibly renaming it
         if that name is already in use. The name will be stored
@@ -366,22 +479,36 @@ class ResourceModel:
             name = xform_name(name)
 
         if name in names:
-            logger.debug(f'Renaming {self.name} {category} {name}')
-            self._renamed[(category, name)] = name + '_' + category
-            name += '_' + category
+            logger.debug(f"Renaming {self.name} {category} {name}")
+            self._renamed[
+                (
+                    category,
+                    name,
+                )
+            ] = (
+                name + "_" + category
+            )
+            name += "_" + category
 
             if name in names:
                 # This isn't good, let's raise instead of trying to keep
                 # renaming this value.
                 raise ValueError(
-                    'Problem renaming {} {} to {}!'.format(
-                        self.name, category, name
+                    "Problem renaming {} {} to {}!".format(
+                        self.name,
+                        category,
+                        name,
                     )
                 )
 
         names.add(name)
 
-    def _get_name(self, category, name, snake_case=True):
+    def _get_name(
+        self,
+        category,
+        name,
+        snake_case=True,
+    ):
         """
         Get a possibly renamed value given a category and name. This
         uses the rename map set up in ``load_rename_map``, so that
@@ -400,9 +527,18 @@ class ResourceModel:
         if snake_case:
             name = xform_name(name)
 
-        return self._renamed.get((category, name), name)
+        return self._renamed.get(
+            (
+                category,
+                name,
+            ),
+            name,
+        )
 
-    def get_attributes(self, shape):
+    def get_attributes(
+        self,
+        shape,
+    ):
         """
         Get a dictionary of attribute names to original name and shape
         models that represent the attributes of this resource. Looks
@@ -420,20 +556,30 @@ class ResourceModel:
         attributes = {}
         identifier_names = [i.name for i in self.identifiers]
 
-        for name, member in shape.members.items():
+        for (
+            name,
+            member,
+        ) in shape.members.items():
             snake_cased = xform_name(name)
             if snake_cased in identifier_names:
                 # Skip identifiers, these are set through other means
                 continue
             snake_cased = self._get_name(
-                'attribute', snake_cased, snake_case=False
+                "attribute",
+                snake_cased,
+                snake_case=False,
             )
-            attributes[snake_cased] = (name, member)
+            attributes[snake_cased] = (
+                name,
+                member,
+            )
 
         return attributes
 
     @property
-    def identifiers(self):
+    def identifiers(
+        self,
+    ):
         """
         Get a list of resource identifiers.
 
@@ -441,31 +587,56 @@ class ResourceModel:
         """
         identifiers = []
 
-        for item in self._definition.get('identifiers', []):
-            name = self._get_name('identifier', item['name'])
-            member_name = item.get('memberName', None)
+        for item in self._definition.get(
+            "identifiers",
+            [],
+        ):
+            name = self._get_name(
+                "identifier",
+                item["name"],
+            )
+            member_name = item.get(
+                "memberName",
+                None,
+            )
             if member_name:
-                member_name = self._get_name('attribute', member_name)
-            identifiers.append(Identifier(name, member_name))
+                member_name = self._get_name(
+                    "attribute",
+                    member_name,
+                )
+            identifiers.append(
+                Identifier(
+                    name,
+                    member_name,
+                )
+            )
 
         return identifiers
 
     @property
-    def load(self):
+    def load(
+        self,
+    ):
         """
         Get the load action for this resource, if it is defined.
 
         :type: :py:class:`Action` or ``None``
         """
-        action = self._definition.get('load')
+        action = self._definition.get("load")
 
         if action is not None:
-            action = Action('load', action, self._resource_defs)
+            action = Action(
+                "load",
+                action,
+                self._resource_defs,
+            )
 
         return action
 
     @property
-    def actions(self):
+    def actions(
+        self,
+    ):
         """
         Get a list of actions for this resource.
 
@@ -473,14 +644,31 @@ class ResourceModel:
         """
         actions = []
 
-        for name, item in self._definition.get('actions', {}).items():
-            name = self._get_name('action', name)
-            actions.append(Action(name, item, self._resource_defs))
+        for (
+            name,
+            item,
+        ) in self._definition.get(
+            "actions",
+            {},
+        ).items():
+            name = self._get_name(
+                "action",
+                name,
+            )
+            actions.append(
+                Action(
+                    name,
+                    item,
+                    self._resource_defs,
+                )
+            )
 
         return actions
 
     @property
-    def batch_actions(self):
+    def batch_actions(
+        self,
+    ):
         """
         Get a list of batch actions for this resource.
 
@@ -488,13 +676,30 @@ class ResourceModel:
         """
         actions = []
 
-        for name, item in self._definition.get('batchActions', {}).items():
-            name = self._get_name('batch_action', name)
-            actions.append(Action(name, item, self._resource_defs))
+        for (
+            name,
+            item,
+        ) in self._definition.get(
+            "batchActions",
+            {},
+        ).items():
+            name = self._get_name(
+                "batch_action",
+                name,
+            )
+            actions.append(
+                Action(
+                    name,
+                    item,
+                    self._resource_defs,
+                )
+            )
 
         return actions
 
-    def _get_has_definition(self):
+    def _get_has_definition(
+        self,
+    ):
         """
         Get a ``has`` relationship definition from a model, where the
         service resource model is treated special in that it contains
@@ -511,15 +716,30 @@ class ResourceModel:
             # the defined resources as subresources.
             definition = {}
 
-            for name, resource_def in self._resource_defs.items():
+            for (
+                name,
+                resource_def,
+            ) in self._resource_defs.items():
                 # It's possible for the service to have renamed a
                 # resource or to have defined multiple names that
                 # point to the same resource type, so we need to
                 # take that into account.
                 found = False
-                has_items = self._definition.get('has', {}).items()
-                for has_name, has_def in has_items:
-                    if has_def.get('resource', {}).get('type') == name:
+                has_items = self._definition.get(
+                    "has",
+                    {},
+                ).items()
+                for (
+                    has_name,
+                    has_def,
+                ) in has_items:
+                    if (
+                        has_def.get(
+                            "resource",
+                            {},
+                        ).get("type")
+                        == name
+                    ):
                         definition[has_name] = has_def
                         found = True
 
@@ -539,20 +759,37 @@ class ResourceModel:
                     #   }
                     # }
                     #
-                    fake_has = {'resource': {'type': name, 'identifiers': []}}
+                    fake_has = {
+                        "resource": {
+                            "type": name,
+                            "identifiers": [],
+                        }
+                    }
 
-                    for identifier in resource_def.get('identifiers', []):
-                        fake_has['resource']['identifiers'].append(
-                            {'target': identifier['name'], 'source': 'input'}
+                    for identifier in resource_def.get(
+                        "identifiers",
+                        [],
+                    ):
+                        fake_has["resource"]["identifiers"].append(
+                            {
+                                "target": identifier["name"],
+                                "source": "input",
+                            }
                         )
 
                     definition[name] = fake_has
         else:
-            definition = self._definition.get('has', {})
+            definition = self._definition.get(
+                "has",
+                {},
+            )
 
         return definition
 
-    def _get_related_resources(self, subresources):
+    def _get_related_resources(
+        self,
+        subresources,
+    ):
         """
         Get a list of sub-resources or references.
 
@@ -563,16 +800,30 @@ class ResourceModel:
         """
         resources = []
 
-        for name, definition in self._get_has_definition().items():
+        for (
+            name,
+            definition,
+        ) in self._get_has_definition().items():
             if subresources:
-                name = self._get_name('subresource', name, snake_case=False)
+                name = self._get_name(
+                    "subresource",
+                    name,
+                    snake_case=False,
+                )
             else:
-                name = self._get_name('reference', name)
-            action = Action(name, definition, self._resource_defs)
+                name = self._get_name(
+                    "reference",
+                    name,
+                )
+            action = Action(
+                name,
+                definition,
+                self._resource_defs,
+            )
 
             data_required = False
             for identifier in action.resource.identifiers:
-                if identifier.source == 'data':
+                if identifier.source == "data":
                     data_required = True
                     break
 
@@ -584,7 +835,9 @@ class ResourceModel:
         return resources
 
     @property
-    def subresources(self):
+    def subresources(
+        self,
+    ):
         """
         Get a list of sub-resources.
 
@@ -593,7 +846,9 @@ class ResourceModel:
         return self._get_related_resources(True)
 
     @property
-    def references(self):
+    def references(
+        self,
+    ):
         """
         Get a list of reference resources.
 
@@ -602,7 +857,9 @@ class ResourceModel:
         return self._get_related_resources(False)
 
     @property
-    def collections(self):
+    def collections(
+        self,
+    ):
         """
         Get a list of collections for this resource.
 
@@ -610,14 +867,31 @@ class ResourceModel:
         """
         collections = []
 
-        for name, item in self._definition.get('hasMany', {}).items():
-            name = self._get_name('collection', name)
-            collections.append(Collection(name, item, self._resource_defs))
+        for (
+            name,
+            item,
+        ) in self._definition.get(
+            "hasMany",
+            {},
+        ).items():
+            name = self._get_name(
+                "collection",
+                name,
+            )
+            collections.append(
+                Collection(
+                    name,
+                    item,
+                    self._resource_defs,
+                )
+            )
 
         return collections
 
     @property
-    def waiters(self):
+    def waiters(
+        self,
+    ):
         """
         Get a list of waiters for this resource.
 
@@ -625,8 +899,22 @@ class ResourceModel:
         """
         waiters = []
 
-        for name, item in self._definition.get('waiters', {}).items():
-            name = self._get_name('waiter', Waiter.PREFIX + name)
-            waiters.append(Waiter(name, item))
+        for (
+            name,
+            item,
+        ) in self._definition.get(
+            "waiters",
+            {},
+        ).items():
+            name = self._get_name(
+                "waiter",
+                Waiter.PREFIX + name,
+            )
+            waiters.append(
+                Waiter(
+                    name,
+                    item,
+                )
+            )
 
         return waiters

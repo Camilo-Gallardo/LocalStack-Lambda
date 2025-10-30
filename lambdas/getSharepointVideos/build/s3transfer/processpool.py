@@ -198,15 +198,32 @@ import logging
 import multiprocessing
 import signal
 import threading
-from copy import deepcopy
+from copy import (
+    deepcopy,
+)
 
 import botocore.session
-from botocore.config import Config
+from botocore.config import (
+    Config,
+)
 
-from s3transfer.compat import MAXINT, BaseManager
-from s3transfer.constants import ALLOWED_DOWNLOAD_ARGS, MB, PROCESS_USER_AGENT
-from s3transfer.exceptions import CancelledError, RetriesExceededError
-from s3transfer.futures import BaseTransferFuture, BaseTransferMeta
+from s3transfer.compat import (
+    MAXINT,
+    BaseManager,
+)
+from s3transfer.constants import (
+    ALLOWED_DOWNLOAD_ARGS,
+    MB,
+    PROCESS_USER_AGENT,
+)
+from s3transfer.exceptions import (
+    CancelledError,
+    RetriesExceededError,
+)
+from s3transfer.futures import (
+    BaseTransferFuture,
+    BaseTransferMeta,
+)
 from s3transfer.utils import (
     S3_RETRYABLE_DOWNLOAD_ERRORS,
     CallArgs,
@@ -217,36 +234,36 @@ from s3transfer.utils import (
 
 logger = logging.getLogger(__name__)
 
-SHUTDOWN_SIGNAL = 'SHUTDOWN'
+SHUTDOWN_SIGNAL = "SHUTDOWN"
 
 # The DownloadFileRequest tuple is submitted from the ProcessPoolDownloader
 # to the GetObjectSubmitter in order for the submitter to begin submitting
 # GetObjectJobs to the GetObjectWorkers.
 DownloadFileRequest = collections.namedtuple(
-    'DownloadFileRequest',
+    "DownloadFileRequest",
     [
-        'transfer_id',  # The unique id for the transfer
-        'bucket',  # The bucket to download the object from
-        'key',  # The key to download the object from
-        'filename',  # The user-requested download location
-        'extra_args',  # Extra arguments to provide to client calls
-        'expected_size',  # The user-provided expected size of the download
+        "transfer_id",  # The unique id for the transfer
+        "bucket",  # The bucket to download the object from
+        "key",  # The key to download the object from
+        "filename",  # The user-requested download location
+        "extra_args",  # Extra arguments to provide to client calls
+        "expected_size",  # The user-provided expected size of the download
     ],
 )
 
 # The GetObjectJob tuple is submitted from the GetObjectSubmitter
 # to the GetObjectWorkers to download the file or parts of the file.
 GetObjectJob = collections.namedtuple(
-    'GetObjectJob',
+    "GetObjectJob",
     [
-        'transfer_id',  # The unique id for the transfer
-        'bucket',  # The bucket to download the object from
-        'key',  # The key to download the object from
-        'temp_filename',  # The temporary file to write the content to via
+        "transfer_id",  # The unique id for the transfer
+        "bucket",  # The bucket to download the object from
+        "key",  # The key to download the object from
+        "temp_filename",  # The temporary file to write the content to via
         # completed GetObject calls.
-        'extra_args',  # Extra arguments to provide to the GetObject call
-        'offset',  # The offset to write the content for the temp file.
-        'filename',  # The user-requested download location. The worker
+        "extra_args",  # Extra arguments to provide to the GetObject call
+        "offset",  # The offset to write the content for the temp file.
+        "filename",  # The user-requested download location. The worker
         # of final GetObjectJob will move the file located at
         # temp_filename to the location of filename.
     ],
@@ -257,13 +274,19 @@ GetObjectJob = collections.namedtuple(
 def ignore_ctrl_c():
     original_handler = _add_ignore_handler_for_interrupts()
     yield
-    signal.signal(signal.SIGINT, original_handler)
+    signal.signal(
+        signal.SIGINT,
+        original_handler,
+    )
 
 
 def _add_ignore_handler_for_interrupts():
     # Windows is unable to pickle signal.signal directly so it needs to
     # be wrapped in a function defined at the module level
-    return signal.signal(signal.SIGINT, signal.SIG_IGN)
+    return signal.signal(
+        signal.SIGINT,
+        signal.SIG_IGN,
+    )
 
 
 class ProcessTransferConfig:
@@ -289,7 +312,11 @@ class ProcessTransferConfig:
 
 
 class ProcessPoolDownloader:
-    def __init__(self, client_kwargs=None, config=None):
+    def __init__(
+        self,
+        client_kwargs=None,
+        config=None,
+    ):
         """Downloads S3 objects using process pools
 
         :type client_kwargs: dict
@@ -323,7 +350,12 @@ class ProcessPoolDownloader:
         self._workers = []
 
     def download_file(
-        self, bucket, key, filename, extra_args=None, expected_size=None
+        self,
+        bucket,
+        key,
+        filename,
+        extra_args=None,
+        expected_size=None,
     ):
         """Downloads the object's contents to a file
 
@@ -363,7 +395,8 @@ class ProcessPoolDownloader:
             expected_size=expected_size,
         )
         logger.debug(
-            'Submitting download file request: %s.', download_file_request
+            "Submitting download file request: %s.",
+            download_file_request,
         )
         self._download_request_queue.put(download_file_request)
         call_args = CallArgs(
@@ -373,56 +406,86 @@ class ProcessPoolDownloader:
             extra_args=extra_args,
             expected_size=expected_size,
         )
-        future = self._get_transfer_future(transfer_id, call_args)
+        future = self._get_transfer_future(
+            transfer_id,
+            call_args,
+        )
         return future
 
-    def shutdown(self):
+    def shutdown(
+        self,
+    ):
         """Shutdown the downloader
 
         It will wait till all downloads are complete before returning.
         """
         self._shutdown_if_needed()
 
-    def __enter__(self):
+    def __enter__(
+        self,
+    ):
         return self
 
-    def __exit__(self, exc_type, exc_value, *args):
-        if isinstance(exc_value, KeyboardInterrupt):
+    def __exit__(
+        self,
+        exc_type,
+        exc_value,
+        *args,
+    ):
+        if isinstance(
+            exc_value,
+            KeyboardInterrupt,
+        ):
             if self._transfer_monitor is not None:
                 self._transfer_monitor.notify_cancel_all_in_progress()
         self.shutdown()
 
-    def _start_if_needed(self):
+    def _start_if_needed(
+        self,
+    ):
         with self._start_lock:
             if not self._started:
                 self._start()
 
-    def _start(self):
+    def _start(
+        self,
+    ):
         self._start_transfer_monitor_manager()
         self._start_submitter()
         self._start_get_object_workers()
         self._started = True
 
-    def _validate_all_known_args(self, provided):
+    def _validate_all_known_args(
+        self,
+        provided,
+    ):
         for kwarg in provided:
             if kwarg not in ALLOWED_DOWNLOAD_ARGS:
-                download_args = ', '.join(ALLOWED_DOWNLOAD_ARGS)
+                download_args = ", ".join(ALLOWED_DOWNLOAD_ARGS)
                 raise ValueError(
                     f"Invalid extra_args key '{kwarg}', "
                     f"must be one of: {download_args}"
                 )
 
-    def _get_transfer_future(self, transfer_id, call_args):
+    def _get_transfer_future(
+        self,
+        transfer_id,
+        call_args,
+    ):
         meta = ProcessPoolTransferMeta(
-            call_args=call_args, transfer_id=transfer_id
+            call_args=call_args,
+            transfer_id=transfer_id,
         )
         future = ProcessPoolTransferFuture(
-            monitor=self._transfer_monitor, meta=meta
+            monitor=self._transfer_monitor,
+            meta=meta,
         )
         return future
 
-    def _start_transfer_monitor_manager(self):
-        logger.debug('Starting the TransferMonitorManager.')
+    def _start_transfer_monitor_manager(
+        self,
+    ):
+        logger.debug("Starting the TransferMonitorManager.")
         self._manager = TransferMonitorManager()
         # We do not want Ctrl-C's to cause the manager to shutdown immediately
         # as worker processes will still need to communicate with it when they
@@ -431,8 +494,10 @@ class ProcessPoolDownloader:
         self._manager.start(_add_ignore_handler_for_interrupts)
         self._transfer_monitor = self._manager.TransferMonitor()
 
-    def _start_submitter(self):
-        logger.debug('Starting the GetObjectSubmitter.')
+    def _start_submitter(
+        self,
+    ):
+        logger.debug("Starting the GetObjectSubmitter.")
         self._submitter = GetObjectSubmitter(
             transfer_config=self._transfer_config,
             client_factory=self._client_factory,
@@ -443,9 +508,11 @@ class ProcessPoolDownloader:
         )
         self._submitter.start()
 
-    def _start_get_object_workers(self):
+    def _start_get_object_workers(
+        self,
+    ):
         logger.debug(
-            'Starting %s GetObjectWorkers.',
+            "Starting %s GetObjectWorkers.",
             self._transfer_config.max_request_processes,
         )
         for _ in range(self._transfer_config.max_request_processes):
@@ -458,28 +525,38 @@ class ProcessPoolDownloader:
             worker.start()
             self._workers.append(worker)
 
-    def _shutdown_if_needed(self):
+    def _shutdown_if_needed(
+        self,
+    ):
         with self._start_lock:
             if self._started:
                 self._shutdown()
 
-    def _shutdown(self):
+    def _shutdown(
+        self,
+    ):
         self._shutdown_submitter()
         self._shutdown_get_object_workers()
         self._shutdown_transfer_monitor_manager()
         self._started = False
 
-    def _shutdown_transfer_monitor_manager(self):
-        logger.debug('Shutting down the TransferMonitorManager.')
+    def _shutdown_transfer_monitor_manager(
+        self,
+    ):
+        logger.debug("Shutting down the TransferMonitorManager.")
         self._manager.shutdown()
 
-    def _shutdown_submitter(self):
-        logger.debug('Shutting down the GetObjectSubmitter.')
+    def _shutdown_submitter(
+        self,
+    ):
+        logger.debug("Shutting down the GetObjectSubmitter.")
         self._download_request_queue.put(SHUTDOWN_SIGNAL)
         self._submitter.join()
 
-    def _shutdown_get_object_workers(self):
-        logger.debug('Shutting down the GetObjectWorkers.')
+    def _shutdown_get_object_workers(
+        self,
+    ):
+        logger.debug("Shutting down the GetObjectWorkers.")
         for _ in self._workers:
             self._worker_queue.put(SHUTDOWN_SIGNAL)
         for worker in self._workers:
@@ -487,7 +564,11 @@ class ProcessPoolDownloader:
 
 
 class ProcessPoolTransferFuture(BaseTransferFuture):
-    def __init__(self, monitor, meta):
+    def __init__(
+        self,
+        monitor,
+        meta,
+    ):
         """The future associated to a submitted process pool transfer request
 
         :type monitor: TransferMonitor
@@ -501,13 +582,19 @@ class ProcessPoolTransferFuture(BaseTransferFuture):
         self._meta = meta
 
     @property
-    def meta(self):
+    def meta(
+        self,
+    ):
         return self._meta
 
-    def done(self):
+    def done(
+        self,
+    ):
         return self._monitor.is_done(self._meta.transfer_id)
 
-    def result(self):
+    def result(
+        self,
+    ):
         try:
             return self._monitor.poll_for_result(self._meta.transfer_id)
         except KeyboardInterrupt:
@@ -528,35 +615,51 @@ class ProcessPoolTransferFuture(BaseTransferFuture):
             self.cancel()
             raise
 
-    def cancel(self):
+    def cancel(
+        self,
+    ):
         self._monitor.notify_exception(
-            self._meta.transfer_id, CancelledError()
+            self._meta.transfer_id,
+            CancelledError(),
         )
 
 
 class ProcessPoolTransferMeta(BaseTransferMeta):
     """Holds metadata about the ProcessPoolTransferFuture"""
 
-    def __init__(self, transfer_id, call_args):
+    def __init__(
+        self,
+        transfer_id,
+        call_args,
+    ):
         self._transfer_id = transfer_id
         self._call_args = call_args
         self._user_context = {}
 
     @property
-    def call_args(self):
+    def call_args(
+        self,
+    ):
         return self._call_args
 
     @property
-    def transfer_id(self):
+    def transfer_id(
+        self,
+    ):
         return self._transfer_id
 
     @property
-    def user_context(self):
+    def user_context(
+        self,
+    ):
         return self._user_context
 
 
 class ClientFactory:
-    def __init__(self, client_kwargs=None):
+    def __init__(
+        self,
+        client_kwargs=None,
+    ):
         """Creates S3 clients for processes
 
         Botocore sessions and clients are not pickleable so they cannot be
@@ -567,22 +670,32 @@ class ClientFactory:
         if self._client_kwargs is None:
             self._client_kwargs = {}
 
-        client_config = deepcopy(self._client_kwargs.get('config', Config()))
+        client_config = deepcopy(
+            self._client_kwargs.get(
+                "config",
+                Config(),
+            )
+        )
         if not client_config.user_agent_extra:
             client_config.user_agent_extra = PROCESS_USER_AGENT
         else:
             client_config.user_agent_extra += " " + PROCESS_USER_AGENT
-        self._client_kwargs['config'] = client_config
+        self._client_kwargs["config"] = client_config
 
-    def create_client(self):
+    def create_client(
+        self,
+    ):
         """Create a botocore S3 client"""
         return botocore.session.Session().create_client(
-            's3', **self._client_kwargs
+            "s3",
+            **self._client_kwargs,
         )
 
 
 class TransferMonitor:
-    def __init__(self):
+    def __init__(
+        self,
+    ):
         """Monitors transfers for cross-process communication
 
         Notifications can be sent to the monitor and information can be
@@ -598,14 +711,19 @@ class TransferMonitor:
         self._id_count = 0
         self._init_lock = threading.Lock()
 
-    def notify_new_transfer(self):
+    def notify_new_transfer(
+        self,
+    ):
         with self._init_lock:
             transfer_id = self._id_count
             self._transfer_states[transfer_id] = TransferState()
             self._id_count += 1
             return transfer_id
 
-    def is_done(self, transfer_id):
+    def is_done(
+        self,
+        transfer_id,
+    ):
         """Determine a particular transfer is complete
 
         :param transfer_id: Unique identifier for the transfer
@@ -613,14 +731,20 @@ class TransferMonitor:
         """
         return self._transfer_states[transfer_id].done
 
-    def notify_done(self, transfer_id):
+    def notify_done(
+        self,
+        transfer_id,
+    ):
         """Notify a particular transfer is complete
 
         :param transfer_id: Unique identifier for the transfer
         """
         self._transfer_states[transfer_id].set_done()
 
-    def poll_for_result(self, transfer_id):
+    def poll_for_result(
+        self,
+        transfer_id,
+    ):
         """Poll for the result of a transfer
 
         :param transfer_id: Unique identifier for the transfer
@@ -634,7 +758,11 @@ class TransferMonitor:
             raise exception
         return None
 
-    def notify_exception(self, transfer_id, exception):
+    def notify_exception(
+        self,
+        transfer_id,
+        exception,
+    ):
         """Notify an exception was encountered for a transfer
 
         :param transfer_id: Unique identifier for the transfer
@@ -646,12 +774,17 @@ class TransferMonitor:
         # arguments or have the ProxyObject do the serialization.
         self._transfer_states[transfer_id].exception = exception
 
-    def notify_cancel_all_in_progress(self):
+    def notify_cancel_all_in_progress(
+        self,
+    ):
         for transfer_state in self._transfer_states.values():
             if not transfer_state.done:
                 transfer_state.exception = CancelledError()
 
-    def get_exception(self, transfer_id):
+    def get_exception(
+        self,
+        transfer_id,
+    ):
         """Retrieve the exception encountered for the transfer
 
         :param transfer_id: Unique identifier for the transfer
@@ -660,7 +793,11 @@ class TransferMonitor:
         """
         return self._transfer_states[transfer_id].exception
 
-    def notify_expected_jobs_to_complete(self, transfer_id, num_jobs):
+    def notify_expected_jobs_to_complete(
+        self,
+        transfer_id,
+        num_jobs,
+    ):
         """Notify the amount of jobs expected for a transfer
 
         :param transfer_id: Unique identifier for the transfer
@@ -668,7 +805,10 @@ class TransferMonitor:
         """
         self._transfer_states[transfer_id].jobs_to_complete = num_jobs
 
-    def notify_job_complete(self, transfer_id):
+    def notify_job_complete(
+        self,
+        transfer_id,
+    ):
         """Notify that a single job is completed for a transfer
 
         :param transfer_id: Unique identifier for the transfer
@@ -687,39 +827,59 @@ class TransferState:
     # state of a transfer across processes: one hop to get a proxy object for
     # the TransferState and then a second hop to communicate calling the
     # specific TransferState method.
-    def __init__(self):
+    def __init__(
+        self,
+    ):
         self._exception = None
         self._done_event = threading.Event()
         self._job_lock = threading.Lock()
         self._jobs_to_complete = 0
 
     @property
-    def done(self):
+    def done(
+        self,
+    ):
         return self._done_event.is_set()
 
-    def set_done(self):
+    def set_done(
+        self,
+    ):
         self._done_event.set()
 
-    def wait_till_done(self):
+    def wait_till_done(
+        self,
+    ):
         self._done_event.wait(MAXINT)
 
     @property
-    def exception(self):
+    def exception(
+        self,
+    ):
         return self._exception
 
     @exception.setter
-    def exception(self, val):
+    def exception(
+        self,
+        val,
+    ):
         self._exception = val
 
     @property
-    def jobs_to_complete(self):
+    def jobs_to_complete(
+        self,
+    ):
         return self._jobs_to_complete
 
     @jobs_to_complete.setter
-    def jobs_to_complete(self, val):
+    def jobs_to_complete(
+        self,
+        val,
+    ):
         self._jobs_to_complete = val
 
-    def decrement_jobs_to_complete(self):
+    def decrement_jobs_to_complete(
+        self,
+    ):
         with self._job_lock:
             self._jobs_to_complete -= 1
             return self._jobs_to_complete
@@ -729,16 +889,24 @@ class TransferMonitorManager(BaseManager):
     pass
 
 
-TransferMonitorManager.register('TransferMonitor', TransferMonitor)
+TransferMonitorManager.register(
+    "TransferMonitor",
+    TransferMonitor,
+)
 
 
 class BaseS3TransferProcess(multiprocessing.Process):
-    def __init__(self, client_factory):
+    def __init__(
+        self,
+        client_factory,
+    ):
         super().__init__()
         self._client_factory = client_factory
         self._client = None
 
-    def run(self):
+    def run(
+        self,
+    ):
         # Clients are not pickleable so their instantiation cannot happen
         # in the __init__ for processes that are created under the
         # spawn method.
@@ -755,8 +923,10 @@ class BaseS3TransferProcess(multiprocessing.Process):
             # jobs.
             self._do_run()
 
-    def _do_run(self):
-        raise NotImplementedError('_do_run()')
+    def _do_run(
+        self,
+    ):
+        raise NotImplementedError("_do_run()")
 
 
 class GetObjectSubmitter(BaseS3TransferProcess):
@@ -789,62 +959,85 @@ class GetObjectSubmitter(BaseS3TransferProcess):
         self._download_request_queue = download_request_queue
         self._worker_queue = worker_queue
 
-    def _do_run(self):
+    def _do_run(
+        self,
+    ):
         while True:
             download_file_request = self._download_request_queue.get()
             if download_file_request == SHUTDOWN_SIGNAL:
-                logger.debug('Submitter shutdown signal received.')
+                logger.debug("Submitter shutdown signal received.")
                 return
             try:
                 self._submit_get_object_jobs(download_file_request)
             except Exception as e:
                 logger.debug(
-                    'Exception caught when submitting jobs for '
-                    'download file request %s: %s',
+                    "Exception caught when submitting jobs for "
+                    "download file request %s: %s",
                     download_file_request,
                     e,
                     exc_info=True,
                 )
                 self._transfer_monitor.notify_exception(
-                    download_file_request.transfer_id, e
+                    download_file_request.transfer_id,
+                    e,
                 )
-                self._transfer_monitor.notify_done(
-                    download_file_request.transfer_id
-                )
+                self._transfer_monitor.notify_done(download_file_request.transfer_id)
 
-    def _submit_get_object_jobs(self, download_file_request):
+    def _submit_get_object_jobs(
+        self,
+        download_file_request,
+    ):
         size = self._get_size(download_file_request)
-        temp_filename = self._allocate_temp_file(download_file_request, size)
+        temp_filename = self._allocate_temp_file(
+            download_file_request,
+            size,
+        )
         if size < self._transfer_config.multipart_threshold:
             self._submit_single_get_object_job(
-                download_file_request, temp_filename
+                download_file_request,
+                temp_filename,
             )
         else:
             self._submit_ranged_get_object_jobs(
-                download_file_request, temp_filename, size
+                download_file_request,
+                temp_filename,
+                size,
             )
 
-    def _get_size(self, download_file_request):
+    def _get_size(
+        self,
+        download_file_request,
+    ):
         expected_size = download_file_request.expected_size
         if expected_size is None:
             expected_size = self._client.head_object(
                 Bucket=download_file_request.bucket,
                 Key=download_file_request.key,
                 **download_file_request.extra_args,
-            )['ContentLength']
+            )["ContentLength"]
         return expected_size
 
-    def _allocate_temp_file(self, download_file_request, size):
-        temp_filename = self._osutil.get_temp_filename(
-            download_file_request.filename
+    def _allocate_temp_file(
+        self,
+        download_file_request,
+        size,
+    ):
+        temp_filename = self._osutil.get_temp_filename(download_file_request.filename)
+        self._osutil.allocate(
+            temp_filename,
+            size,
         )
-        self._osutil.allocate(temp_filename, size)
         return temp_filename
 
     def _submit_single_get_object_job(
-        self, download_file_request, temp_filename
+        self,
+        download_file_request,
+        temp_filename,
     ):
-        self._notify_jobs_to_complete(download_file_request.transfer_id, 1)
+        self._notify_jobs_to_complete(
+            download_file_request.transfer_id,
+            1,
+        )
         self._submit_get_object_job(
             transfer_id=download_file_request.transfer_id,
             bucket=download_file_request.bucket,
@@ -856,19 +1049,28 @@ class GetObjectSubmitter(BaseS3TransferProcess):
         )
 
     def _submit_ranged_get_object_jobs(
-        self, download_file_request, temp_filename, size
+        self,
+        download_file_request,
+        temp_filename,
+        size,
     ):
         part_size = self._transfer_config.multipart_chunksize
-        num_parts = calculate_num_parts(size, part_size)
+        num_parts = calculate_num_parts(
+            size,
+            part_size,
+        )
         self._notify_jobs_to_complete(
-            download_file_request.transfer_id, num_parts
+            download_file_request.transfer_id,
+            num_parts,
         )
         for i in range(num_parts):
             offset = i * part_size
             range_parameter = calculate_range_parameter(
-                part_size, i, num_parts
+                part_size,
+                i,
+                num_parts,
             )
-            get_object_kwargs = {'Range': range_parameter}
+            get_object_kwargs = {"Range": range_parameter}
             get_object_kwargs.update(download_file_request.extra_args)
             self._submit_get_object_job(
                 transfer_id=download_file_request.transfer_id,
@@ -880,17 +1082,25 @@ class GetObjectSubmitter(BaseS3TransferProcess):
                 filename=download_file_request.filename,
             )
 
-    def _submit_get_object_job(self, **get_object_job_kwargs):
+    def _submit_get_object_job(
+        self,
+        **get_object_job_kwargs,
+    ):
         self._worker_queue.put(GetObjectJob(**get_object_job_kwargs))
 
-    def _notify_jobs_to_complete(self, transfer_id, jobs_to_complete):
+    def _notify_jobs_to_complete(
+        self,
+        transfer_id,
+        jobs_to_complete,
+    ):
         logger.debug(
-            'Notifying %s job(s) to complete for transfer_id %s.',
+            "Notifying %s job(s) to complete for transfer_id %s.",
             jobs_to_complete,
             transfer_id,
         )
         self._transfer_monitor.notify_expected_jobs_to_complete(
-            transfer_id, jobs_to_complete
+            transfer_id,
+            jobs_to_complete,
         )
 
 
@@ -900,7 +1110,13 @@ class GetObjectWorker(BaseS3TransferProcess):
     _MAX_ATTEMPTS = 5
     _IO_CHUNKSIZE = 2 * MB
 
-    def __init__(self, queue, client_factory, transfer_monitor, osutil):
+    def __init__(
+        self,
+        queue,
+        client_factory,
+        transfer_monitor,
+        osutil,
+    ):
         """Fulfills GetObjectJobs
 
         Downloads the S3 object, writes it to the specified file, and
@@ -919,34 +1135,39 @@ class GetObjectWorker(BaseS3TransferProcess):
         self._transfer_monitor = transfer_monitor
         self._osutil = osutil
 
-    def _do_run(self):
+    def _do_run(
+        self,
+    ):
         while True:
             job = self._queue.get()
             if job == SHUTDOWN_SIGNAL:
-                logger.debug('Worker shutdown signal received.')
+                logger.debug("Worker shutdown signal received.")
                 return
             if not self._transfer_monitor.get_exception(job.transfer_id):
                 self._run_get_object_job(job)
             else:
                 logger.debug(
-                    'Skipping get object job %s because there was a previous '
-                    'exception.',
+                    "Skipping get object job %s because there was a previous "
+                    "exception.",
                     job,
                 )
-            remaining = self._transfer_monitor.notify_job_complete(
-                job.transfer_id
-            )
+            remaining = self._transfer_monitor.notify_job_complete(job.transfer_id)
             logger.debug(
-                '%s jobs remaining for transfer_id %s.',
+                "%s jobs remaining for transfer_id %s.",
                 remaining,
                 job.transfer_id,
             )
             if not remaining:
                 self._finalize_download(
-                    job.transfer_id, job.temp_filename, job.filename
+                    job.transfer_id,
+                    job.temp_filename,
+                    job.filename,
                 )
 
-    def _run_get_object_job(self, job):
+    def _run_get_object_job(
+        self,
+        job,
+    ):
         try:
             self._do_get_object(
                 bucket=job.bucket,
@@ -957,27 +1178,42 @@ class GetObjectWorker(BaseS3TransferProcess):
             )
         except Exception as e:
             logger.debug(
-                'Exception caught when downloading object for '
-                'get object job %s: %s',
+                "Exception caught when downloading object for " "get object job %s: %s",
                 job,
                 e,
                 exc_info=True,
             )
-            self._transfer_monitor.notify_exception(job.transfer_id, e)
+            self._transfer_monitor.notify_exception(
+                job.transfer_id,
+                e,
+            )
 
-    def _do_get_object(self, bucket, key, extra_args, temp_filename, offset):
+    def _do_get_object(
+        self,
+        bucket,
+        key,
+        extra_args,
+        temp_filename,
+        offset,
+    ):
         last_exception = None
         for i in range(self._MAX_ATTEMPTS):
             try:
                 response = self._client.get_object(
-                    Bucket=bucket, Key=key, **extra_args
+                    Bucket=bucket,
+                    Key=key,
+                    **extra_args,
                 )
-                self._write_to_file(temp_filename, offset, response['Body'])
+                self._write_to_file(
+                    temp_filename,
+                    offset,
+                    response["Body"],
+                )
                 return
             except S3_RETRYABLE_DOWNLOAD_ERRORS as e:
                 logger.debug(
-                    'Retrying exception caught (%s), '
-                    'retrying request, (attempt %s / %s)',
+                    "Retrying exception caught (%s), "
+                    "retrying request, (attempt %s / %s)",
                     e,
                     i + 1,
                     self._MAX_ATTEMPTS,
@@ -986,23 +1222,54 @@ class GetObjectWorker(BaseS3TransferProcess):
                 last_exception = e
         raise RetriesExceededError(last_exception)
 
-    def _write_to_file(self, filename, offset, body):
-        with open(filename, 'rb+') as f:
+    def _write_to_file(
+        self,
+        filename,
+        offset,
+        body,
+    ):
+        with open(
+            filename,
+            "rb+",
+        ) as f:
             f.seek(offset)
-            chunks = iter(lambda: body.read(self._IO_CHUNKSIZE), b'')
+            chunks = iter(
+                lambda: body.read(self._IO_CHUNKSIZE),
+                b"",
+            )
             for chunk in chunks:
                 f.write(chunk)
 
-    def _finalize_download(self, transfer_id, temp_filename, filename):
+    def _finalize_download(
+        self,
+        transfer_id,
+        temp_filename,
+        filename,
+    ):
         if self._transfer_monitor.get_exception(transfer_id):
             self._osutil.remove_file(temp_filename)
         else:
-            self._do_file_rename(transfer_id, temp_filename, filename)
+            self._do_file_rename(
+                transfer_id,
+                temp_filename,
+                filename,
+            )
         self._transfer_monitor.notify_done(transfer_id)
 
-    def _do_file_rename(self, transfer_id, temp_filename, filename):
+    def _do_file_rename(
+        self,
+        transfer_id,
+        temp_filename,
+        filename,
+    ):
         try:
-            self._osutil.rename_file(temp_filename, filename)
+            self._osutil.rename_file(
+                temp_filename,
+                filename,
+            )
         except Exception as e:
-            self._transfer_monitor.notify_exception(transfer_id, e)
+            self._transfer_monitor.notify_exception(
+                transfer_id,
+                e,
+            )
             self._osutil.remove_file(temp_filename)

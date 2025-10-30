@@ -10,13 +10,24 @@
 # distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF
 # ANY KIND, either express or implied. See the License for the specific
 # language governing permissions and limitations under the License.
-from s3transfer.tasks import SubmissionTask, Task
+from s3transfer.tasks import (
+    SubmissionTask,
+    Task,
+)
 
 
-class DeleteSubmissionTask(SubmissionTask):
+class DeleteSubmissionTask(
+    SubmissionTask
+):
     """Task for submitting tasks to execute an object deletion."""
 
-    def _submit(self, client, request_executor, transfer_future, **kwargs):
+    def _submit(
+        self,
+        client,
+        request_executor,
+        transfer_future,
+        **kwargs
+    ):
         """
         :param client: The client associated with the transfer manager
 
@@ -35,25 +46,35 @@ class DeleteSubmissionTask(SubmissionTask):
         :param transfer_future: The transfer future associated with the
             transfer request that tasks are being submitted for
         """
-        call_args = transfer_future.meta.call_args
+        call_args = (
+            transfer_future.meta.call_args
+        )
 
         self._transfer_coordinator.submit(
             request_executor,
             DeleteObjectTask(
                 transfer_coordinator=self._transfer_coordinator,
                 main_kwargs={
-                    'client': client,
-                    'bucket': call_args.bucket,
-                    'key': call_args.key,
-                    'extra_args': call_args.extra_args,
+                    "client": client,
+                    "bucket": call_args.bucket,
+                    "key": call_args.key,
+                    "extra_args": call_args.extra_args,
                 },
                 is_final=True,
             ),
         )
 
 
-class DeleteObjectTask(Task):
-    def _main(self, client, bucket, key, extra_args):
+class DeleteObjectTask(
+    Task
+):
+    def _main(
+        self,
+        client,
+        bucket,
+        key,
+        extra_args,
+    ):
         """
 
         :param client: The S3 client to use when calling DeleteObject
@@ -68,4 +89,8 @@ class DeleteObjectTask(Task):
         :param extra_args: Extra arguments to pass to the DeleteObject call.
 
         """
-        client.delete_object(Bucket=bucket, Key=key, **extra_args)
+        client.delete_object(
+            Bucket=bucket,
+            Key=key,
+            **extra_args
+        )

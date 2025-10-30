@@ -1,12 +1,18 @@
-from __future__ import absolute_import
+from __future__ import (
+    absolute_import,
+)
 
 import email
 import logging
 import re
 import time
 import warnings
-from collections import namedtuple
-from itertools import takewhile
+from collections import (
+    namedtuple,
+)
+from itertools import (
+    takewhile,
+)
 
 from ..exceptions import (
     ConnectTimeoutError,
@@ -17,14 +23,23 @@ from ..exceptions import (
     ReadTimeoutError,
     ResponseError,
 )
-from ..packages import six
+from ..packages import (
+    six,
+)
 
 log = logging.getLogger(__name__)
 
 
 # Data structure for representing the metadata of requests that result in a retry.
 RequestHistory = namedtuple(
-    "RequestHistory", ["method", "url", "error", "status", "redirect_location"]
+    "RequestHistory",
+    [
+        "method",
+        "url",
+        "error",
+        "status",
+        "redirect_location",
+    ],
 )
 
 
@@ -34,7 +49,9 @@ _Default = object()
 
 class _RetryMeta(type):
     @property
-    def DEFAULT_METHOD_WHITELIST(cls):
+    def DEFAULT_METHOD_WHITELIST(
+        cls,
+    ):
         warnings.warn(
             "Using 'Retry.DEFAULT_METHOD_WHITELIST' is deprecated and "
             "will be removed in v2.0. Use 'Retry.DEFAULT_ALLOWED_METHODS' instead",
@@ -43,7 +60,10 @@ class _RetryMeta(type):
         return cls.DEFAULT_ALLOWED_METHODS
 
     @DEFAULT_METHOD_WHITELIST.setter
-    def DEFAULT_METHOD_WHITELIST(cls, value):
+    def DEFAULT_METHOD_WHITELIST(
+        cls,
+        value,
+    ):
         warnings.warn(
             "Using 'Retry.DEFAULT_METHOD_WHITELIST' is deprecated and "
             "will be removed in v2.0. Use 'Retry.DEFAULT_ALLOWED_METHODS' instead",
@@ -52,7 +72,9 @@ class _RetryMeta(type):
         cls.DEFAULT_ALLOWED_METHODS = value
 
     @property
-    def DEFAULT_REDIRECT_HEADERS_BLACKLIST(cls):
+    def DEFAULT_REDIRECT_HEADERS_BLACKLIST(
+        cls,
+    ):
         warnings.warn(
             "Using 'Retry.DEFAULT_REDIRECT_HEADERS_BLACKLIST' is deprecated and "
             "will be removed in v2.0. Use 'Retry.DEFAULT_REMOVE_HEADERS_ON_REDIRECT' instead",
@@ -61,7 +83,10 @@ class _RetryMeta(type):
         return cls.DEFAULT_REMOVE_HEADERS_ON_REDIRECT
 
     @DEFAULT_REDIRECT_HEADERS_BLACKLIST.setter
-    def DEFAULT_REDIRECT_HEADERS_BLACKLIST(cls, value):
+    def DEFAULT_REDIRECT_HEADERS_BLACKLIST(
+        cls,
+        value,
+    ):
         warnings.warn(
             "Using 'Retry.DEFAULT_REDIRECT_HEADERS_BLACKLIST' is deprecated and "
             "will be removed in v2.0. Use 'Retry.DEFAULT_REMOVE_HEADERS_ON_REDIRECT' instead",
@@ -70,7 +95,9 @@ class _RetryMeta(type):
         cls.DEFAULT_REMOVE_HEADERS_ON_REDIRECT = value
 
     @property
-    def BACKOFF_MAX(cls):
+    def BACKOFF_MAX(
+        cls,
+    ):
         warnings.warn(
             "Using 'Retry.BACKOFF_MAX' is deprecated and "
             "will be removed in v2.0. Use 'Retry.DEFAULT_BACKOFF_MAX' instead",
@@ -79,7 +106,10 @@ class _RetryMeta(type):
         return cls.DEFAULT_BACKOFF_MAX
 
     @BACKOFF_MAX.setter
-    def BACKOFF_MAX(cls, value):
+    def BACKOFF_MAX(
+        cls,
+        value,
+    ):
         warnings.warn(
             "Using 'Retry.BACKOFF_MAX' is deprecated and "
             "will be removed in v2.0. Use 'Retry.DEFAULT_BACKOFF_MAX' instead",
@@ -228,15 +258,32 @@ class Retry(object):
 
     #: Default methods to be used for ``allowed_methods``
     DEFAULT_ALLOWED_METHODS = frozenset(
-        ["HEAD", "GET", "PUT", "DELETE", "OPTIONS", "TRACE"]
+        [
+            "HEAD",
+            "GET",
+            "PUT",
+            "DELETE",
+            "OPTIONS",
+            "TRACE",
+        ]
     )
 
     #: Default status codes to be used for ``status_forcelist``
-    RETRY_AFTER_STATUS_CODES = frozenset([413, 429, 503])
+    RETRY_AFTER_STATUS_CODES = frozenset(
+        [
+            413,
+            429,
+            503,
+        ]
+    )
 
     #: Default headers to be used for ``remove_headers_on_redirect``
     DEFAULT_REMOVE_HEADERS_ON_REDIRECT = frozenset(
-        ["Cookie", "Authorization", "Proxy-Authorization"]
+        [
+            "Cookie",
+            "Authorization",
+            "Proxy-Authorization",
+        ]
     )
 
     #: Maximum backoff time.
@@ -340,20 +387,37 @@ class Retry(object):
         return type(self)(**params)
 
     @classmethod
-    def from_int(cls, retries, redirect=True, default=None):
+    def from_int(
+        cls,
+        retries,
+        redirect=True,
+        default=None,
+    ):
         """Backwards-compatibility for the old retries format."""
         if retries is None:
             retries = default if default is not None else cls.DEFAULT
 
-        if isinstance(retries, Retry):
+        if isinstance(
+            retries,
+            Retry,
+        ):
             return retries
 
         redirect = bool(redirect) and None
-        new_retries = cls(retries, redirect=redirect)
-        log.debug("Converted retries value: %r -> %r", retries, new_retries)
+        new_retries = cls(
+            retries,
+            redirect=redirect,
+        )
+        log.debug(
+            "Converted retries value: %r -> %r",
+            retries,
+            new_retries,
+        )
         return new_retries
 
-    def get_backoff_time(self):
+    def get_backoff_time(
+        self,
+    ):
         """Formula for computing the current backoff
 
         :rtype: float
@@ -361,18 +425,30 @@ class Retry(object):
         # We want to consider only the last consecutive errors sequence (Ignore redirects).
         consecutive_errors_len = len(
             list(
-                takewhile(lambda x: x.redirect_location is None, reversed(self.history))
+                takewhile(
+                    lambda x: x.redirect_location is None,
+                    reversed(self.history),
+                )
             )
         )
         if consecutive_errors_len <= 1:
             return 0
 
         backoff_value = self.backoff_factor * (2 ** (consecutive_errors_len - 1))
-        return min(self.DEFAULT_BACKOFF_MAX, backoff_value)
+        return min(
+            self.DEFAULT_BACKOFF_MAX,
+            backoff_value,
+        )
 
-    def parse_retry_after(self, retry_after):
+    def parse_retry_after(
+        self,
+        retry_after,
+    ):
         # Whitespace: https://tools.ietf.org/html/rfc7230#section-3.2.4
-        if re.match(r"^\s*[0-9]+\s*$", retry_after):
+        if re.match(
+            r"^\s*[0-9]+\s*$",
+            retry_after,
+        ):
             seconds = int(retry_after)
         else:
             retry_date_tuple = email.utils.parsedate_tz(retry_after)
@@ -393,7 +469,10 @@ class Retry(object):
 
         return seconds
 
-    def get_retry_after(self, response):
+    def get_retry_after(
+        self,
+        response,
+    ):
         """Get the value of Retry-After in seconds."""
 
         retry_after = response.headers.get("Retry-After")
@@ -403,7 +482,10 @@ class Retry(object):
 
         return self.parse_retry_after(retry_after)
 
-    def sleep_for_retry(self, response=None):
+    def sleep_for_retry(
+        self,
+        response=None,
+    ):
         retry_after = self.get_retry_after(response)
         if retry_after:
             time.sleep(retry_after)
@@ -411,13 +493,18 @@ class Retry(object):
 
         return False
 
-    def _sleep_backoff(self):
+    def _sleep_backoff(
+        self,
+    ):
         backoff = self.get_backoff_time()
         if backoff <= 0:
             return
         time.sleep(backoff)
 
-    def sleep(self, response=None):
+    def sleep(
+        self,
+        response=None,
+    ):
         """Sleep between retry attempts.
 
         This method will respect a server's ``Retry-After`` response header
@@ -433,21 +520,42 @@ class Retry(object):
 
         self._sleep_backoff()
 
-    def _is_connection_error(self, err):
+    def _is_connection_error(
+        self,
+        err,
+    ):
         """Errors when we're fairly sure that the server did not receive the
         request, so it should be safe to retry.
         """
-        if isinstance(err, ProxyError):
+        if isinstance(
+            err,
+            ProxyError,
+        ):
             err = err.original_error
-        return isinstance(err, ConnectTimeoutError)
+        return isinstance(
+            err,
+            ConnectTimeoutError,
+        )
 
-    def _is_read_error(self, err):
+    def _is_read_error(
+        self,
+        err,
+    ):
         """Errors that occur after the request has been started, so we should
         assume that the server began processing it.
         """
-        return isinstance(err, (ReadTimeoutError, ProtocolError))
+        return isinstance(
+            err,
+            (
+                ReadTimeoutError,
+                ProtocolError,
+            ),
+        )
 
-    def _is_method_retryable(self, method):
+    def _is_method_retryable(
+        self,
+        method,
+    ):
         """Checks if a given HTTP method should be retried upon, depending if
         it is included in the allowed_methods
         """
@@ -467,7 +575,12 @@ class Retry(object):
             return False
         return True
 
-    def is_retry(self, method, status_code, has_retry_after=False):
+    def is_retry(
+        self,
+        method,
+        status_code,
+        has_retry_after=False,
+    ):
         """Is this method/status code retryable? (Based on allowlists and control
         variables such as the number of total retries to allow, whether to
         respect the Retry-After header, whether this header is present, and
@@ -487,7 +600,9 @@ class Retry(object):
             and (status_code in self.RETRY_AFTER_STATUS_CODES)
         )
 
-    def is_exhausted(self):
+    def is_exhausted(
+        self,
+    ):
         """Are we out of retries?"""
         retry_counts = (
             self.total,
@@ -497,7 +612,12 @@ class Retry(object):
             self.status,
             self.other,
         )
-        retry_counts = list(filter(None, retry_counts))
+        retry_counts = list(
+            filter(
+                None,
+                retry_counts,
+            )
+        )
         if not retry_counts:
             return False
 
@@ -524,7 +644,11 @@ class Retry(object):
         """
         if self.total is False and error:
             # Disabled, indicate to re-raise the error.
-            raise six.reraise(type(error), error, _stacktrace)
+            raise six.reraise(
+                type(error),
+                error,
+                _stacktrace,
+            )
 
         total = self.total
         if total is not None:
@@ -542,14 +666,22 @@ class Retry(object):
         if error and self._is_connection_error(error):
             # Connect retry?
             if connect is False:
-                raise six.reraise(type(error), error, _stacktrace)
+                raise six.reraise(
+                    type(error),
+                    error,
+                    _stacktrace,
+                )
             elif connect is not None:
                 connect -= 1
 
         elif error and self._is_read_error(error):
             # Read retry?
             if read is False or not self._is_method_retryable(method):
-                raise six.reraise(type(error), error, _stacktrace)
+                raise six.reraise(
+                    type(error),
+                    error,
+                    _stacktrace,
+                )
             elif read is not None:
                 read -= 1
 
@@ -577,7 +709,13 @@ class Retry(object):
                 status = response.status
 
         history = self.history + (
-            RequestHistory(method, url, error, status, redirect_location),
+            RequestHistory(
+                method,
+                url,
+                error,
+                status,
+                redirect_location,
+            ),
         )
 
         new_retry = self.new(
@@ -591,19 +729,35 @@ class Retry(object):
         )
 
         if new_retry.is_exhausted():
-            raise MaxRetryError(_pool, url, error or ResponseError(cause))
+            raise MaxRetryError(
+                _pool,
+                url,
+                error or ResponseError(cause),
+            )
 
-        log.debug("Incremented Retry for (url='%s'): %r", url, new_retry)
+        log.debug(
+            "Incremented Retry for (url='%s'): %r",
+            url,
+            new_retry,
+        )
 
         return new_retry
 
-    def __repr__(self):
+    def __repr__(
+        self,
+    ):
         return (
             "{cls.__name__}(total={self.total}, connect={self.connect}, "
             "read={self.read}, redirect={self.redirect}, status={self.status})"
-        ).format(cls=type(self), self=self)
+        ).format(
+            cls=type(self),
+            self=self,
+        )
 
-    def __getattr__(self, item):
+    def __getattr__(
+        self,
+        item,
+    ):
         if item == "method_whitelist":
             # TODO: Remove this deprecated alias in v2.0
             warnings.warn(
@@ -613,9 +767,18 @@ class Retry(object):
             )
             return self.allowed_methods
         try:
-            return getattr(super(Retry, self), item)
+            return getattr(
+                super(
+                    Retry,
+                    self,
+                ),
+                item,
+            )
         except AttributeError:
-            return getattr(Retry, item)
+            return getattr(
+                Retry,
+                item,
+            )
 
 
 # For backwards compatibility (equivalent to pre-v1.9):

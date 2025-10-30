@@ -109,9 +109,7 @@ class HTTPConnection(_HTTPConnection):
 
     #: Disable Nagle's algorithm by default.
     #: ``[(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)]``
-    default_socket_options: typing.ClassVar[connection._TYPE_SOCKET_OPTIONS] = [
-        (socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
-    ]
+    default_socket_options: typing.ClassVar[connection._TYPE_SOCKET_OPTIONS] = [(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)]
 
     #: Whether this connection verifies the host's certificate.
     is_verified: bool = False
@@ -138,8 +136,7 @@ class HTTPConnection(_HTTPConnection):
         timeout: _TYPE_TIMEOUT = _DEFAULT_TIMEOUT,
         source_address: tuple[str, int] | None = None,
         blocksize: int = 16384,
-        socket_options: None
-        | (connection._TYPE_SOCKET_OPTIONS) = default_socket_options,
+        socket_options: None | (connection._TYPE_SOCKET_OPTIONS) = default_socket_options,
         proxy: Url | None = None,
         proxy_config: ProxyConfig | None = None,
     ) -> None:
@@ -215,9 +212,7 @@ class HTTPConnection(_HTTPConnection):
             ) from e
 
         except OSError as e:
-            raise NewConnectionError(
-                self, f"Failed to establish a new connection: {e}"
-            ) from e
+            raise NewConnectionError(self, f"Failed to establish a new connection: {e}") from e
 
         # Audit hooks are only available in Python 3.8+
         if _HAS_SYS_AUDIT:
@@ -233,9 +228,7 @@ class HTTPConnection(_HTTPConnection):
         scheme: str = "http",
     ) -> None:
         if scheme not in ("http", "https"):
-            raise ValueError(
-                f"Invalid proxy scheme for tunneling: {scheme!r}, must be either 'http' or 'https'"
-            )
+            raise ValueError(f"Invalid proxy scheme for tunneling: {scheme!r}, must be either 'http' or 'https'")
         super().set_tunnel(host, port=port, headers=headers)
         self._tunnel_scheme = scheme
 
@@ -294,25 +287,17 @@ class HTTPConnection(_HTTPConnection):
         # is broken but we don't want this method in our documentation.
         match = _CONTAINS_CONTROL_CHAR_RE.search(method)
         if match:
-            raise ValueError(
-                f"Method cannot contain non-token characters {method!r} (found at least {match.group()!r})"
-            )
+            raise ValueError(f"Method cannot contain non-token characters {method!r} (found at least {match.group()!r})")
 
-        return super().putrequest(
-            method, url, skip_host=skip_host, skip_accept_encoding=skip_accept_encoding
-        )
+        return super().putrequest(method, url, skip_host=skip_host, skip_accept_encoding=skip_accept_encoding)
 
     def putheader(self, header: str, *values: str) -> None:
         """"""
         if not any(isinstance(v, str) and v == SKIP_HEADER for v in values):
             super().putheader(header, *values)
         elif to_str(header.lower()) not in SKIPPABLE_HEADERS:
-            skippable_headers = "', '".join(
-                [str.title(header) for header in sorted(SKIPPABLE_HEADERS)]
-            )
-            raise ValueError(
-                f"urllib3.util.SKIP_HEADER only supports '{skippable_headers}'"
-            )
+            skippable_headers = "', '".join([str.title(header) for header in sorted(SKIPPABLE_HEADERS)])
+            raise ValueError(f"urllib3.util.SKIP_HEADER only supports '{skippable_headers}'")
 
     # `request` method's signature intentionally violates LSP.
     # urllib3's API is different from `http.client.HTTPConnection` and the subclassing is only incidental.
@@ -354,9 +339,7 @@ class HTTPConnection(_HTTPConnection):
         header_keys = frozenset(to_str(k.lower()) for k in headers)
         skip_accept_encoding = "accept-encoding" in header_keys
         skip_host = "host" in header_keys
-        self.putrequest(
-            method, url, skip_accept_encoding=skip_accept_encoding, skip_host=skip_host
-        )
+        self.putrequest(method, url, skip_accept_encoding=skip_accept_encoding, skip_host=skip_host)
 
         # Transform the body into an iterable of sendall()-able chunks
         # and detect if an explicit Content-Length is doable.
@@ -425,8 +408,7 @@ class HTTPConnection(_HTTPConnection):
         body with chunked encoding and not as one block
         """
         warnings.warn(
-            "HTTPConnection.request_chunked() is deprecated and will be removed "
-            "in urllib3 v2.1.0. Instead use HTTPConnection.request(..., chunked=True).",
+            "HTTPConnection.request_chunked() is deprecated and will be removed " "in urllib3 v2.1.0. Instead use HTTPConnection.request(..., chunked=True).",
             category=DeprecationWarning,
             stacklevel=2,
         )
@@ -513,8 +495,7 @@ class HTTPSConnection(HTTPConnection):
         timeout: _TYPE_TIMEOUT = _DEFAULT_TIMEOUT,
         source_address: tuple[str, int] | None = None,
         blocksize: int = 16384,
-        socket_options: None
-        | (connection._TYPE_SOCKET_OPTIONS) = HTTPConnection.default_socket_options,
+        socket_options: None | (connection._TYPE_SOCKET_OPTIONS) = HTTPConnection.default_socket_options,
         proxy: Url | None = None,
         proxy_config: ProxyConfig | None = None,
         cert_reqs: int | str | None = None,
@@ -581,9 +562,7 @@ class HTTPSConnection(HTTPConnection):
         This method should only be called once, before the connection is used.
         """
         warnings.warn(
-            "HTTPSConnection.set_cert() is deprecated and will be removed "
-            "in urllib3 v2.1.0. Instead provide the parameters to the "
-            "HTTPSConnection constructor.",
+            "HTTPSConnection.set_cert() is deprecated and will be removed " "in urllib3 v2.1.0. Instead provide the parameters to the " "HTTPSConnection constructor.",
             category=DeprecationWarning,
             stacklevel=2,
         )
@@ -632,10 +611,7 @@ class HTTPSConnection(HTTPConnection):
         is_time_off = datetime.date.today() < RECENT_DATE
         if is_time_off:
             warnings.warn(
-                (
-                    f"System time is way off (before {RECENT_DATE}). This will probably "
-                    "lead to SSL verification errors"
-                ),
+                (f"System time is way off (before {RECENT_DATE}). This will probably " "lead to SSL verification errors"),
                 SystemTimeWarning,
             )
 
@@ -761,13 +737,7 @@ def _ssl_wrap_socket_and_match_hostname(
     # We need to do the hasattr() check for our custom
     # pyOpenSSL and SecureTransport SSLContext objects
     # because neither support load_default_certs().
-    if (
-        not ca_certs
-        and not ca_cert_dir
-        and not ca_cert_data
-        and default_ssl_context
-        and hasattr(context, "load_default_certs")
-    ):
+    if not ca_certs and not ca_cert_dir and not ca_cert_data and default_ssl_context and hasattr(context, "load_default_certs"):
         context.load_default_certs()
 
     # Ensure that IPv6 addresses are in the proper format and don't have a
@@ -795,14 +765,8 @@ def _ssl_wrap_socket_and_match_hostname(
 
     try:
         if assert_fingerprint:
-            _assert_fingerprint(
-                ssl_sock.getpeercert(binary_form=True), assert_fingerprint
-            )
-        elif (
-            context.verify_mode != ssl.CERT_NONE
-            and not context.check_hostname
-            and assert_hostname is not False
-        ):
+            _assert_fingerprint(ssl_sock.getpeercert(binary_form=True), assert_fingerprint)
+        elif context.verify_mode != ssl.CERT_NONE and not context.check_hostname and assert_hostname is not False:
             cert: _TYPE_PEER_CERT_RET_DICT = ssl_sock.getpeercert()  # type: ignore[assignment]
 
             # Need to signal to our match_hostname whether to use 'commonName' or not.
@@ -811,9 +775,7 @@ def _ssl_wrap_socket_and_match_hostname(
             if default_ssl_context:
                 hostname_checks_common_name = False
             else:
-                hostname_checks_common_name = (
-                    getattr(context, "hostname_checks_common_name", False) or False
-                )
+                hostname_checks_common_name = getattr(context, "hostname_checks_common_name", False) or False
 
             _match_hostname(
                 cert,
@@ -823,8 +785,7 @@ def _ssl_wrap_socket_and_match_hostname(
 
         return _WrappedAndVerifiedSocket(
             socket=ssl_sock,
-            is_verified=context.verify_mode == ssl.CERT_REQUIRED
-            or bool(assert_fingerprint),
+            is_verified=context.verify_mode == ssl.CERT_REQUIRED or bool(assert_fingerprint),
         )
     except BaseException:
         ssl_sock.close()
@@ -862,19 +823,10 @@ def _wrap_proxy_error(err: Exception, proxy_scheme: str | None) -> ProxyError:
     # then we should warn the user that we're very sure that
     # this proxy is HTTP-only and they have a configuration issue.
     error_normalized = " ".join(re.split("[^a-z]", str(err).lower()))
-    is_likely_http_proxy = (
-        "wrong version number" in error_normalized
-        or "unknown protocol" in error_normalized
-    )
-    http_proxy_warning = (
-        ". Your proxy appears to only use HTTP and not HTTPS, "
-        "try changing your proxy URL to be HTTP. See: "
-        "https://urllib3.readthedocs.io/en/latest/advanced-usage.html"
-        "#https-proxy-error-http-proxy"
-    )
+    is_likely_http_proxy = "wrong version number" in error_normalized or "unknown protocol" in error_normalized
+    http_proxy_warning = ". Your proxy appears to only use HTTP and not HTTPS, " "try changing your proxy URL to be HTTP. See: " "https://urllib3.readthedocs.io/en/latest/advanced-usage.html" "#https-proxy-error-http-proxy"
     new_err = ProxyError(
-        f"Unable to connect to proxy"
-        f"{http_proxy_warning if is_likely_http_proxy and proxy_scheme == 'https' else ''}",
+        f"Unable to connect to proxy" f"{http_proxy_warning if is_likely_http_proxy and proxy_scheme == 'https' else ''}",
         err,
     )
     new_err.__cause__ = err
@@ -896,9 +848,7 @@ if not ssl:
 VerifiedHTTPSConnection = HTTPSConnection
 
 
-def _url_from_connection(
-    conn: HTTPConnection | HTTPSConnection, path: str | None = None
-) -> str:
+def _url_from_connection(conn: HTTPConnection | HTTPSConnection, path: str | None = None) -> str:
     """Returns the URL from a given connection. This is mainly used for testing and logging."""
 
     scheme = "https" if isinstance(conn, HTTPSConnection) else "http"

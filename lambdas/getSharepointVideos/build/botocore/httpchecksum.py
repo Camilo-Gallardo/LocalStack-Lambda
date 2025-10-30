@@ -21,23 +21,34 @@ checksum to the request.
 import base64
 import io
 import logging
-from binascii import crc32
-from hashlib import sha1, sha256
+from binascii import (
+    crc32,
+)
+from hashlib import (
+    sha1,
+    sha256,
+)
 
-from botocore.compat import HAS_CRT
+from botocore.compat import (
+    HAS_CRT,
+)
 from botocore.exceptions import (
     AwsChunkedWrapperError,
     FlexibleChecksumError,
     MissingDependencyException,
 )
-from botocore.response import StreamingBody
+from botocore.response import (
+    StreamingBody,
+)
 from botocore.utils import (
     conditionally_calculate_md5,
     determine_content_length,
 )
 
 if HAS_CRT:
-    from awscrt import checksums as crt_checksums
+    from awscrt import (
+        checksums as crt_checksums,
+    )
 else:
     crt_checksums = None
 
@@ -47,24 +58,46 @@ logger = logging.getLogger(__name__)
 class BaseChecksum:
     _CHUNK_SIZE = 1024 * 1024
 
-    def update(self, chunk):
+    def update(
+        self,
+        chunk,
+    ):
         pass
 
-    def digest(self):
+    def digest(
+        self,
+    ):
         pass
 
-    def b64digest(self):
+    def b64digest(
+        self,
+    ):
         bs = self.digest()
         return base64.b64encode(bs).decode("ascii")
 
-    def _handle_fileobj(self, fileobj):
+    def _handle_fileobj(
+        self,
+        fileobj,
+    ):
         start_position = fileobj.tell()
-        for chunk in iter(lambda: fileobj.read(self._CHUNK_SIZE), b""):
+        for chunk in iter(
+            lambda: fileobj.read(self._CHUNK_SIZE),
+            b"",
+        ):
             self.update(chunk)
         fileobj.seek(start_position)
 
-    def handle(self, body):
-        if isinstance(body, (bytes, bytearray)):
+    def handle(
+        self,
+        body,
+    ):
+        if isinstance(
+            body,
+            (
+                bytes,
+                bytearray,
+            ),
+        ):
             self.update(body)
         else:
             self._handle_fileobj(body)
@@ -72,61 +105,117 @@ class BaseChecksum:
 
 
 class Crc32Checksum(BaseChecksum):
-    def __init__(self):
+    def __init__(
+        self,
+    ):
         self._int_crc32 = 0
 
-    def update(self, chunk):
-        self._int_crc32 = crc32(chunk, self._int_crc32) & 0xFFFFFFFF
+    def update(
+        self,
+        chunk,
+    ):
+        self._int_crc32 = (
+            crc32(
+                chunk,
+                self._int_crc32,
+            )
+            & 0xFFFFFFFF
+        )
 
-    def digest(self):
-        return self._int_crc32.to_bytes(4, byteorder="big")
+    def digest(
+        self,
+    ):
+        return self._int_crc32.to_bytes(
+            4,
+            byteorder="big",
+        )
 
 
 class CrtCrc32Checksum(BaseChecksum):
     # Note: This class is only used if the CRT is available
-    def __init__(self):
+    def __init__(
+        self,
+    ):
         self._int_crc32 = 0
 
-    def update(self, chunk):
-        new_checksum = crt_checksums.crc32(chunk, self._int_crc32)
+    def update(
+        self,
+        chunk,
+    ):
+        new_checksum = crt_checksums.crc32(
+            chunk,
+            self._int_crc32,
+        )
         self._int_crc32 = new_checksum & 0xFFFFFFFF
 
-    def digest(self):
-        return self._int_crc32.to_bytes(4, byteorder="big")
+    def digest(
+        self,
+    ):
+        return self._int_crc32.to_bytes(
+            4,
+            byteorder="big",
+        )
 
 
 class CrtCrc32cChecksum(BaseChecksum):
     # Note: This class is only used if the CRT is available
-    def __init__(self):
+    def __init__(
+        self,
+    ):
         self._int_crc32c = 0
 
-    def update(self, chunk):
-        new_checksum = crt_checksums.crc32c(chunk, self._int_crc32c)
+    def update(
+        self,
+        chunk,
+    ):
+        new_checksum = crt_checksums.crc32c(
+            chunk,
+            self._int_crc32c,
+        )
         self._int_crc32c = new_checksum & 0xFFFFFFFF
 
-    def digest(self):
-        return self._int_crc32c.to_bytes(4, byteorder="big")
+    def digest(
+        self,
+    ):
+        return self._int_crc32c.to_bytes(
+            4,
+            byteorder="big",
+        )
 
 
 class Sha1Checksum(BaseChecksum):
-    def __init__(self):
+    def __init__(
+        self,
+    ):
         self._checksum = sha1()
 
-    def update(self, chunk):
+    def update(
+        self,
+        chunk,
+    ):
         self._checksum.update(chunk)
 
-    def digest(self):
+    def digest(
+        self,
+    ):
         return self._checksum.digest()
 
 
 class Sha256Checksum(BaseChecksum):
-    def __init__(self):
+    def __init__(
+        self,
+    ):
         self._checksum = sha256()
 
-    def update(self, chunk):
+    def update(
+        self,
+        chunk,
+    ):
         self._checksum.update(chunk)
 
-    def digest(self):
+    def digest(
+        self,
+    ):
         return self._checksum.digest()
 
 
@@ -149,22 +238,29 @@ class AwsChunkedWrapper:
             chunk_size = self._DEFAULT_CHUNK_SIZE
         self._chunk_size = chunk_size
 
-    def _reset(self):
+    def _reset(
+        self,
+    ):
         self._remaining = b""
         self._complete = False
         self._checksum = None
         if self._checksum_cls:
             self._checksum = self._checksum_cls()
 
-    def seek(self, offset, whence=0):
+    def seek(
+        self,
+        offset,
+        whence=0,
+    ):
         if offset != 0 or whence != 0:
-            raise AwsChunkedWrapperError(
-                error_msg="Can only seek to start of stream"
-            )
+            raise AwsChunkedWrapperError(error_msg="Can only seek to start of stream")
         self._reset()
         self._raw.seek(0)
 
-    def read(self, size=None):
+    def read(
+        self,
+        size=None,
+    ):
         # Normalize "read all" size values to None
         if size is not None and size <= 0:
             size = None
@@ -189,7 +285,9 @@ class AwsChunkedWrapper:
         self._remaining = self._remaining[size:]
         return to_return
 
-    def _make_chunk(self):
+    def _make_chunk(
+        self,
+    ):
         # NOTE: Chunk size is not deterministic as read could return less. This
         # means we cannot know the content length of the encoded aws-chunked
         # stream ahead of time without ensuring a consistent chunk size
@@ -203,29 +301,51 @@ class AwsChunkedWrapper:
         if self._checksum and self._complete:
             name = self._checksum_name.encode("ascii")
             checksum = self._checksum.b64digest().encode("ascii")
-            return b"0\r\n%s:%s\r\n\r\n" % (name, checksum)
+            return b"0\r\n%s:%s\r\n\r\n" % (
+                name,
+                checksum,
+            )
 
-        return b"%s\r\n%s\r\n" % (hex_len, raw_chunk)
+        return b"%s\r\n%s\r\n" % (
+            hex_len,
+            raw_chunk,
+        )
 
-    def __iter__(self):
+    def __iter__(
+        self,
+    ):
         while not self._complete:
             yield self._make_chunk()
 
 
 class StreamingChecksumBody(StreamingBody):
-    def __init__(self, raw_stream, content_length, checksum, expected):
-        super().__init__(raw_stream, content_length)
+    def __init__(
+        self,
+        raw_stream,
+        content_length,
+        checksum,
+        expected,
+    ):
+        super().__init__(
+            raw_stream,
+            content_length,
+        )
         self._checksum = checksum
         self._expected = expected
 
-    def read(self, amt=None):
+    def read(
+        self,
+        amt=None,
+    ):
         chunk = super().read(amt=amt)
         self._checksum.update(chunk)
         if amt is None or (not chunk and amt > 0):
             self._validate_checksum()
         return chunk
 
-    def _validate_checksum(self):
+    def _validate_checksum(
+        self,
+    ):
         if self._checksum.digest() != base64.b64decode(self._expected):
             error_msg = (
                 f"Expected checksum {self._expected} did not match calculated "
@@ -234,9 +354,21 @@ class StreamingChecksumBody(StreamingBody):
             raise FlexibleChecksumError(error_msg=error_msg)
 
 
-def resolve_checksum_context(request, operation_model, params):
-    resolve_request_checksum_algorithm(request, operation_model, params)
-    resolve_response_checksum_algorithms(request, operation_model, params)
+def resolve_checksum_context(
+    request,
+    operation_model,
+    params,
+):
+    resolve_request_checksum_algorithm(
+        request,
+        operation_model,
+        params,
+    )
+    resolve_response_checksum_algorithms(
+        request,
+        operation_model,
+        params,
+    )
 
 
 def resolve_request_checksum_algorithm(
@@ -285,20 +417,34 @@ def resolve_request_checksum_algorithm(
             # If the header is already set by the customer, skip calculation
             return
 
-        checksum_context = request["context"].get("checksum", {})
+        checksum_context = request["context"].get(
+            "checksum",
+            {},
+        )
         checksum_context["request_algorithm"] = algorithm
         request["context"]["checksum"] = checksum_context
     elif operation_model.http_checksum_required or http_checksum.get(
         "requestChecksumRequired"
     ):
         # Otherwise apply the old http checksum behavior via Content-MD5
-        checksum_context = request["context"].get("checksum", {})
+        checksum_context = request["context"].get(
+            "checksum",
+            {},
+        )
         checksum_context["request_algorithm"] = "conditional-md5"
         request["context"]["checksum"] = checksum_context
 
 
-def apply_request_checksum(request):
-    checksum_context = request.get("context", {}).get("checksum", {})
+def apply_request_checksum(
+    request,
+):
+    checksum_context = request.get(
+        "context",
+        {},
+    ).get(
+        "checksum",
+        {},
+    )
     algorithm = checksum_context.get("request_algorithm")
 
     if not algorithm:
@@ -317,8 +463,16 @@ def apply_request_checksum(request):
         )
 
 
-def _apply_request_header_checksum(request):
-    checksum_context = request.get("context", {}).get("checksum", {})
+def _apply_request_header_checksum(
+    request,
+):
+    checksum_context = request.get(
+        "context",
+        {},
+    ).get(
+        "checksum",
+        {},
+    )
     algorithm = checksum_context.get("request_algorithm")
     location_name = algorithm["name"]
     if location_name in request["headers"]:
@@ -329,8 +483,16 @@ def _apply_request_header_checksum(request):
     request["headers"][location_name] = digest
 
 
-def _apply_request_trailer_checksum(request):
-    checksum_context = request.get("context", {}).get("checksum", {})
+def _apply_request_trailer_checksum(
+    request,
+):
+    checksum_context = request.get(
+        "context",
+        {},
+    ).get(
+        "checksum",
+        {},
+    )
     algorithm = checksum_context.get("request_algorithm")
     location_name = algorithm["name"]
     checksum_cls = _CHECKSUM_CLS.get(algorithm["algorithm"])
@@ -357,7 +519,13 @@ def _apply_request_trailer_checksum(request):
         # services such as S3 may require the decoded content length
         headers["X-Amz-Decoded-Content-Length"] = str(content_length)
 
-    if isinstance(body, (bytes, bytearray)):
+    if isinstance(
+        body,
+        (
+            bytes,
+            bytearray,
+        ),
+    ):
         body = io.BytesIO(body)
 
     request["body"] = AwsChunkedWrapper(
@@ -368,7 +536,10 @@ def _apply_request_trailer_checksum(request):
 
 
 def resolve_response_checksum_algorithms(
-    request, operation_model, params, supported_algorithms=None
+    request,
+    operation_model,
+    params,
+    supported_algorithms=None,
 ):
     http_checksum = operation_model.http_checksum
     mode_member = http_checksum.get("requestValidationModeMember")
@@ -376,7 +547,11 @@ def resolve_response_checksum_algorithms(
         if supported_algorithms is None:
             supported_algorithms = _SUPPORTED_CHECKSUM_ALGORITHMS
         response_algorithms = {
-            a.lower() for a in http_checksum.get("responseAlgorithms", [])
+            a.lower()
+            for a in http_checksum.get(
+                "responseAlgorithms",
+                [],
+            )
         }
 
         usable_algorithms = []
@@ -386,14 +561,25 @@ def resolve_response_checksum_algorithms(
             if algorithm in supported_algorithms:
                 usable_algorithms.append(algorithm)
 
-        checksum_context = request["context"].get("checksum", {})
+        checksum_context = request["context"].get(
+            "checksum",
+            {},
+        )
         checksum_context["response_algorithms"] = usable_algorithms
         request["context"]["checksum"] = checksum_context
 
 
-def handle_checksum_body(http_response, response, context, operation_model):
+def handle_checksum_body(
+    http_response,
+    response,
+    context,
+    operation_model,
+):
     headers = response["headers"]
-    checksum_context = context.get("checksum", {})
+    checksum_context = context.get(
+        "checksum",
+        {},
+    )
     algorithms = checksum_context.get("response_algorithms")
 
     if not algorithms:
@@ -413,26 +599,37 @@ def handle_checksum_body(http_response, response, context, operation_model):
 
         if operation_model.has_streaming_output:
             response["body"] = _handle_streaming_response(
-                http_response, response, algorithm
+                http_response,
+                response,
+                algorithm,
             )
         else:
             response["body"] = _handle_bytes_response(
-                http_response, response, algorithm
+                http_response,
+                response,
+                algorithm,
             )
 
         # Expose metadata that the checksum check actually occured
-        checksum_context = response["context"].get("checksum", {})
+        checksum_context = response["context"].get(
+            "checksum",
+            {},
+        )
         checksum_context["response_algorithm"] = algorithm
         response["context"]["checksum"] = checksum_context
         return
 
     logger.info(
-        f'Skipping checksum validation. Response did not contain one of the '
-        f'following algorithms: {algorithms}.'
+        f"Skipping checksum validation. Response did not contain one of the "
+        f"following algorithms: {algorithms}."
     )
 
 
-def _handle_streaming_response(http_response, response, algorithm):
+def _handle_streaming_response(
+    http_response,
+    response,
+    algorithm,
+):
     checksum_cls = _CHECKSUM_CLS.get(algorithm)
     header_name = "x-amz-checksum-%s" % algorithm
     return StreamingChecksumBody(
@@ -443,7 +640,11 @@ def _handle_streaming_response(http_response, response, algorithm):
     )
 
 
-def _handle_bytes_response(http_response, response, algorithm):
+def _handle_bytes_response(
+    http_response,
+    response,
+    algorithm,
+):
     body = http_response.content
     header_name = "x-amz-checksum-%s" % algorithm
     checksum_cls = _CHECKSUM_CLS.get(algorithm)
@@ -451,12 +652,9 @@ def _handle_bytes_response(http_response, response, algorithm):
     checksum.update(body)
     expected = response["headers"][header_name]
     if checksum.digest() != base64.b64decode(expected):
-        error_msg = (
-            "Expected checksum %s did not match calculated checksum: %s"
-            % (
-                expected,
-                checksum.b64digest(),
-            )
+        error_msg = "Expected checksum %s did not match calculated checksum: %s" % (
+            expected,
+            checksum.b64digest(),
         )
         raise FlexibleChecksumError(error_msg=error_msg)
     return body
@@ -467,7 +665,10 @@ _CHECKSUM_CLS = {
     "sha1": Sha1Checksum,
     "sha256": Sha256Checksum,
 }
-_CRT_CHECKSUM_ALGORITHMS = ["crc32", "crc32c"]
+_CRT_CHECKSUM_ALGORITHMS = [
+    "crc32",
+    "crc32c",
+]
 if HAS_CRT:
     # Use CRT checksum implementations if available
     _CRT_CHECKSUM_CLS = {
@@ -476,8 +677,11 @@ if HAS_CRT:
     }
     _CHECKSUM_CLS.update(_CRT_CHECKSUM_CLS)
     # Validate this list isn't out of sync with _CRT_CHECKSUM_CLS keys
-    assert all(
-        name in _CRT_CHECKSUM_ALGORITHMS for name in _CRT_CHECKSUM_CLS.keys()
-    )
+    assert all(name in _CRT_CHECKSUM_ALGORITHMS for name in _CRT_CHECKSUM_CLS.keys())
 _SUPPORTED_CHECKSUM_ALGORITHMS = list(_CHECKSUM_CLS.keys())
-_ALGORITHMS_PRIORITY_LIST = ['crc32c', 'crc32', 'sha1', 'sha256']
+_ALGORITHMS_PRIORITY_LIST = [
+    "crc32c",
+    "crc32",
+    "sha1",
+    "sha256",
+]

@@ -1,10 +1,18 @@
-from __future__ import absolute_import
+from __future__ import (
+    absolute_import,
+)
 
 import sys
 
-from .filepost import encode_multipart_formdata
-from .packages import six
-from .packages.six.moves.urllib.parse import urlencode
+from .filepost import (
+    encode_multipart_formdata,
+)
+from .packages import (
+    six,
+)
+from .packages.six.moves.urllib.parse import (
+    urlencode,
+)
 
 __all__ = ["RequestMethods"]
 
@@ -38,9 +46,17 @@ class RequestMethods(object):
         explicitly.
     """
 
-    _encode_url_methods = {"DELETE", "GET", "HEAD", "OPTIONS"}
+    _encode_url_methods = {
+        "DELETE",
+        "GET",
+        "HEAD",
+        "OPTIONS",
+    }
 
-    def __init__(self, headers=None):
+    def __init__(
+        self,
+        headers=None,
+    ):
         self.headers = headers or {}
 
     def urlopen(
@@ -155,11 +171,18 @@ class RequestMethods(object):
                 )
 
             if encode_multipart:
-                body, content_type = encode_multipart_formdata(
-                    fields, boundary=multipart_boundary
+                (
+                    body,
+                    content_type,
+                ) = encode_multipart_formdata(
+                    fields,
+                    boundary=multipart_boundary,
                 )
             else:
-                body, content_type = (
+                (
+                    body,
+                    content_type,
+                ) = (
                     urlencode(fields),
                     "application/x-www-form-urlencoded",
                 )

@@ -1,20 +1,43 @@
-from __future__ import annotations
+from __future__ import (
+    annotations,
+)
 
 import argparse
 import sys
 import typing
-from json import dumps
-from os.path import abspath, basename, dirname, join, realpath
-from platform import python_version
-from unicodedata import unidata_version
+from json import (
+    dumps,
+)
+from os.path import (
+    abspath,
+    basename,
+    dirname,
+    join,
+    realpath,
+)
+from platform import (
+    python_version,
+)
+from unicodedata import (
+    unidata_version,
+)
 
 import charset_normalizer.md as md_module
-from charset_normalizer import from_fp
-from charset_normalizer.models import CliDetectionResult
-from charset_normalizer.version import __version__
+from charset_normalizer import (
+    from_fp,
+)
+from charset_normalizer.models import (
+    CliDetectionResult,
+)
+from charset_normalizer.version import (
+    __version__,
+)
 
 
-def query_yes_no(question: str, default: str = "yes") -> bool:
+def query_yes_no(
+    question: str,
+    default: str = "yes",
+) -> bool:
     """Ask a yes/no question via input() and return their answer.
 
     "question" is a string that is presented to the user.
@@ -26,7 +49,13 @@ def query_yes_no(question: str, default: str = "yes") -> bool:
 
     Credit goes to (c) https://stackoverflow.com/questions/3041986/apt-command-line-interface-like-yes-no-input
     """
-    valid = {"yes": True, "y": True, "ye": True, "no": False, "n": False}
+    valid = {
+        "yes": True,
+        "y": True,
+        "ye": True,
+        "no": False,
+        "n": False,
+    }
     if default is None:
         prompt = " [y/n] "
     elif default == "yes":
@@ -91,14 +120,34 @@ class FileType:
 
         # all other arguments are used as file names
         try:
-            return open(string, self._mode, self._bufsize, self._encoding, self._errors)
+            return open(
+                string,
+                self._mode,
+                self._bufsize,
+                self._encoding,
+                self._errors,
+            )
         except OSError as e:
             message = f"can't open '{string}': {e}"
             raise argparse.ArgumentTypeError(message)
 
-    def __repr__(self) -> str:
-        args = self._mode, self._bufsize
-        kwargs = [("encoding", self._encoding), ("errors", self._errors)]
+    def __repr__(
+        self,
+    ) -> str:
+        args = (
+            self._mode,
+            self._bufsize,
+        )
+        kwargs = [
+            (
+                "encoding",
+                self._encoding,
+            ),
+            (
+                "errors",
+                self._errors,
+            ),
+        ]
         args_str = ", ".join(
             [repr(arg) for arg in args if arg != -1]
             + [f"{kw}={arg!r}" for kw, arg in kwargs if arg is not None]
@@ -106,7 +155,9 @@ class FileType:
         return f"{type(self).__name__}({args_str})"
 
 
-def cli_detect(argv: list[str] | None = None) -> int:
+def cli_detect(
+    argv: list[str] | None = None,
+) -> int:
     """
     CLI assistant using ARGV and ArgumentParser
     :param argv:
@@ -119,7 +170,10 @@ def cli_detect(argv: list[str] | None = None) -> int:
     )
 
     parser.add_argument(
-        "files", type=FileType("rb"), nargs="+", help="File(s) to be analysed"
+        "files",
+        type=FileType("rb"),
+        nargs="+",
+        help="File(s) to be analysed",
     )
     parser.add_argument(
         "-v",
@@ -194,7 +248,7 @@ def cli_detect(argv: list[str] | None = None) -> int:
             __version__,
             python_version(),
             unidata_version,
-            "OFF" if md_module.__file__.lower().endswith(".py") else "ON",
+            ("OFF" if md_module.__file__.lower().endswith(".py") else "ON"),
         ),
         help="Show version information and exit.",
     )
@@ -205,21 +259,30 @@ def cli_detect(argv: list[str] | None = None) -> int:
         if args.files:
             for my_file in args.files:
                 my_file.close()
-        print("Use --replace in addition of --normalize only.", file=sys.stderr)
+        print(
+            "Use --replace in addition of --normalize only.",
+            file=sys.stderr,
+        )
         return 1
 
     if args.force is True and args.replace is False:
         if args.files:
             for my_file in args.files:
                 my_file.close()
-        print("Use --force in addition of --replace only.", file=sys.stderr)
+        print(
+            "Use --force in addition of --replace only.",
+            file=sys.stderr,
+        )
         return 1
 
     if args.threshold < 0.0 or args.threshold > 1.0:
         if args.files:
             for my_file in args.files:
                 my_file.close()
-        print("--threshold VALUE should be between 0. AND 1.", file=sys.stderr)
+        print(
+            "--threshold VALUE should be between 0. AND 1.",
+            file=sys.stderr,
+        )
         return 1
 
     x_ = []
@@ -323,7 +386,10 @@ def cli_detect(argv: list[str] | None = None) -> int:
                 o_: list[str] = file_name.split(".")
 
                 if args.replace is False:
-                    o_.insert(-1, best_guess.encoding)
+                    o_.insert(
+                        -1,
+                        best_guess.encoding,
+                    )
                     if my_file.closed is False:
                         my_file.close()
                 elif (
@@ -341,12 +407,21 @@ def cli_detect(argv: list[str] | None = None) -> int:
                     continue
 
                 try:
-                    x_[0].unicode_path = join(dir_path, ".".join(o_))
+                    x_[0].unicode_path = join(
+                        dir_path,
+                        ".".join(o_),
+                    )
 
-                    with open(x_[0].unicode_path, "wb") as fp:
+                    with open(
+                        x_[0].unicode_path,
+                        "wb",
+                    ) as fp:
                         fp.write(best_guess.output())
                 except OSError as e:
-                    print(str(e), file=sys.stderr)
+                    print(
+                        str(e),
+                        file=sys.stderr,
+                    )
                     if my_file.closed is False:
                         my_file.close()
                     return 2
@@ -357,7 +432,7 @@ def cli_detect(argv: list[str] | None = None) -> int:
     if args.minimal is False:
         print(
             dumps(
-                [el.__dict__ for el in x_] if len(x_) > 1 else x_[0].__dict__,
+                ([el.__dict__ for el in x_] if len(x_) > 1 else x_[0].__dict__),
                 ensure_ascii=True,
                 indent=4,
             )

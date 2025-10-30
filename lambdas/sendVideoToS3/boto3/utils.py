@@ -11,15 +11,17 @@
 # ANY KIND, either express or implied. See the License for the specific
 # language governing permissions and limitations under the License.
 import sys
-from collections import namedtuple
+from collections import (
+    namedtuple,
+)
 
 _ServiceContext = namedtuple(
-    'ServiceContext',
+    "ServiceContext",
     [
-        'service_name',
-        'service_model',
-        'service_waiter_model',
-        'resource_json_definitions',
+        "service_name",
+        "service_model",
+        "service_waiter_model",
+        "resource_json_definitions",
     ],
 )
 
@@ -47,7 +49,9 @@ class ServiceContext(_ServiceContext):
     pass
 
 
-def import_module(name):
+def import_module(
+    name,
+):
     """Import module given a name.
 
     Does not support relative imports.
@@ -57,23 +61,41 @@ def import_module(name):
     return sys.modules[name]
 
 
-def lazy_call(full_name, **kwargs):
+def lazy_call(
+    full_name,
+    **kwargs,
+):
     parent_kwargs = kwargs
 
-    def _handler(**kwargs):
-        module, function_name = full_name.rsplit('.', 1)
+    def _handler(
+        **kwargs,
+    ):
+        (
+            module,
+            function_name,
+        ) = full_name.rsplit(
+            ".",
+            1,
+        )
         module = import_module(module)
         kwargs.update(parent_kwargs)
-        return getattr(module, function_name)(**kwargs)
+        return getattr(
+            module,
+            function_name,
+        )(**kwargs)
 
     return _handler
 
 
-def inject_attribute(class_attributes, name, value):
+def inject_attribute(
+    class_attributes,
+    name,
+    value,
+):
     if name in class_attributes:
         raise RuntimeError(
             f'Cannot inject class attribute "{name}", attribute '
-            f'already exists in class dict.'
+            f"already exists in class dict."
         )
     else:
         class_attributes[name] = value
@@ -89,12 +111,21 @@ class LazyLoadedWaiterModel:
     when the docstring is generated/accessed.
     """
 
-    def __init__(self, bc_session, service_name, api_version):
+    def __init__(
+        self,
+        bc_session,
+        service_name,
+        api_version,
+    ):
         self._session = bc_session
         self._service_name = service_name
         self._api_version = api_version
 
-    def get_waiter(self, waiter_name):
+    def get_waiter(
+        self,
+        waiter_name,
+    ):
         return self._session.get_waiter_model(
-            self._service_name, self._api_version
+            self._service_name,
+            self._api_version,
         ).get_waiter(waiter_name)

@@ -38,14 +38,18 @@ with the proxy:
     proxy_url="socks5h://<username>:<password>@proxy-host"
 
 """
-from __future__ import absolute_import
+from __future__ import (
+    absolute_import,
+)
 
 try:
     import socks
 except ImportError:
     import warnings
 
-    from ..exceptions import DependencyWarning
+    from ..exceptions import (
+        DependencyWarning,
+    )
 
     warnings.warn(
         (
@@ -57,14 +61,31 @@ except ImportError:
     )
     raise
 
-from socket import error as SocketError
-from socket import timeout as SocketTimeout
+from socket import (
+    error as SocketError,
+)
+from socket import (
+    timeout as SocketTimeout,
+)
 
-from ..connection import HTTPConnection, HTTPSConnection
-from ..connectionpool import HTTPConnectionPool, HTTPSConnectionPool
-from ..exceptions import ConnectTimeoutError, NewConnectionError
-from ..poolmanager import PoolManager
-from ..util.url import parse_url
+from ..connection import (
+    HTTPConnection,
+    HTTPSConnection,
+)
+from ..connectionpool import (
+    HTTPConnectionPool,
+    HTTPSConnectionPool,
+)
+from ..exceptions import (
+    ConnectTimeoutError,
+    NewConnectionError,
+)
+from ..poolmanager import (
+    PoolManager,
+)
+from ..util.url import (
+    parse_url,
+)
 
 try:
     import ssl
@@ -79,9 +100,14 @@ class SOCKSConnection(HTTPConnection):
 
     def __init__(self, *args, **kwargs):
         self._socks_options = kwargs.pop("_socks_options")
-        super(SOCKSConnection, self).__init__(*args, **kwargs)
+        super(
+            SOCKSConnection,
+            self,
+        ).__init__(*args, **kwargs)
 
-    def _new_conn(self):
+    def _new_conn(
+        self,
+    ):
         """
         Establish a new connection via the SOCKS proxy.
         """
@@ -94,7 +120,10 @@ class SOCKSConnection(HTTPConnection):
 
         try:
             conn = socks.create_connection(
-                (self.host, self.port),
+                (
+                    self.host,
+                    self.port,
+                ),
                 proxy_type=self._socks_options["socks_version"],
                 proxy_addr=self._socks_options["proxy_host"],
                 proxy_port=self._socks_options["proxy_port"],
@@ -109,7 +138,10 @@ class SOCKSConnection(HTTPConnection):
             raise ConnectTimeoutError(
                 self,
                 "Connection to %s timed out. (connect timeout=%s)"
-                % (self.host, self.timeout),
+                % (
+                    self.host,
+                    self.timeout,
+                ),
             )
 
         except socks.ProxyError as e:
@@ -117,24 +149,33 @@ class SOCKSConnection(HTTPConnection):
             # useful errors here.
             if e.socket_err:
                 error = e.socket_err
-                if isinstance(error, SocketTimeout):
+                if isinstance(
+                    error,
+                    SocketTimeout,
+                ):
                     raise ConnectTimeoutError(
                         self,
                         "Connection to %s timed out. (connect timeout=%s)"
-                        % (self.host, self.timeout),
+                        % (
+                            self.host,
+                            self.timeout,
+                        ),
                     )
                 else:
                     raise NewConnectionError(
-                        self, "Failed to establish a new connection: %s" % error
+                        self,
+                        "Failed to establish a new connection: %s" % error,
                     )
             else:
                 raise NewConnectionError(
-                    self, "Failed to establish a new connection: %s" % e
+                    self,
+                    "Failed to establish a new connection: %s" % e,
                 )
 
         except SocketError as e:  # Defensive: PySocks should catch all these.
             raise NewConnectionError(
-                self, "Failed to establish a new connection: %s" % e
+                self,
+                "Failed to establish a new connection: %s" % e,
             )
 
         return conn
@@ -144,7 +185,10 @@ class SOCKSConnection(HTTPConnection):
 # urllib3/connection.py here because the HTTPSConnection will already have been
 # correctly set to either the Verified or Unverified form by that module. This
 # means the SOCKSHTTPSConnection will automatically be the correct type.
-class SOCKSHTTPSConnection(SOCKSConnection, HTTPSConnection):
+class SOCKSHTTPSConnection(
+    SOCKSConnection,
+    HTTPSConnection,
+):
     pass
 
 
@@ -181,7 +225,10 @@ class SOCKSProxyManager(PoolManager):
         if username is None and password is None and parsed.auth is not None:
             split = parsed.auth.split(":")
             if len(split) == 2:
-                username, password = split
+                (
+                    username,
+                    password,
+                ) = split
         if parsed.scheme == "socks5":
             socks_version = socks.PROXY_TYPE_SOCKS5
             rdns = False
@@ -209,8 +256,9 @@ class SOCKSProxyManager(PoolManager):
         }
         connection_pool_kw["_socks_options"] = socks_options
 
-        super(SOCKSProxyManager, self).__init__(
-            num_pools, headers, **connection_pool_kw
-        )
+        super(
+            SOCKSProxyManager,
+            self,
+        ).__init__(num_pools, headers, **connection_pool_kw)
 
         self.pool_classes_by_scheme = SOCKSProxyManager.pool_classes_by_scheme

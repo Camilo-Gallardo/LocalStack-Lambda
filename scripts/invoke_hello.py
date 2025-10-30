@@ -1,7 +1,16 @@
-import json, boto3, os
+import json
+import os
 
-AWS_ENDPOINT = os.environ.get("AWS_ENDPOINT","http://localhost:4566")
-REGION = os.environ.get("REGION","us-east-1")
+import boto3
+
+AWS_ENDPOINT = os.environ.get(
+    "AWS_ENDPOINT",
+    "http://localhost:4566",
+)
+REGION = os.environ.get(
+    "REGION",
+    "us-east-1",
+)
 
 client = boto3.client(
     "lambda",
@@ -13,8 +22,25 @@ client = boto3.client(
 
 resp = client.invoke(
     FunctionName="hello_world",
-    Payload=json.dumps({"name": "Camilo"}).encode()
+    Payload=json.dumps(
+        {
+            "name": "Camilo"
+        }
+    ).encode(),
 )
 
-print(resp["StatusCode"], resp.get("FunctionError"))
-print(resp["Payload"].read().decode())
+print(
+    resp[
+        "StatusCode"
+    ],
+    resp.get(
+        "FunctionError"
+    ),
+)
+print(
+    resp[
+        "Payload"
+    ]
+    .read()
+    .decode()
+)

@@ -1,23 +1,52 @@
 """
 Python HTTP library with thread-safe connection pooling, file post support, user friendly, and more
 """
-from __future__ import absolute_import
+
+from __future__ import (
+    absolute_import,
+)
 
 # Set default logging handler to avoid "No handler found" warnings.
 import logging
 import warnings
-from logging import NullHandler
+from logging import (
+    NullHandler,
+)
 
-from . import exceptions
-from ._version import __version__
-from .connectionpool import HTTPConnectionPool, HTTPSConnectionPool, connection_from_url
-from .filepost import encode_multipart_formdata
-from .poolmanager import PoolManager, ProxyManager, proxy_from_url
-from .response import HTTPResponse
-from .util.request import make_headers
-from .util.retry import Retry
-from .util.timeout import Timeout
-from .util.url import get_host
+from . import (
+    exceptions,
+)
+from ._version import (
+    __version__,
+)
+from .connectionpool import (
+    HTTPConnectionPool,
+    HTTPSConnectionPool,
+    connection_from_url,
+)
+from .filepost import (
+    encode_multipart_formdata,
+)
+from .poolmanager import (
+    PoolManager,
+    ProxyManager,
+    proxy_from_url,
+)
+from .response import (
+    HTTPResponse,
+)
+from .util.request import (
+    make_headers,
+)
+from .util.retry import (
+    Retry,
+)
+from .util.timeout import (
+    Timeout,
+)
+from .util.url import (
+    get_host,
+)
 
 # === NOTE TO REPACKAGERS AND VENDORS ===
 # Please delete this block, this logic is only
@@ -60,7 +89,9 @@ __all__ = (
 logging.getLogger(__name__).addHandler(NullHandler())
 
 
-def add_stderr_logger(level=logging.DEBUG):
+def add_stderr_logger(
+    level=logging.DEBUG,
+):
     """
     Helper for quickly adding a StreamHandler to the logger. Useful for
     debugging.
@@ -74,7 +105,10 @@ def add_stderr_logger(level=logging.DEBUG):
     handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(message)s"))
     logger.addHandler(handler)
     logger.setLevel(level)
-    logger.debug("Added a stderr logging handler to logger: %s", __name__)
+    logger.debug(
+        "Added a stderr logging handler to logger: %s",
+        __name__,
+    )
     return handler
 
 
@@ -86,17 +120,38 @@ del NullHandler
 # shouldn't be: otherwise, it's very hard for users to use most Python
 # mechanisms to silence them.
 # SecurityWarning's always go off by default.
-warnings.simplefilter("always", exceptions.SecurityWarning, append=True)
+warnings.simplefilter(
+    "always",
+    exceptions.SecurityWarning,
+    append=True,
+)
 # SubjectAltNameWarning's should go off once per host
-warnings.simplefilter("default", exceptions.SubjectAltNameWarning, append=True)
+warnings.simplefilter(
+    "default",
+    exceptions.SubjectAltNameWarning,
+    append=True,
+)
 # InsecurePlatformWarning's don't vary between requests, so we keep it default.
-warnings.simplefilter("default", exceptions.InsecurePlatformWarning, append=True)
+warnings.simplefilter(
+    "default",
+    exceptions.InsecurePlatformWarning,
+    append=True,
+)
 # SNIMissingWarnings should go off only once.
-warnings.simplefilter("default", exceptions.SNIMissingWarning, append=True)
+warnings.simplefilter(
+    "default",
+    exceptions.SNIMissingWarning,
+    append=True,
+)
 
 
-def disable_warnings(category=exceptions.HTTPWarning):
+def disable_warnings(
+    category=exceptions.HTTPWarning,
+):
     """
     Helper for quickly disabling all urllib3 warnings.
     """
-    warnings.simplefilter("ignore", category)
+    warnings.simplefilter(
+        "ignore",
+        category,
+    )

@@ -7,6 +7,7 @@ CoreFoundation messing about and memory management. The concerns in this module
 are almost entirely about trying to avoid memory leaks and providing
 appropriate and useful assistance to the higher-level code.
 """
+
 import base64
 import ctypes
 import itertools
@@ -16,25 +17,36 @@ import ssl
 import struct
 import tempfile
 
-from .bindings import CFConst, CoreFoundation, Security
+from .bindings import (
+    CFConst,
+    CoreFoundation,
+    Security,
+)
 
 # This regular expression is used to grab PEM data out of a PEM bundle.
 _PEM_CERTS_RE = re.compile(
-    b"-----BEGIN CERTIFICATE-----\n(.*?)\n-----END CERTIFICATE-----", re.DOTALL
+    b"-----BEGIN CERTIFICATE-----\n(.*?)\n-----END CERTIFICATE-----",
+    re.DOTALL,
 )
 
 
-def _cf_data_from_bytes(bytestring):
+def _cf_data_from_bytes(
+    bytestring,
+):
     """
     Given a bytestring, create a CFData object from it. This CFData object must
     be CFReleased by the caller.
     """
     return CoreFoundation.CFDataCreate(
-        CoreFoundation.kCFAllocatorDefault, bytestring, len(bytestring)
+        CoreFoundation.kCFAllocatorDefault,
+        bytestring,
+        len(bytestring),
     )
 
 
-def _cf_dictionary_from_tuples(tuples):
+def _cf_dictionary_from_tuples(
+    tuples,
+):
     """
     Given a list of Python tuples, create an associated CFDictionary.
     """
@@ -56,7 +68,9 @@ def _cf_dictionary_from_tuples(tuples):
     )
 
 
-def _cfstr(py_bstr):
+def _cfstr(
+    py_bstr,
+):
     """
     Given a Python binary data, create a CFString.
     The string must be CFReleased by the caller.
@@ -70,7 +84,9 @@ def _cfstr(py_bstr):
     return cf_str
 
 
-def _create_cfstring_array(lst):
+def _create_cfstring_array(
+    lst,
+):
     """
     Given a list of Python binary data, create an associated CFMutableArray.
     The array must be CFReleased by the caller.
@@ -91,7 +107,10 @@ def _create_cfstring_array(lst):
             if not cf_str:
                 raise MemoryError("Unable to allocate memory!")
             try:
-                CoreFoundation.CFArrayAppendValue(cf_arr, cf_str)
+                CoreFoundation.CFArrayAppendValue(
+                    cf_arr,
+                    cf_str,
+                )
             finally:
                 CoreFoundation.CFRelease(cf_str)
     except BaseException as e:
@@ -101,22 +120,31 @@ def _create_cfstring_array(lst):
     return cf_arr
 
 
-def _cf_string_to_unicode(value):
+def _cf_string_to_unicode(
+    value,
+):
     """
     Creates a Unicode string from a CFString object. Used entirely for error
     reporting.
 
     Yes, it annoys me quite a lot that this function is this complex.
     """
-    value_as_void_p = ctypes.cast(value, ctypes.POINTER(ctypes.c_void_p))
+    value_as_void_p = ctypes.cast(
+        value,
+        ctypes.POINTER(ctypes.c_void_p),
+    )
 
     string = CoreFoundation.CFStringGetCStringPtr(
-        value_as_void_p, CFConst.kCFStringEncodingUTF8
+        value_as_void_p,
+        CFConst.kCFStringEncodingUTF8,
     )
     if string is None:
         buffer = ctypes.create_string_buffer(1024)
         result = CoreFoundation.CFStringGetCString(
-            value_as_void_p, buffer, 1024, CFConst.kCFStringEncodingUTF8
+            value_as_void_p,
+            buffer,
+            1024,
+            CFConst.kCFStringEncodingUTF8,
         )
         if not result:
             raise OSError("Error copying C string from CFStringRef")
@@ -126,7 +154,10 @@ def _cf_string_to_unicode(value):
     return string
 
 
-def _assert_no_error(error, exception_class=None):
+def _assert_no_error(
+    error,
+    exception_class=None,
+):
     """
     Checks the return code and throws an exception if there is an error to
     report
@@ -134,12 +165,15 @@ def _assert_no_error(error, exception_class=None):
     if error == 0:
         return
 
-    cf_error_string = Security.SecCopyErrorMessageString(error, None)
+    cf_error_string = Security.SecCopyErrorMessageString(
+        error,
+        None,
+    )
     output = _cf_string_to_unicode(cf_error_string)
     CoreFoundation.CFRelease(cf_error_string)
 
-    if output is None or output == u"":
-        output = u"OSStatus %s" % error
+    if output is None or output == "":
+        output = "OSStatus %s" % error
 
     if exception_class is None:
         exception_class = ssl.SSLError
@@ -147,13 +181,18 @@ def _assert_no_error(error, exception_class=None):
     raise exception_class(output)
 
 
-def _cert_array_from_pem(pem_bundle):
+def _cert_array_from_pem(
+    pem_bundle,
+):
     """
     Given a bundle of certs in PEM format, turns them into a CFArray of certs
     that can be used to validate a cert chain.
     """
     # Normalize the PEM bundle's line endings.
-    pem_bundle = pem_bundle.replace(b"\r\n", b"\n")
+    pem_bundle = pem_bundle.replace(
+        b"\r\n",
+        b"\n",
+    )
 
     der_certs = [
         base64.b64decode(match.group(1)) for match in _PEM_CERTS_RE.finditer(pem_bundle)
@@ -175,13 +214,17 @@ def _cert_array_from_pem(pem_bundle):
             if not certdata:
                 raise ssl.SSLError("Unable to allocate memory!")
             cert = Security.SecCertificateCreateWithData(
-                CoreFoundation.kCFAllocatorDefault, certdata
+                CoreFoundation.kCFAllocatorDefault,
+                certdata,
             )
             CoreFoundation.CFRelease(certdata)
             if not cert:
                 raise ssl.SSLError("Unable to build cert object!")
 
-            CoreFoundation.CFArrayAppendValue(cert_array, cert)
+            CoreFoundation.CFArrayAppendValue(
+                cert_array,
+                cert,
+            )
             CoreFoundation.CFRelease(cert)
     except Exception:
         # We need to free the array before the exception bubbles further.
@@ -193,7 +236,9 @@ def _cert_array_from_pem(pem_bundle):
     return cert_array
 
 
-def _is_cert(item):
+def _is_cert(
+    item,
+):
     """
     Returns True if a given CFTypeRef is a certificate.
     """
@@ -201,7 +246,9 @@ def _is_cert(item):
     return CoreFoundation.CFGetTypeID(item) == expected
 
 
-def _is_identity(item):
+def _is_identity(
+    item,
+):
     """
     Returns True if a given CFTypeRef is an identity.
     """
@@ -231,20 +278,34 @@ def _temporary_keychain():
     password = base64.b16encode(random_bytes[8:])  # Must be valid UTF-8
     tempdirectory = tempfile.mkdtemp()
 
-    keychain_path = os.path.join(tempdirectory, filename).encode("utf-8")
+    keychain_path = os.path.join(
+        tempdirectory,
+        filename,
+    ).encode("utf-8")
 
     # We now want to create the keychain itself.
     keychain = Security.SecKeychainRef()
     status = Security.SecKeychainCreate(
-        keychain_path, len(password), password, False, None, ctypes.byref(keychain)
+        keychain_path,
+        len(password),
+        password,
+        False,
+        None,
+        ctypes.byref(keychain),
     )
     _assert_no_error(status)
 
     # Having created the keychain, we want to pass it off to the caller.
-    return keychain, tempdirectory
+    return (
+        keychain,
+        tempdirectory,
+    )
 
 
-def _load_items_from_file(keychain, path):
+def _load_items_from_file(
+    keychain,
+    path,
+):
     """
     Given a single file, loads all the trust objects from it into arrays and
     the keychain.
@@ -255,12 +316,17 @@ def _load_items_from_file(keychain, path):
     identities = []
     result_array = None
 
-    with open(path, "rb") as f:
+    with open(
+        path,
+        "rb",
+    ) as f:
         raw_filedata = f.read()
 
     try:
         filedata = CoreFoundation.CFDataCreate(
-            CoreFoundation.kCFAllocatorDefault, raw_filedata, len(raw_filedata)
+            CoreFoundation.kCFAllocatorDefault,
+            raw_filedata,
+            len(raw_filedata),
         )
         result_array = CoreFoundation.CFArrayRef()
         result = Security.SecItemImport(
@@ -281,8 +347,14 @@ def _load_items_from_file(keychain, path):
         # keychain already has them!
         result_count = CoreFoundation.CFArrayGetCount(result_array)
         for index in range(result_count):
-            item = CoreFoundation.CFArrayGetValueAtIndex(result_array, index)
-            item = ctypes.cast(item, CoreFoundation.CFTypeRef)
+            item = CoreFoundation.CFArrayGetValueAtIndex(
+                result_array,
+                index,
+            )
+            item = ctypes.cast(
+                item,
+                CoreFoundation.CFTypeRef,
+            )
 
             if _is_cert(item):
                 CoreFoundation.CFRetain(item)
@@ -296,7 +368,10 @@ def _load_items_from_file(keychain, path):
 
         CoreFoundation.CFRelease(filedata)
 
-    return (identities, certificates)
+    return (
+        identities,
+        certificates,
+    )
 
 
 def _load_client_cert_chain(keychain, *paths):
@@ -339,7 +414,13 @@ def _load_client_cert_chain(keychain, *paths):
 
     try:
         for file_path in paths:
-            new_identities, new_certs = _load_items_from_file(keychain, file_path)
+            (
+                new_identities,
+                new_certs,
+            ) = _load_items_from_file(
+                keychain,
+                file_path,
+            )
             identities.extend(new_identities)
             certificates.extend(new_certs)
 
@@ -348,7 +429,9 @@ def _load_client_cert_chain(keychain, *paths):
         if not identities:
             new_identity = Security.SecIdentityRef()
             status = Security.SecIdentityCreateWithCertificate(
-                keychain, certificates[0], ctypes.byref(new_identity)
+                keychain,
+                certificates[0],
+                ctypes.byref(new_identity),
             )
             _assert_no_error(status)
             identities.append(new_identity)
@@ -363,35 +446,77 @@ def _load_client_cert_chain(keychain, *paths):
             0,
             ctypes.byref(CoreFoundation.kCFTypeArrayCallBacks),
         )
-        for item in itertools.chain(identities, certificates):
+        for item in itertools.chain(
+            identities,
+            certificates,
+        ):
             # ArrayAppendValue does a CFRetain on the item. That's fine,
             # because the finally block will release our other refs to them.
-            CoreFoundation.CFArrayAppendValue(trust_chain, item)
+            CoreFoundation.CFArrayAppendValue(
+                trust_chain,
+                item,
+            )
 
         return trust_chain
     finally:
-        for obj in itertools.chain(identities, certificates):
+        for obj in itertools.chain(
+            identities,
+            certificates,
+        ):
             CoreFoundation.CFRelease(obj)
 
 
 TLS_PROTOCOL_VERSIONS = {
-    "SSLv2": (0, 2),
-    "SSLv3": (3, 0),
-    "TLSv1": (3, 1),
-    "TLSv1.1": (3, 2),
-    "TLSv1.2": (3, 3),
+    "SSLv2": (
+        0,
+        2,
+    ),
+    "SSLv3": (
+        3,
+        0,
+    ),
+    "TLSv1": (
+        3,
+        1,
+    ),
+    "TLSv1.1": (
+        3,
+        2,
+    ),
+    "TLSv1.2": (
+        3,
+        3,
+    ),
 }
 
 
-def _build_tls_unknown_ca_alert(version):
+def _build_tls_unknown_ca_alert(
+    version,
+):
     """
     Builds a TLS alert record for an unknown CA.
     """
-    ver_maj, ver_min = TLS_PROTOCOL_VERSIONS[version]
+    (
+        ver_maj,
+        ver_min,
+    ) = TLS_PROTOCOL_VERSIONS[version]
     severity_fatal = 0x02
     description_unknown_ca = 0x30
-    msg = struct.pack(">BB", severity_fatal, description_unknown_ca)
+    msg = struct.pack(
+        ">BB",
+        severity_fatal,
+        description_unknown_ca,
+    )
     msg_len = len(msg)
     record_type_alert = 0x15
-    record = struct.pack(">BBBH", record_type_alert, ver_maj, ver_min, msg_len) + msg
+    record = (
+        struct.pack(
+            ">BBBH",
+            record_type_alert,
+            ver_maj,
+            ver_min,
+            msg_len,
+        )
+        + msg
+    )
     return record

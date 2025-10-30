@@ -10,10 +10,18 @@
 # distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF
 # ANY KIND, either express or implied. See the License for the specific
 # language governing permissions and limitations under the License.
-from botocore.docs.bcdoc.restdoc import DocumentStructure
-from botocore.docs.method import document_model_driven_method
-from botocore.docs.paginator import document_paginate_method
-from botocore.docs.waiter import document_wait_method
+from botocore.docs.bcdoc.restdoc import (
+    DocumentStructure,
+)
+from botocore.docs.method import (
+    document_model_driven_method,
+)
+from botocore.docs.paginator import (
+    document_paginate_method,
+)
+from botocore.docs.waiter import (
+    document_wait_method,
+)
 
 
 class LazyLoadedDocstring(str):
@@ -42,11 +50,14 @@ class LazyLoadedDocstring(str):
 
     def _write_docstring(self, *args, **kwargs):
         raise NotImplementedError(
-            '_write_docstring is not implemented. Please subclass from '
-            'this class and provide your own _write_docstring method'
+            "_write_docstring is not implemented. Please subclass from "
+            "this class and provide your own _write_docstring method"
         )
 
-    def expandtabs(self, tabsize=8):
+    def expandtabs(
+        self,
+        tabsize=8,
+    ):
         """Expands tabs to spaces
 
         So this is a big hack in order to get lazy loaded docstring work
@@ -60,26 +71,33 @@ class LazyLoadedDocstring(str):
             self._generate()
         return self._docstring.expandtabs(tabsize)
 
-    def __str__(self):
+    def __str__(
+        self,
+    ):
         return self._generate()
 
     # __doc__ of target will use either __repr__ or __str__ of this class.
     __repr__ = __str__
 
-    def _generate(self):
+    def _generate(
+        self,
+    ):
         # Generate the docstring if it is not already cached.
         if self._docstring is None:
             self._docstring = self._create_docstring()
         return self._docstring
 
-    def _create_docstring(self):
-        docstring_structure = DocumentStructure('docstring', target='html')
+    def _create_docstring(
+        self,
+    ):
+        docstring_structure = DocumentStructure(
+            "docstring",
+            target="html",
+        )
         # Call the document method function with the args and kwargs
         # passed to the class.
-        self._write_docstring(
-            docstring_structure, *self._gen_args, **self._gen_kwargs
-        )
-        return docstring_structure.flush_structure().decode('utf-8')
+        self._write_docstring(docstring_structure, *self._gen_args, **self._gen_kwargs)
+        return docstring_structure.flush_structure().decode("utf-8")
 
 
 class ClientMethodDocstring(LazyLoadedDocstring):

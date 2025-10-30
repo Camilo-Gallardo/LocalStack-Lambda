@@ -22,7 +22,11 @@ class CertificateError(ValueError):
     pass
 
 
-def _dnsname_match(dn, hostname, max_wildcards=1):
+def _dnsname_match(
+    dn,
+    hostname,
+    max_wildcards=1,
+):
     """Matching according to RFC 6125, section 6.4.3
 
     http://tools.ietf.org/html/rfc6125#section-6.4.3
@@ -66,24 +70,44 @@ def _dnsname_match(dn, hostname, max_wildcards=1):
         pats.append(re.escape(leftmost))
     else:
         # Otherwise, '*' matches any dotless string, e.g. www*
-        pats.append(re.escape(leftmost).replace(r"\*", "[^.]*"))
+        pats.append(
+            re.escape(leftmost).replace(
+                r"\*",
+                "[^.]*",
+            )
+        )
 
     # add the remaining fragments, ignore any wildcards
     for frag in remainder:
         pats.append(re.escape(frag))
 
-    pat = re.compile(r"\A" + r"\.".join(pats) + r"\Z", re.IGNORECASE)
+    pat = re.compile(
+        r"\A" + r"\.".join(pats) + r"\Z",
+        re.IGNORECASE,
+    )
     return pat.match(hostname)
 
 
-def _to_unicode(obj):
-    if isinstance(obj, str) and sys.version_info < (3,):
+def _to_unicode(
+    obj,
+):
+    if isinstance(
+        obj,
+        str,
+    ) and sys.version_info < (3,):
         # ignored flake8 # F821 to support python 2.7 function
-        obj = unicode(obj, encoding="ascii", errors="strict")  # noqa: F821
+        obj = unicode(
+            obj,
+            encoding="ascii",
+            errors="strict",
+        )  # noqa: F821
     return obj
 
 
-def _ipaddress_match(ipname, host_ip):
+def _ipaddress_match(
+    ipname,
+    host_ip,
+):
     """Exact matching of IP addresses.
 
     RFC 6125 explicitly doesn't define an algorithm for this
@@ -95,7 +119,10 @@ def _ipaddress_match(ipname, host_ip):
     return ip == host_ip
 
 
-def match_hostname(cert, hostname):
+def match_hostname(
+    cert,
+    hostname,
+):
     """Verify that *cert* (in decoded format as returned by
     SSLSocket.getpeercert()) matches the *hostname*.  RFC 2818 and RFC 6125
     rules are followed, but IP addresses are not accepted for *hostname*.
@@ -112,7 +139,10 @@ def match_hostname(cert, hostname):
     try:
         # Divergence from upstream: ipaddress can't handle byte str
         host_ip = ipaddress.ip_address(_to_unicode(hostname))
-    except (UnicodeError, ValueError):
+    except (
+        UnicodeError,
+        ValueError,
+    ):
         # ValueError: Not an IP address (common case)
         # UnicodeError: Divergence from upstream: Have to deal with ipaddress not taking
         # byte strings.  addresses should be all ascii, so we consider it not
@@ -125,34 +155,70 @@ def match_hostname(cert, hostname):
         else:  # Defensive
             raise
     dnsnames = []
-    san = cert.get("subjectAltName", ())
-    for key, value in san:
+    san = cert.get(
+        "subjectAltName",
+        (),
+    )
+    for (
+        key,
+        value,
+    ) in san:
         if key == "DNS":
-            if host_ip is None and _dnsname_match(value, hostname):
+            if host_ip is None and _dnsname_match(
+                value,
+                hostname,
+            ):
                 return
             dnsnames.append(value)
         elif key == "IP Address":
-            if host_ip is not None and _ipaddress_match(value, host_ip):
+            if host_ip is not None and _ipaddress_match(
+                value,
+                host_ip,
+            ):
                 return
             dnsnames.append(value)
     if not dnsnames:
         # The subject is only checked when there is no dNSName entry
         # in subjectAltName
-        for sub in cert.get("subject", ()):
-            for key, value in sub:
+        for sub in cert.get(
+            "subject",
+            (),
+        ):
+            for (
+                key,
+                value,
+            ) in sub:
                 # XXX according to RFC 2818, the most specific Common Name
                 # must be used.
                 if key == "commonName":
-                    if _dnsname_match(value, hostname):
+                    if _dnsname_match(
+                        value,
+                        hostname,
+                    ):
                         return
                     dnsnames.append(value)
     if len(dnsnames) > 1:
         raise CertificateError(
             "hostname %r "
-            "doesn't match either of %s" % (hostname, ", ".join(map(repr, dnsnames)))
+            "doesn't match either of %s"
+            % (
+                hostname,
+                ", ".join(
+                    map(
+                        repr,
+                        dnsnames,
+                    )
+                ),
+            )
         )
     elif len(dnsnames) == 1:
-        raise CertificateError("hostname %r doesn't match %r" % (hostname, dnsnames[0]))
+        raise CertificateError(
+            "hostname %r doesn't match %r"
+            % (
+                hostname,
+                dnsnames[0],
+            )
+        )
     else:
         raise CertificateError(
             "no appropriate commonName or subjectAltName fields were found"

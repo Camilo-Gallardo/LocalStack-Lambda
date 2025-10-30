@@ -1,4 +1,6 @@
-from .docx2txt import process
-from .docx2txt import process_args
+from .docx2txt import (
+    process,
+    process_args,
+)
 
-VERSION = '0.9'
+VERSION = "0.9"

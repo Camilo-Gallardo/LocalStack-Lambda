@@ -48,11 +48,7 @@ except ImportError:
     from ..exceptions import DependencyWarning
 
     warnings.warn(
-        (
-            "SOCKS support in urllib3 requires the installation of optional "
-            "dependencies: specifically, PySocks.  For more information, see "
-            "https://urllib3.readthedocs.io/en/latest/contrib.html#socks-proxies"
-        ),
+        ("SOCKS support in urllib3 requires the installation of optional " "dependencies: specifically, PySocks.  For more information, see " "https://urllib3.readthedocs.io/en/latest/contrib.html#socks-proxies"),
         DependencyWarning,
     )
     raise
@@ -143,18 +139,12 @@ class SOCKSConnection(HTTPConnection):
                 else:
                     # Adding `from e` messes with coverage somehow, so it's omitted.
                     # See #2386.
-                    raise NewConnectionError(
-                        self, f"Failed to establish a new connection: {error}"
-                    )
+                    raise NewConnectionError(self, f"Failed to establish a new connection: {error}")
             else:
-                raise NewConnectionError(
-                    self, f"Failed to establish a new connection: {e}"
-                ) from e
+                raise NewConnectionError(self, f"Failed to establish a new connection: {e}") from e
 
         except OSError as e:  # Defensive: PySocks should catch all these.
-            raise NewConnectionError(
-                self, f"Failed to establish a new connection: {e}"
-            ) from e
+            raise NewConnectionError(self, f"Failed to establish a new connection: {e}") from e
 
         return conn
 

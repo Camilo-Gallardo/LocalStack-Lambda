@@ -1,0 +1,13 @@
+service: aws-python-auth0-custom-authorizers-api
+env_vars: {}
+aws_services: []
+http_mocks: []
+
+# carga por RUTA para evitar el import de la carpeta con guiones
+handler_file: "lambdas/aws-python-auth0-custom-authorizers-api/handler.py"
+handler_name: "handler"
+
+test_event:
+  type: "TOKEN"
+  authorizationToken: "Bearer test-token"
+  methodArn: "arn:aws:execute-api:us-east-1:123456789012:abcdef/dev/GET/resource"

@@ -10,61 +10,134 @@
 # distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF
 # ANY KIND, either express or implied. See the License for the specific
 # language governing permissions and limitations under the License.
-from botocore.exceptions import ClientError
-
-from boto3 import utils
+from boto3 import (
+    utils,
+)
 from boto3.s3.transfer import (
     ProgressCallbackInvoker,
     S3Transfer,
     TransferConfig,
     create_transfer_manager,
 )
+from botocore.exceptions import (
+    ClientError,
+)
 
 
-def inject_s3_transfer_methods(class_attributes, **kwargs):
-    utils.inject_attribute(class_attributes, 'upload_file', upload_file)
-    utils.inject_attribute(class_attributes, 'download_file', download_file)
-    utils.inject_attribute(class_attributes, 'copy', copy)
-    utils.inject_attribute(class_attributes, 'upload_fileobj', upload_fileobj)
+def inject_s3_transfer_methods(
+    class_attributes,
+    **kwargs
+):
     utils.inject_attribute(
-        class_attributes, 'download_fileobj', download_fileobj
+        class_attributes,
+        "upload_file",
+        upload_file,
+    )
+    utils.inject_attribute(
+        class_attributes,
+        "download_file",
+        download_file,
+    )
+    utils.inject_attribute(
+        class_attributes,
+        "copy",
+        copy,
+    )
+    utils.inject_attribute(
+        class_attributes,
+        "upload_fileobj",
+        upload_fileobj,
+    )
+    utils.inject_attribute(
+        class_attributes,
+        "download_fileobj",
+        download_fileobj,
     )
 
 
-def inject_bucket_methods(class_attributes, **kwargs):
-    utils.inject_attribute(class_attributes, 'load', bucket_load)
-    utils.inject_attribute(class_attributes, 'upload_file', bucket_upload_file)
+def inject_bucket_methods(
+    class_attributes,
+    **kwargs
+):
     utils.inject_attribute(
-        class_attributes, 'download_file', bucket_download_file
+        class_attributes,
+        "load",
+        bucket_load,
     )
-    utils.inject_attribute(class_attributes, 'copy', bucket_copy)
     utils.inject_attribute(
-        class_attributes, 'upload_fileobj', bucket_upload_fileobj
+        class_attributes,
+        "upload_file",
+        bucket_upload_file,
     )
     utils.inject_attribute(
-        class_attributes, 'download_fileobj', bucket_download_fileobj
+        class_attributes,
+        "download_file",
+        bucket_download_file,
+    )
+    utils.inject_attribute(
+        class_attributes,
+        "copy",
+        bucket_copy,
+    )
+    utils.inject_attribute(
+        class_attributes,
+        "upload_fileobj",
+        bucket_upload_fileobj,
+    )
+    utils.inject_attribute(
+        class_attributes,
+        "download_fileobj",
+        bucket_download_fileobj,
     )
 
 
-def inject_object_methods(class_attributes, **kwargs):
-    utils.inject_attribute(class_attributes, 'upload_file', object_upload_file)
+def inject_object_methods(
+    class_attributes,
+    **kwargs
+):
     utils.inject_attribute(
-        class_attributes, 'download_file', object_download_file
-    )
-    utils.inject_attribute(class_attributes, 'copy', object_copy)
-    utils.inject_attribute(
-        class_attributes, 'upload_fileobj', object_upload_fileobj
+        class_attributes,
+        "upload_file",
+        object_upload_file,
     )
     utils.inject_attribute(
-        class_attributes, 'download_fileobj', object_download_fileobj
+        class_attributes,
+        "download_file",
+        object_download_file,
+    )
+    utils.inject_attribute(
+        class_attributes,
+        "copy",
+        object_copy,
+    )
+    utils.inject_attribute(
+        class_attributes,
+        "upload_fileobj",
+        object_upload_fileobj,
+    )
+    utils.inject_attribute(
+        class_attributes,
+        "download_fileobj",
+        object_download_fileobj,
     )
 
 
-def inject_object_summary_methods(class_attributes, **kwargs):
-    utils.inject_attribute(class_attributes, 'load', object_summary_load)
+def inject_object_summary_methods(
+    class_attributes,
+    **kwargs
+):
+    utils.inject_attribute(
+        class_attributes,
+        "load",
+        object_summary_load,
+    )
 
 
-def bucket_load(self, *args, **kwargs):
+def bucket_load(
+    self,
+    *args,
+    **kwargs
+):
     """
     Calls s3.Client.list_buckets() to update the attributes of the Bucket
     resource.
@@ -77,33 +150,70 @@ def bucket_load(self, *args, **kwargs):
     # However, we may fail if we lack permissions to ListBuckets
     # or the bucket is in another account. In which case, creation_date
     # will be None.
-    self.meta.data = {}
+    self.meta.data = (
+        {}
+    )
     try:
-        response = self.meta.client.list_buckets()
-        for bucket_data in response['Buckets']:
-            if bucket_data['Name'] == self.name:
+        response = (
+            self.meta.client.list_buckets()
+        )
+        for bucket_data in response[
+            "Buckets"
+        ]:
+            if (
+                bucket_data[
+                    "Name"
+                ]
+                == self.name
+            ):
                 self.meta.data = bucket_data
                 break
     except ClientError as e:
-        if not e.response.get('Error', {}).get('Code') == 'AccessDenied':
+        if (
+            not e.response.get(
+                "Error",
+                {},
+            ).get(
+                "Code"
+            )
+            == "AccessDenied"
+        ):
             raise
 
 
-def object_summary_load(self, *args, **kwargs):
+def object_summary_load(
+    self,
+    *args,
+    **kwargs
+):
     """
     Calls s3.Client.head_object to update the attributes of the ObjectSummary
     resource.
     """
     response = self.meta.client.head_object(
-        Bucket=self.bucket_name, Key=self.key
+        Bucket=self.bucket_name,
+        Key=self.key,
     )
-    if 'ContentLength' in response:
-        response['Size'] = response.pop('ContentLength')
+    if (
+        "ContentLength"
+        in response
+    ):
+        response[
+            "Size"
+        ] = response.pop(
+            "ContentLength"
+        )
     self.meta.data = response
 
 
 def upload_file(
-    self, Filename, Bucket, Key, ExtraArgs=None, Callback=None, Config=None
+    self,
+    Filename,
+    Bucket,
+    Key,
+    ExtraArgs=None,
+    Callback=None,
+    Config=None,
 ):
     """Upload a file to an S3 object.
 
@@ -139,7 +249,10 @@ def upload_file(
     :param Config: The transfer configuration to be used when performing the
         transfer.
     """
-    with S3Transfer(self, Config) as transfer:
+    with S3Transfer(
+        self,
+        Config,
+    ) as transfer:
         return transfer.upload_file(
             filename=Filename,
             bucket=Bucket,
@@ -150,7 +263,13 @@ def upload_file(
 
 
 def download_file(
-    self, Bucket, Key, Filename, ExtraArgs=None, Callback=None, Config=None
+    self,
+    Bucket,
+    Key,
+    Filename,
+    ExtraArgs=None,
+    Callback=None,
+    Config=None,
 ):
     """Download an S3 object to a file.
 
@@ -186,7 +305,10 @@ def download_file(
     :param Config: The transfer configuration to be used when performing the
         transfer.
     """
-    with S3Transfer(self, Config) as transfer:
+    with S3Transfer(
+        self,
+        Config,
+    ) as transfer:
         return transfer.download_file(
             bucket=Bucket,
             key=Key,
@@ -197,7 +319,12 @@ def download_file(
 
 
 def bucket_upload_file(
-    self, Filename, Key, ExtraArgs=None, Callback=None, Config=None
+    self,
+    Filename,
+    Key,
+    ExtraArgs=None,
+    Callback=None,
+    Config=None,
 ):
     """Upload a file to an S3 object.
 
@@ -241,7 +368,12 @@ def bucket_upload_file(
 
 
 def bucket_download_file(
-    self, Key, Filename, ExtraArgs=None, Callback=None, Config=None
+    self,
+    Key,
+    Filename,
+    ExtraArgs=None,
+    Callback=None,
+    Config=None,
 ):
     """Download an S3 object to a file.
 
@@ -285,7 +417,11 @@ def bucket_download_file(
 
 
 def object_upload_file(
-    self, Filename, ExtraArgs=None, Callback=None, Config=None
+    self,
+    Filename,
+    ExtraArgs=None,
+    Callback=None,
+    Config=None,
 ):
     """Upload a file to an S3 object.
 
@@ -326,7 +462,11 @@ def object_upload_file(
 
 
 def object_download_file(
-    self, Filename, ExtraArgs=None, Callback=None, Config=None
+    self,
+    Filename,
+    ExtraArgs=None,
+    Callback=None,
+    Config=None,
 ):
     """Download an S3 object to a file.
 
@@ -425,14 +565,29 @@ def copy(
         copy.
     """
     subscribers = None
-    if Callback is not None:
-        subscribers = [ProgressCallbackInvoker(Callback)]
+    if (
+        Callback
+        is not None
+    ):
+        subscribers = [
+            ProgressCallbackInvoker(
+                Callback
+            )
+        ]
 
     config = Config
-    if config is None:
-        config = TransferConfig()
+    if (
+        config
+        is None
+    ):
+        config = (
+            TransferConfig()
+        )
 
-    with create_transfer_manager(self, config) as manager:
+    with create_transfer_manager(
+        self,
+        config,
+    ) as manager:
         future = manager.copy(
             copy_source=CopySource,
             bucket=Bucket,
@@ -441,7 +596,9 @@ def copy(
             subscribers=subscribers,
             source_client=SourceClient,
         )
-        return future.result()
+        return (
+            future.result()
+        )
 
 
 def bucket_copy(
@@ -574,7 +731,13 @@ def object_copy(
 
 
 def upload_fileobj(
-    self, Fileobj, Bucket, Key, ExtraArgs=None, Callback=None, Config=None
+    self,
+    Fileobj,
+    Bucket,
+    Key,
+    ExtraArgs=None,
+    Callback=None,
+    Config=None,
 ):
     """Upload a file-like object to S3.
 
@@ -614,18 +777,38 @@ def upload_fileobj(
     :param Config: The transfer configuration to be used when performing the
         upload.
     """
-    if not hasattr(Fileobj, 'read'):
-        raise ValueError('Fileobj must implement read')
+    if not hasattr(
+        Fileobj,
+        "read",
+    ):
+        raise ValueError(
+            "Fileobj must implement read"
+        )
 
     subscribers = None
-    if Callback is not None:
-        subscribers = [ProgressCallbackInvoker(Callback)]
+    if (
+        Callback
+        is not None
+    ):
+        subscribers = [
+            ProgressCallbackInvoker(
+                Callback
+            )
+        ]
 
     config = Config
-    if config is None:
-        config = TransferConfig()
+    if (
+        config
+        is None
+    ):
+        config = (
+            TransferConfig()
+        )
 
-    with create_transfer_manager(self, config) as manager:
+    with create_transfer_manager(
+        self,
+        config,
+    ) as manager:
         future = manager.upload(
             fileobj=Fileobj,
             bucket=Bucket,
@@ -633,11 +816,18 @@ def upload_fileobj(
             extra_args=ExtraArgs,
             subscribers=subscribers,
         )
-        return future.result()
+        return (
+            future.result()
+        )
 
 
 def bucket_upload_fileobj(
-    self, Fileobj, Key, ExtraArgs=None, Callback=None, Config=None
+    self,
+    Fileobj,
+    Key,
+    ExtraArgs=None,
+    Callback=None,
+    Config=None,
 ):
     """Upload a file-like object to this bucket.
 
@@ -686,7 +876,11 @@ def bucket_upload_fileobj(
 
 
 def object_upload_fileobj(
-    self, Fileobj, ExtraArgs=None, Callback=None, Config=None
+    self,
+    Fileobj,
+    ExtraArgs=None,
+    Callback=None,
+    Config=None,
 ):
     """Upload a file-like object to this object.
 
@@ -733,7 +927,13 @@ def object_upload_fileobj(
 
 
 def download_fileobj(
-    self, Bucket, Key, Fileobj, ExtraArgs=None, Callback=None, Config=None
+    self,
+    Bucket,
+    Key,
+    Fileobj,
+    ExtraArgs=None,
+    Callback=None,
+    Config=None,
 ):
     """Download an object from S3 to a file-like object.
 
@@ -773,18 +973,38 @@ def download_fileobj(
     :param Config: The transfer configuration to be used when performing the
         download.
     """
-    if not hasattr(Fileobj, 'write'):
-        raise ValueError('Fileobj must implement write')
+    if not hasattr(
+        Fileobj,
+        "write",
+    ):
+        raise ValueError(
+            "Fileobj must implement write"
+        )
 
     subscribers = None
-    if Callback is not None:
-        subscribers = [ProgressCallbackInvoker(Callback)]
+    if (
+        Callback
+        is not None
+    ):
+        subscribers = [
+            ProgressCallbackInvoker(
+                Callback
+            )
+        ]
 
     config = Config
-    if config is None:
-        config = TransferConfig()
+    if (
+        config
+        is None
+    ):
+        config = (
+            TransferConfig()
+        )
 
-    with create_transfer_manager(self, config) as manager:
+    with create_transfer_manager(
+        self,
+        config,
+    ) as manager:
         future = manager.download(
             bucket=Bucket,
             key=Key,
@@ -792,11 +1012,18 @@ def download_fileobj(
             extra_args=ExtraArgs,
             subscribers=subscribers,
         )
-        return future.result()
+        return (
+            future.result()
+        )
 
 
 def bucket_download_fileobj(
-    self, Key, Fileobj, ExtraArgs=None, Callback=None, Config=None
+    self,
+    Key,
+    Fileobj,
+    ExtraArgs=None,
+    Callback=None,
+    Config=None,
 ):
     """Download an object from this bucket to a file-like-object.
 
@@ -845,7 +1072,11 @@ def bucket_download_fileobj(
 
 
 def object_download_fileobj(
-    self, Fileobj, ExtraArgs=None, Callback=None, Config=None
+    self,
+    Fileobj,
+    ExtraArgs=None,
+    Callback=None,
+    Config=None,
 ):
     """Download this object from S3 to a file-like object.
 

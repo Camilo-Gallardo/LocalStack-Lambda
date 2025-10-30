@@ -2,17 +2,27 @@ import logging
 import math
 import threading
 
-from botocore.retries import bucket, standard, throttling
+from botocore.retries import (
+    bucket,
+    standard,
+    throttling,
+)
 
 logger = logging.getLogger(__name__)
 
 
-def register_retry_handler(client):
+def register_retry_handler(
+    client,
+):
     clock = bucket.Clock()
     rate_adjustor = throttling.CubicCalculator(
-        starting_max_rate=0, start_time=clock.current_time()
+        starting_max_rate=0,
+        start_time=clock.current_time(),
     )
-    token_bucket = bucket.TokenBucket(max_rate=1, clock=clock)
+    token_bucket = bucket.TokenBucket(
+        max_rate=1,
+        clock=clock,
+    )
     rate_clocker = RateClocker(clock)
     throttling_detector = standard.ThrottlingErrorDetector(
         retry_event_adapter=standard.RetryEventAdapter(),
@@ -25,11 +35,11 @@ def register_retry_handler(client):
         clock=clock,
     )
     client.meta.events.register(
-        'before-send',
+        "before-send",
         limiter.on_sending_request,
     )
     client.meta.events.register(
-        'needs-retry',
+        "needs-retry",
         limiter.on_receiving_response,
     )
     return limiter
@@ -70,10 +80,12 @@ class ClientRateLimiter:
                     rate_to_use = measured_rate
                 else:
                     rate_to_use = min(
-                        measured_rate, self._token_bucket.max_rate
+                        measured_rate,
+                        self._token_bucket.max_rate,
                     )
                 new_rate = self._rate_adjustor.error_received(
-                    rate_to_use, timestamp
+                    rate_to_use,
+                    timestamp,
                 )
                 logger.debug(
                     "Throttling response received, new send rate: %s "
@@ -85,7 +97,8 @@ class ClientRateLimiter:
                 )
                 self._enabled = True
             self._token_bucket.max_rate = min(
-                new_rate, self._MAX_RATE_ADJUST_SCALE * measured_rate
+                new_rate,
+                self._MAX_RATE_ADJUST_SCALE * measured_rate,
             )
 
 
@@ -110,13 +123,13 @@ class RateClocker:
         self._count = 0
         self._lock = threading.Lock()
 
-    def record(self, amount=1):
+    def record(
+        self,
+        amount=1,
+    ):
         with self._lock:
             t = self._clock.current_time()
-            bucket = (
-                math.floor(t * self._time_bucket_scale)
-                / self._time_bucket_scale
-            )
+            bucket = math.floor(t * self._time_bucket_scale) / self._time_bucket_scale
             self._count += amount
             if bucket > self._last_bucket:
                 current_rate = self._count / float(bucket - self._last_bucket)
@@ -128,5 +141,7 @@ class RateClocker:
             return self._measured_rate
 
     @property
-    def measured_rate(self):
+    def measured_rate(
+        self,
+    ):
         return self._measured_rate

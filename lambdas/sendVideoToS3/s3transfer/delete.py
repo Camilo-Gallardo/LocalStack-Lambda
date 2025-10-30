@@ -10,7 +10,10 @@
 # distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF
 # ANY KIND, either express or implied. See the License for the specific
 # language governing permissions and limitations under the License.
-from s3transfer.tasks import SubmissionTask, Task
+from s3transfer.tasks import (
+    SubmissionTask,
+    Task,
+)
 
 
 class DeleteSubmissionTask(SubmissionTask):
@@ -42,10 +45,10 @@ class DeleteSubmissionTask(SubmissionTask):
             DeleteObjectTask(
                 transfer_coordinator=self._transfer_coordinator,
                 main_kwargs={
-                    'client': client,
-                    'bucket': call_args.bucket,
-                    'key': call_args.key,
-                    'extra_args': call_args.extra_args,
+                    "client": client,
+                    "bucket": call_args.bucket,
+                    "key": call_args.key,
+                    "extra_args": call_args.extra_args,
                 },
                 is_final=True,
             ),
@@ -53,7 +56,13 @@ class DeleteSubmissionTask(SubmissionTask):
 
 
 class DeleteObjectTask(Task):
-    def _main(self, client, bucket, key, extra_args):
+    def _main(
+        self,
+        client,
+        bucket,
+        key,
+        extra_args,
+    ):
         """
 
         :param client: The S3 client to use when calling DeleteObject

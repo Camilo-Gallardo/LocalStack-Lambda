@@ -1,11 +1,16 @@
-from __future__ import absolute_import
+from __future__ import (
+    absolute_import,
+)
 
 import hashlib
 import hmac
 import os
 import sys
 import warnings
-from binascii import hexlify, unhexlify
+from binascii import (
+    hexlify,
+    unhexlify,
+)
 
 from ..exceptions import (
     InsecurePlatformWarning,
@@ -13,8 +18,13 @@ from ..exceptions import (
     SNIMissingWarning,
     SSLError,
 )
-from ..packages import six
-from .url import BRACELESS_IPV6_ADDRZ_RE, IPV4_RE
+from ..packages import (
+    six,
+)
+from .url import (
+    BRACELESS_IPV6_ADDRZ_RE,
+    IPV4_RE,
+)
 
 SSLContext = None
 SSLTransport = None
@@ -25,12 +35,32 @@ ALPN_PROTOCOLS = ["http/1.1"]
 
 # Maps the length of a digest to a possible hash function producing this digest
 HASHFUNC_MAP = {
-    length: getattr(hashlib, algorithm, None)
-    for length, algorithm in ((32, "md5"), (40, "sha1"), (64, "sha256"))
+    length: getattr(
+        hashlib,
+        algorithm,
+        None,
+    )
+    for length, algorithm in (
+        (
+            32,
+            "md5",
+        ),
+        (
+            40,
+            "sha1",
+        ),
+        (
+            64,
+            "sha256",
+        ),
+    )
 }
 
 
-def _const_compare_digest_backport(a, b):
+def _const_compare_digest_backport(
+    a,
+    b,
+):
     """
     Compare two digests of equal length in constant time.
 
@@ -38,57 +68,92 @@ def _const_compare_digest_backport(a, b):
     Returns True if the digests match, and False otherwise.
     """
     result = abs(len(a) - len(b))
-    for left, right in zip(bytearray(a), bytearray(b)):
+    for (
+        left,
+        right,
+    ) in zip(
+        bytearray(a),
+        bytearray(b),
+    ):
         result |= left ^ right
     return result == 0
 
 
-_const_compare_digest = getattr(hmac, "compare_digest", _const_compare_digest_backport)
+_const_compare_digest = getattr(
+    hmac,
+    "compare_digest",
+    _const_compare_digest_backport,
+)
 
 try:  # Test for SSL features
     import ssl
-    from ssl import CERT_REQUIRED, wrap_socket
+    from ssl import (
+        CERT_REQUIRED,
+        wrap_socket,
+    )
 except ImportError:
     pass
 
 try:
-    from ssl import HAS_SNI  # Has SNI?
+    from ssl import (
+        HAS_SNI,
+    )  # Has SNI?
 except ImportError:
     pass
 
 try:
-    from .ssltransport import SSLTransport
+    from .ssltransport import (
+        SSLTransport,
+    )
 except ImportError:
     pass
 
 
 try:  # Platform-specific: Python 3.6
-    from ssl import PROTOCOL_TLS
+    from ssl import (
+        PROTOCOL_TLS,
+    )
 
     PROTOCOL_SSLv23 = PROTOCOL_TLS
 except ImportError:
     try:
-        from ssl import PROTOCOL_SSLv23 as PROTOCOL_TLS
+        from ssl import (
+            PROTOCOL_SSLv23 as PROTOCOL_TLS,
+        )
 
         PROTOCOL_SSLv23 = PROTOCOL_TLS
     except ImportError:
         PROTOCOL_SSLv23 = PROTOCOL_TLS = 2
 
 try:
-    from ssl import PROTOCOL_TLS_CLIENT
+    from ssl import (
+        PROTOCOL_TLS_CLIENT,
+    )
 except ImportError:
     PROTOCOL_TLS_CLIENT = PROTOCOL_TLS
 
 
 try:
-    from ssl import OP_NO_COMPRESSION, OP_NO_SSLv2, OP_NO_SSLv3
+    from ssl import (
+        OP_NO_COMPRESSION,
+        OP_NO_SSLv2,
+        OP_NO_SSLv3,
+    )
 except ImportError:
-    OP_NO_SSLv2, OP_NO_SSLv3 = 0x1000000, 0x2000000
+    (
+        OP_NO_SSLv2,
+        OP_NO_SSLv3,
+    ) = (
+        0x1000000,
+        0x2000000,
+    )
     OP_NO_COMPRESSION = 0x20000
 
 
 try:  # OP_NO_TICKET was added in Python 3.6
-    from ssl import OP_NO_TICKET
+    from ssl import (
+        OP_NO_TICKET,
+    )
 except ImportError:
     OP_NO_TICKET = 0x4000
 
@@ -130,11 +195,16 @@ DEFAULT_CIPHERS = ":".join(
 )
 
 try:
-    from ssl import SSLContext  # Modern SSL?
+    from ssl import (
+        SSLContext,
+    )  # Modern SSL?
 except ImportError:
 
     class SSLContext(object):  # Platform-specific: Python 2
-        def __init__(self, protocol_version):
+        def __init__(
+            self,
+            protocol_version,
+        ):
             self.protocol = protocol_version
             # Use default values from a real SSLContext
             self.check_hostname = False
@@ -145,11 +215,20 @@ except ImportError:
             self.keyfile = None
             self.ciphers = None
 
-        def load_cert_chain(self, certfile, keyfile):
+        def load_cert_chain(
+            self,
+            certfile,
+            keyfile,
+        ):
             self.certfile = certfile
             self.keyfile = keyfile
 
-        def load_verify_locations(self, cafile=None, capath=None, cadata=None):
+        def load_verify_locations(
+            self,
+            cafile=None,
+            capath=None,
+            cadata=None,
+        ):
             self.ca_certs = cafile
 
             if capath is not None:
@@ -158,10 +237,18 @@ except ImportError:
             if cadata is not None:
                 raise SSLError("CA data not supported in older Pythons")
 
-        def set_ciphers(self, cipher_suite):
+        def set_ciphers(
+            self,
+            cipher_suite,
+        ):
             self.ciphers = cipher_suite
 
-        def wrap_socket(self, socket, server_hostname=None, server_side=False):
+        def wrap_socket(
+            self,
+            socket,
+            server_hostname=None,
+            server_side=False,
+        ):
             warnings.warn(
                 "A true SSLContext object is not available. This prevents "
                 "urllib3 from configuring SSL appropriately and may cause "
@@ -182,7 +269,10 @@ except ImportError:
             return wrap_socket(socket, ciphers=self.ciphers, **kwargs)
 
 
-def assert_fingerprint(cert, fingerprint):
+def assert_fingerprint(
+    cert,
+    fingerprint,
+):
     """
     Checks if given fingerprint matches the supplied certificate.
 
@@ -192,7 +282,10 @@ def assert_fingerprint(cert, fingerprint):
         Fingerprint as string of hexdigits, can be interspersed by colons.
     """
 
-    fingerprint = fingerprint.replace(":", "").lower()
+    fingerprint = fingerprint.replace(
+        ":",
+        "",
+    ).lower()
     digest_length = len(fingerprint)
     if digest_length not in HASHFUNC_MAP:
         raise SSLError("Fingerprint of invalid length: {0}".format(fingerprint))
@@ -209,15 +302,21 @@ def assert_fingerprint(cert, fingerprint):
 
     cert_digest = hashfunc(cert).digest()
 
-    if not _const_compare_digest(cert_digest, fingerprint_bytes):
+    if not _const_compare_digest(
+        cert_digest,
+        fingerprint_bytes,
+    ):
         raise SSLError(
             'Fingerprints did not match. Expected "{0}", got "{1}".'.format(
-                fingerprint, hexlify(cert_digest)
+                fingerprint,
+                hexlify(cert_digest),
             )
         )
 
 
-def resolve_cert_reqs(candidate):
+def resolve_cert_reqs(
+    candidate,
+):
     """
     Resolves the argument to a numeric constant, which can be passed to
     the wrap_socket function/method from the ssl module.
@@ -231,33 +330,58 @@ def resolve_cert_reqs(candidate):
     if candidate is None:
         return CERT_REQUIRED
 
-    if isinstance(candidate, str):
-        res = getattr(ssl, candidate, None)
+    if isinstance(
+        candidate,
+        str,
+    ):
+        res = getattr(
+            ssl,
+            candidate,
+            None,
+        )
         if res is None:
-            res = getattr(ssl, "CERT_" + candidate)
+            res = getattr(
+                ssl,
+                "CERT_" + candidate,
+            )
         return res
 
     return candidate
 
 
-def resolve_ssl_version(candidate):
+def resolve_ssl_version(
+    candidate,
+):
     """
     like resolve_cert_reqs
     """
     if candidate is None:
         return PROTOCOL_TLS
 
-    if isinstance(candidate, str):
-        res = getattr(ssl, candidate, None)
+    if isinstance(
+        candidate,
+        str,
+    ):
+        res = getattr(
+            ssl,
+            candidate,
+            None,
+        )
         if res is None:
-            res = getattr(ssl, "PROTOCOL_" + candidate)
+            res = getattr(
+                ssl,
+                "PROTOCOL_" + candidate,
+            )
         return res
 
     return candidate
 
 
 def create_urllib3_context(
-    ssl_version=None, cert_reqs=None, options=None, ciphers=None
+    ssl_version=None,
+    cert_reqs=None,
+    options=None,
+    ciphers=None,
 ):
     """All arguments have the same meaning as ``ssl_wrap_socket``.
 
@@ -326,14 +450,29 @@ def create_urllib3_context(
     # versions of Python.  We only enable on Python 3.7.4+ or if certificate
     # verification is enabled to work around Python issue #37428
     # See: https://bugs.python.org/issue37428
-    if (cert_reqs == ssl.CERT_REQUIRED or sys.version_info >= (3, 7, 4)) and getattr(
-        context, "post_handshake_auth", None
+    if (
+        cert_reqs == ssl.CERT_REQUIRED
+        or sys.version_info
+        >= (
+            3,
+            7,
+            4,
+        )
+    ) and getattr(
+        context,
+        "post_handshake_auth",
+        None,
     ) is not None:
         context.post_handshake_auth = True
 
     def disable_check_hostname():
         if (
-            getattr(context, "check_hostname", None) is not None
+            getattr(
+                context,
+                "check_hostname",
+                None,
+            )
+            is not None
         ):  # Platform-specific: Python 3.2
             # We do our own verification, including fingerprints and alternative
             # hostnames. So disable it here
@@ -353,7 +492,10 @@ def create_urllib3_context(
 
     # Enable logging of TLS session keys via defacto standard environment variable
     # 'SSLKEYLOGFILE', if the feature is available (Python 3.8+). Skip empty values.
-    if hasattr(context, "keylog_filename"):
+    if hasattr(
+        context,
+        "keylog_filename",
+    ):
         sslkeylogfile = os.environ.get("SSLKEYLOGFILE")
         if sslkeylogfile:
             context.keylog_filename = sslkeylogfile
@@ -404,15 +546,29 @@ def ssl_wrap_socket(
         # Note: This branch of code and all the variables in it are no longer
         # used by urllib3 itself. We should consider deprecating and removing
         # this code.
-        context = create_urllib3_context(ssl_version, cert_reqs, ciphers=ciphers)
+        context = create_urllib3_context(
+            ssl_version,
+            cert_reqs,
+            ciphers=ciphers,
+        )
 
     if ca_certs or ca_cert_dir or ca_cert_data:
         try:
-            context.load_verify_locations(ca_certs, ca_cert_dir, ca_cert_data)
-        except (IOError, OSError) as e:
+            context.load_verify_locations(
+                ca_certs,
+                ca_cert_dir,
+                ca_cert_data,
+            )
+        except (
+            IOError,
+            OSError,
+        ) as e:
             raise SSLError(e)
 
-    elif ssl_context is None and hasattr(context, "load_default_certs"):
+    elif ssl_context is None and hasattr(
+        context,
+        "load_default_certs",
+    ):
         # try to load OS default certs; works well on Windows (require Python3.4+)
         context.load_default_certs()
 
@@ -424,12 +580,22 @@ def ssl_wrap_socket(
 
     if certfile:
         if key_password is None:
-            context.load_cert_chain(certfile, keyfile)
+            context.load_cert_chain(
+                certfile,
+                keyfile,
+            )
         else:
-            context.load_cert_chain(certfile, keyfile, key_password)
+            context.load_cert_chain(
+                certfile,
+                keyfile,
+                key_password,
+            )
 
     try:
-        if hasattr(context, "set_alpn_protocols"):
+        if hasattr(
+            context,
+            "set_alpn_protocols",
+        ):
             context.set_alpn_protocols(ALPN_PROTOCOLS)
     except NotImplementedError:  # Defensive: in CI, we always have set_alpn_protocols
         pass
@@ -456,29 +622,46 @@ def ssl_wrap_socket(
 
     if send_sni:
         ssl_sock = _ssl_wrap_socket_impl(
-            sock, context, tls_in_tls, server_hostname=server_hostname
+            sock,
+            context,
+            tls_in_tls,
+            server_hostname=server_hostname,
         )
     else:
-        ssl_sock = _ssl_wrap_socket_impl(sock, context, tls_in_tls)
+        ssl_sock = _ssl_wrap_socket_impl(
+            sock,
+            context,
+            tls_in_tls,
+        )
     return ssl_sock
 
 
-def is_ipaddress(hostname):
+def is_ipaddress(
+    hostname,
+):
     """Detects whether the hostname given is an IPv4 or IPv6 address.
     Also detects IPv6 addresses with Zone IDs.
 
     :param str hostname: Hostname to examine.
     :return: True if the hostname is an IP address, False otherwise.
     """
-    if not six.PY2 and isinstance(hostname, bytes):
+    if not six.PY2 and isinstance(
+        hostname,
+        bytes,
+    ):
         # IDN A-label bytes are ASCII compatible.
         hostname = hostname.decode("ascii")
     return bool(IPV4_RE.match(hostname) or BRACELESS_IPV6_ADDRZ_RE.match(hostname))
 
 
-def _is_key_file_encrypted(key_file):
+def _is_key_file_encrypted(
+    key_file,
+):
     """Detects if a key file is encrypted or not."""
-    with open(key_file, "r") as f:
+    with open(
+        key_file,
+        "r",
+    ) as f:
         for line in f:
             # Look for Proc-Type: 4,ENCRYPTED
             if "ENCRYPTED" in line:
@@ -487,7 +670,12 @@ def _is_key_file_encrypted(key_file):
     return False
 
 
-def _ssl_wrap_socket_impl(sock, ssl_context, tls_in_tls, server_hostname=None):
+def _ssl_wrap_socket_impl(
+    sock,
+    ssl_context,
+    tls_in_tls,
+    server_hostname=None,
+):
     if tls_in_tls:
         if not SSLTransport:
             # Import error, ssl is not available.
@@ -496,9 +684,16 @@ def _ssl_wrap_socket_impl(sock, ssl_context, tls_in_tls, server_hostname=None):
             )
 
         SSLTransport._validate_ssl_context_for_tls_in_tls(ssl_context)
-        return SSLTransport(sock, ssl_context, server_hostname)
+        return SSLTransport(
+            sock,
+            ssl_context,
+            server_hostname,
+        )
 
     if server_hostname:
-        return ssl_context.wrap_socket(sock, server_hostname=server_hostname)
+        return ssl_context.wrap_socket(
+            sock,
+            server_hostname=server_hostname,
+        )
     else:
         return ssl_context.wrap_socket(sock)

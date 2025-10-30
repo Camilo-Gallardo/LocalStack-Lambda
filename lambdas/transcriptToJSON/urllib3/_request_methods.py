@@ -1,19 +1,48 @@
-from __future__ import annotations
+from __future__ import (
+    annotations,
+)
 
 import json as _json
 import typing
-from urllib.parse import urlencode
+from urllib.parse import (
+    urlencode,
+)
 
-from ._base_connection import _TYPE_BODY
-from ._collections import HTTPHeaderDict
-from .filepost import _TYPE_FIELDS, encode_multipart_formdata
-from .response import BaseHTTPResponse
+from ._base_connection import (
+    _TYPE_BODY,
+)
+from ._collections import (
+    HTTPHeaderDict,
+)
+from .filepost import (
+    _TYPE_FIELDS,
+    encode_multipart_formdata,
+)
+from .response import (
+    BaseHTTPResponse,
+)
 
-__all__ = ["RequestMethods"]
+__all__ = [
+    "RequestMethods"
+]
 
 _TYPE_ENCODE_URL_FIELDS = typing.Union[
-    typing.Sequence[typing.Tuple[str, typing.Union[str, bytes]]],
-    typing.Mapping[str, typing.Union[str, bytes]],
+    typing.Sequence[
+        typing.Tuple[
+            str,
+            typing.Union[
+                str,
+                bytes,
+            ],
+        ]
+    ],
+    typing.Mapping[
+        str,
+        typing.Union[
+            str,
+            bytes,
+        ],
+    ],
 ]
 
 
@@ -46,19 +75,48 @@ class RequestMethods:
         explicitly.
     """
 
-    _encode_url_methods = {"DELETE", "GET", "HEAD", "OPTIONS"}
+    _encode_url_methods = {
+        "DELETE",
+        "GET",
+        "HEAD",
+        "OPTIONS",
+    }
 
-    def __init__(self, headers: typing.Mapping[str, str] | None = None) -> None:
-        self.headers = headers or {}
+    def __init__(
+        self,
+        headers: (
+            typing.Mapping[
+                str,
+                str,
+            ]
+            | None
+        ) = None,
+    ) -> None:
+        self.headers = (
+            headers
+            or {}
+        )
 
     def urlopen(
         self,
         method: str,
         url: str,
-        body: _TYPE_BODY | None = None,
-        headers: typing.Mapping[str, str] | None = None,
+        body: (
+            _TYPE_BODY
+            | None
+        ) = None,
+        headers: (
+            typing.Mapping[
+                str,
+                str,
+            ]
+            | None
+        ) = None,
         encode_multipart: bool = True,
-        multipart_boundary: str | None = None,
+        multipart_boundary: (
+            str
+            | None
+        ) = None,
         **kw: typing.Any,
     ) -> BaseHTTPResponse:  # Abstract
         raise NotImplementedError(
@@ -70,10 +128,25 @@ class RequestMethods:
         self,
         method: str,
         url: str,
-        body: _TYPE_BODY | None = None,
-        fields: _TYPE_FIELDS | None = None,
-        headers: typing.Mapping[str, str] | None = None,
-        json: typing.Any | None = None,
+        body: (
+            _TYPE_BODY
+            | None
+        ) = None,
+        fields: (
+            _TYPE_FIELDS
+            | None
+        ) = None,
+        headers: (
+            typing.Mapping[
+                str,
+                str,
+            ]
+            | None
+        ) = None,
+        json: (
+            typing.Any
+            | None
+        ) = None,
         **urlopen_kw: typing.Any,
     ) -> BaseHTTPResponse:
         """
@@ -86,27 +159,61 @@ class RequestMethods:
         :meth:`request_encode_url`, :meth:`request_encode_body`,
         or even the lowest level :meth:`urlopen`.
         """
-        method = method.upper()
+        method = (
+            method.upper()
+        )
 
-        if json is not None and body is not None:
+        if (
+            json
+            is not None
+            and body
+            is not None
+        ):
             raise TypeError(
                 "request got values for both 'body' and 'json' parameters which are mutually exclusive"
             )
 
-        if json is not None:
-            if headers is None:
+        if (
+            json
+            is not None
+        ):
+            if (
+                headers
+                is None
+            ):
                 headers = self.headers.copy()  # type: ignore
-            if not ("content-type" in map(str.lower, headers.keys())):
+            if not (
+                "content-type"
+                in map(
+                    str.lower,
+                    headers.keys(),
+                )
+            ):
                 headers["Content-Type"] = "application/json"  # type: ignore
 
-            body = _json.dumps(json, separators=(",", ":"), ensure_ascii=False).encode(
+            body = _json.dumps(
+                json,
+                separators=(
+                    ",",
+                    ":",
+                ),
+                ensure_ascii=False,
+            ).encode(
                 "utf-8"
             )
 
-        if body is not None:
-            urlopen_kw["body"] = body
+        if (
+            body
+            is not None
+        ):
+            urlopen_kw[
+                "body"
+            ] = body
 
-        if method in self._encode_url_methods:
+        if (
+            method
+            in self._encode_url_methods
+        ):
             return self.request_encode_url(
                 method,
                 url,
@@ -116,40 +223,86 @@ class RequestMethods:
             )
         else:
             return self.request_encode_body(
-                method, url, fields=fields, headers=headers, **urlopen_kw
+                method,
+                url,
+                fields=fields,
+                headers=headers,
+                **urlopen_kw,
             )
 
     def request_encode_url(
         self,
         method: str,
         url: str,
-        fields: _TYPE_ENCODE_URL_FIELDS | None = None,
-        headers: typing.Mapping[str, str] | None = None,
+        fields: (
+            _TYPE_ENCODE_URL_FIELDS
+            | None
+        ) = None,
+        headers: (
+            typing.Mapping[
+                str,
+                str,
+            ]
+            | None
+        ) = None,
         **urlopen_kw: str,
     ) -> BaseHTTPResponse:
         """
         Make a request using :meth:`urlopen` with the ``fields`` encoded in
         the url. This is useful for request methods like GET, HEAD, DELETE, etc.
         """
-        if headers is None:
-            headers = self.headers
+        if (
+            headers
+            is None
+        ):
+            headers = (
+                self.headers
+            )
 
-        extra_kw: dict[str, typing.Any] = {"headers": headers}
-        extra_kw.update(urlopen_kw)
+        extra_kw: dict[
+            str,
+            typing.Any,
+        ] = {
+            "headers": headers
+        }
+        extra_kw.update(
+            urlopen_kw
+        )
 
         if fields:
-            url += "?" + urlencode(fields)
+            url += (
+                "?"
+                + urlencode(
+                    fields
+                )
+            )
 
-        return self.urlopen(method, url, **extra_kw)
+        return self.urlopen(
+            method,
+            url,
+            **extra_kw,
+        )
 
     def request_encode_body(
         self,
         method: str,
         url: str,
-        fields: _TYPE_FIELDS | None = None,
-        headers: typing.Mapping[str, str] | None = None,
+        fields: (
+            _TYPE_FIELDS
+            | None
+        ) = None,
+        headers: (
+            typing.Mapping[
+                str,
+                str,
+            ]
+            | None
+        ) = None,
         encode_multipart: bool = True,
-        multipart_boundary: str | None = None,
+        multipart_boundary: (
+            str
+            | None
+        ) = None,
         **urlopen_kw: str,
     ) -> BaseHTTPResponse:
         """
@@ -187,31 +340,69 @@ class RequestMethods:
         which is used to compose the body of the request. The random boundary
         string can be explicitly set with the ``multipart_boundary`` parameter.
         """
-        if headers is None:
-            headers = self.headers
+        if (
+            headers
+            is None
+        ):
+            headers = (
+                self.headers
+            )
 
-        extra_kw: dict[str, typing.Any] = {"headers": HTTPHeaderDict(headers)}
-        body: bytes | str
+        extra_kw: dict[
+            str,
+            typing.Any,
+        ] = {
+            "headers": HTTPHeaderDict(
+                headers
+            )
+        }
+        body: (
+            bytes
+            | str
+        )
 
         if fields:
-            if "body" in urlopen_kw:
+            if (
+                "body"
+                in urlopen_kw
+            ):
                 raise TypeError(
                     "request got values for both 'fields' and 'body', can only specify one."
                 )
 
             if encode_multipart:
-                body, content_type = encode_multipart_formdata(
-                    fields, boundary=multipart_boundary
+                (
+                    body,
+                    content_type,
+                ) = encode_multipart_formdata(
+                    fields,
+                    boundary=multipart_boundary,
                 )
             else:
-                body, content_type = (
+                (
+                    body,
+                    content_type,
+                ) = (
                     urlencode(fields),  # type: ignore[arg-type]
                     "application/x-www-form-urlencoded",
                 )
 
-            extra_kw["body"] = body
-            extra_kw["headers"].setdefault("Content-Type", content_type)
+            extra_kw[
+                "body"
+            ] = body
+            extra_kw[
+                "headers"
+            ].setdefault(
+                "Content-Type",
+                content_type,
+            )
 
-        extra_kw.update(urlopen_kw)
+        extra_kw.update(
+            urlopen_kw
+        )
 
-        return self.urlopen(method, url, **extra_kw)
+        return self.urlopen(
+            method,
+            url,
+            **extra_kw,
+        )

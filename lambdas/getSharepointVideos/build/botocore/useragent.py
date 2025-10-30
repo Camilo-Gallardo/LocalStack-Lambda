@@ -24,33 +24,48 @@ configuration options:
 """
 import os
 import platform
-from copy import copy
-from string import ascii_letters, digits
-from typing import NamedTuple, Optional
+from copy import (
+    copy,
+)
+from string import (
+    ascii_letters,
+    digits,
+)
+from typing import (
+    NamedTuple,
+    Optional,
+)
 
-from botocore import __version__ as botocore_version
-from botocore.compat import HAS_CRT
+from botocore import (
+    __version__ as botocore_version,
+)
+from botocore.compat import (
+    HAS_CRT,
+)
 
 _USERAGENT_ALLOWED_CHARACTERS = ascii_letters + digits + "!$%&'*+-.^_`|~"
 _USERAGENT_ALLOWED_OS_NAMES = (
-    'windows',
-    'linux',
-    'macos',
-    'android',
-    'ios',
-    'watchos',
-    'tvos',
-    'other',
+    "windows",
+    "linux",
+    "macos",
+    "android",
+    "ios",
+    "watchos",
+    "tvos",
+    "other",
 )
-_USERAGENT_PLATFORM_NAME_MAPPINGS = {'darwin': 'macos'}
+_USERAGENT_PLATFORM_NAME_MAPPINGS = {"darwin": "macos"}
 # The name by which botocore is identified in the User-Agent header. While most
 # AWS SDKs follow a naming pattern of "aws-sdk-*", botocore and boto3 continue
 # using their existing values. Uses uppercase "B" with all other characters
 # lowercase.
-_USERAGENT_SDK_NAME = 'Botocore'
+_USERAGENT_SDK_NAME = "Botocore"
 
 
-def sanitize_user_agent_string_component(raw_str, allow_hash):
+def sanitize_user_agent_string_component(
+    raw_str,
+    allow_hash,
+):
     """Replaces all not allowed characters in the string with a dash ("-").
 
     Allowed characters are ASCII alphanumerics and ``!$%&'*+-.^_`|~``. If
@@ -62,10 +77,8 @@ def sanitize_user_agent_string_component(raw_str, allow_hash):
     :type allow_hash: bool
     :param allow_hash: Whether "#" is considered an allowed character.
     """
-    return ''.join(
-        c
-        if c in _USERAGENT_ALLOWED_CHARACTERS or (allow_hash and c == '#')
-        else '-'
+    return "".join(
+        (c if c in _USERAGENT_ALLOWED_CHARACTERS or (allow_hash and c == "#") else "-")
         for c in raw_str
     )
 
@@ -84,20 +97,25 @@ class UserAgentComponent(NamedTuple):
     name: str
     value: Optional[str] = None
 
-    def to_string(self):
+    def to_string(
+        self,
+    ):
         """Create string like 'prefix/name#value' from a UserAgentComponent."""
         clean_prefix = sanitize_user_agent_string_component(
-            self.prefix, allow_hash=True
+            self.prefix,
+            allow_hash=True,
         )
         clean_name = sanitize_user_agent_string_component(
-            self.name, allow_hash=False
+            self.name,
+            allow_hash=False,
         )
-        if self.value is None or self.value == '':
-            return f'{clean_prefix}/{clean_name}'
+        if self.value is None or self.value == "":
+            return f"{clean_prefix}/{clean_name}"
         clean_value = sanitize_user_agent_string_component(
-            self.value, allow_hash=True
+            self.value,
+            allow_hash=True,
         )
-        return f'{clean_prefix}/{clean_name}#{clean_value}'
+        return f"{clean_prefix}/{clean_name}#{clean_value}"
 
 
 class RawStringUserAgentComponent:
@@ -109,20 +127,29 @@ class RawStringUserAgentComponent:
     performed.
     """
 
-    def __init__(self, value):
+    def __init__(
+        self,
+        value,
+    ):
         self._value = value
 
-    def to_string(self):
+    def to_string(
+        self,
+    ):
         return self._value
 
 
 # This is not a public interface and is subject to abrupt breaking changes.
 # Any usage is not advised or supported in external code bases.
 try:
-    from botocore.customizations.useragent import modify_components
+    from botocore.customizations.useragent import (
+        modify_components,
+    )
 except ImportError:
     # Default implementation that returns unmodified User-Agent components.
-    def modify_components(components):
+    def modify_components(
+        components,
+    ):
         return components
 
 
@@ -207,17 +234,19 @@ class UserAgentString:
         self._uses_resource = None
 
     @classmethod
-    def from_environment(cls):
+    def from_environment(
+        cls,
+    ):
         crt_version = None
         if HAS_CRT:
-            crt_version = _get_crt_version() or 'Unknown'
+            crt_version = _get_crt_version() or "Unknown"
         return cls(
             platform_name=platform.system(),
             platform_version=platform.release(),
             platform_machine=platform.machine(),
             python_version=platform.python_version(),
             python_implementation=platform.python_implementation(),
-            execution_env=os.environ.get('AWS_EXECUTION_ENV'),
+            execution_env=os.environ.get("AWS_EXECUTION_ENV"),
             crt_version=crt_version,
         )
 
@@ -244,7 +273,10 @@ class UserAgentString:
         self._session_user_agent_extra = session_user_agent_extra
         return self
 
-    def with_client_config(self, client_config):
+    def with_client_config(
+        self,
+        client_config,
+    ):
         """
         Create a copy with all original values and client-specific values.
 
@@ -255,13 +287,18 @@ class UserAgentString:
         cp._client_config = client_config
         return cp
 
-    def to_string(self):
+    def to_string(
+        self,
+    ):
         """
         Build User-Agent header string from the object's properties.
         """
         config_ua_override = None
         if self._client_config:
-            if hasattr(self._client_config, '_supplied_user_agent'):
+            if hasattr(
+                self._client_config,
+                "_supplied_user_agent",
+            ):
                 config_ua_override = self._client_config._supplied_user_agent
             else:
                 config_ua_override = self._client_config.user_agent
@@ -271,7 +308,7 @@ class UserAgentString:
 
         components = [
             *self._build_sdk_metadata(),
-            RawStringUserAgentComponent('ua/2.0'),
+            RawStringUserAgentComponent("ua/2.0"),
             *self._build_os_metadata(),
             *self._build_architecture_metadata(),
             *self._build_language_metadata(),
@@ -284,9 +321,11 @@ class UserAgentString:
 
         components = modify_components(components)
 
-        return ' '.join([comp.to_string() for comp in components])
+        return " ".join([comp.to_string() for comp in components])
 
-    def _build_sdk_metadata(self):
+    def _build_sdk_metadata(
+        self,
+    ):
         """
         Build the SDK name and version component of the User-Agent header.
 
@@ -311,23 +350,34 @@ class UserAgentString:
                         self._session_user_agent_version,
                     ),
                     UserAgentComponent(
-                        'md', _USERAGENT_SDK_NAME, botocore_version
+                        "md",
+                        _USERAGENT_SDK_NAME,
+                        botocore_version,
                     ),
                 ]
             )
         else:
             sdk_md.append(
-                UserAgentComponent(_USERAGENT_SDK_NAME, botocore_version)
+                UserAgentComponent(
+                    _USERAGENT_SDK_NAME,
+                    botocore_version,
+                )
             )
 
         if self._crt_version is not None:
             sdk_md.append(
-                UserAgentComponent('md', 'awscrt', self._crt_version)
+                UserAgentComponent(
+                    "md",
+                    "awscrt",
+                    self._crt_version,
+                )
             )
 
         return sdk_md
 
-    def _build_os_metadata(self):
+    def _build_os_metadata(
+        self,
+    ):
         """
         Build the OS/platform components of the User-Agent header string.
 
@@ -343,7 +393,12 @@ class UserAgentString:
          * ``os/other md/foobar#1.2.3``
         """
         if self._platform_name is None:
-            return [UserAgentComponent('os', 'other')]
+            return [
+                UserAgentComponent(
+                    "os",
+                    "other",
+                )
+            ]
 
         plt_name_lower = self._platform_name.lower()
         if plt_name_lower in _USERAGENT_ALLOWED_OS_NAMES:
@@ -355,17 +410,28 @@ class UserAgentString:
 
         if os_family is not None:
             return [
-                UserAgentComponent('os', os_family, self._platform_version)
+                UserAgentComponent(
+                    "os",
+                    os_family,
+                    self._platform_version,
+                )
             ]
         else:
             return [
-                UserAgentComponent('os', 'other'),
                 UserAgentComponent(
-                    'md', self._platform_name, self._platform_version
+                    "os",
+                    "other",
+                ),
+                UserAgentComponent(
+                    "md",
+                    self._platform_name,
+                    self._platform_version,
                 ),
             ]
 
-    def _build_architecture_metadata(self):
+    def _build_architecture_metadata(
+        self,
+    ):
         """
         Build architecture component of the User-Agent header string.
 
@@ -375,12 +441,16 @@ class UserAgentString:
         if self._platform_machine:
             return [
                 UserAgentComponent(
-                    'md', 'arch', self._platform_machine.lower()
+                    "md",
+                    "arch",
+                    self._platform_machine.lower(),
                 )
             ]
         return []
 
-    def _build_language_metadata(self):
+    def _build_language_metadata(
+        self,
+    ):
         """
         Build the language components of the User-Agent header string.
 
@@ -392,15 +462,25 @@ class UserAgentString:
         ``lang/python#3.10.4 md/pyimpl#CPython``
         """
         lang_md = [
-            UserAgentComponent('lang', 'python', self._python_version),
+            UserAgentComponent(
+                "lang",
+                "python",
+                self._python_version,
+            ),
         ]
         if self._python_implementation:
             lang_md.append(
-                UserAgentComponent('md', 'pyimpl', self._python_implementation)
+                UserAgentComponent(
+                    "md",
+                    "pyimpl",
+                    self._python_implementation,
+                )
             )
         return lang_md
 
-    def _build_execution_env_metadata(self):
+    def _build_execution_env_metadata(
+        self,
+    ):
         """
         Build the execution environment component of the User-Agent header.
 
@@ -408,11 +488,18 @@ class UserAgentString:
         from the environment variable AWS_EXECUTION_ENV.
         """
         if self._execution_env:
-            return [UserAgentComponent('exec-env', self._execution_env)]
+            return [
+                UserAgentComponent(
+                    "exec-env",
+                    self._execution_env,
+                )
+            ]
         else:
             return []
 
-    def _build_feature_metadata(self):
+    def _build_feature_metadata(
+        self,
+    ):
         """
         Build the features components of the User-Agent header string.
 
@@ -421,7 +508,9 @@ class UserAgentString:
         """
         return []
 
-    def _build_config_metadata(self):
+    def _build_config_metadata(
+        self,
+    ):
         """
         Build the configuration components of the User-Agent header string.
 
@@ -431,13 +520,26 @@ class UserAgentString:
         """
         if not self._client_config or not self._client_config.retries:
             return []
-        retry_mode = self._client_config.retries.get('mode')
-        cfg_md = [UserAgentComponent('cfg', 'retry-mode', retry_mode)]
+        retry_mode = self._client_config.retries.get("mode")
+        cfg_md = [
+            UserAgentComponent(
+                "cfg",
+                "retry-mode",
+                retry_mode,
+            )
+        ]
         if self._client_config.endpoint_discovery_enabled:
-            cfg_md.append(UserAgentComponent('cfg', 'endpoint-discovery'))
+            cfg_md.append(
+                UserAgentComponent(
+                    "cfg",
+                    "endpoint-discovery",
+                )
+            )
         return cfg_md
 
-    def _build_app_id(self):
+    def _build_app_id(
+        self,
+    ):
         """
         Build app component of the User-Agent header string.
 
@@ -450,12 +552,17 @@ class UserAgentString:
         """
         if self._client_config and self._client_config.user_agent_appid:
             return [
-                UserAgentComponent('app', self._client_config.user_agent_appid)
+                UserAgentComponent(
+                    "app",
+                    self._client_config.user_agent_appid,
+                )
             ]
         else:
             return []
 
-    def _build_extra(self):
+    def _build_extra(
+        self,
+    ):
         """User agent string components based on legacy "extra" settings.
 
         Creates components from the session-level and client-level
@@ -470,24 +577,23 @@ class UserAgentString:
         """
         extra = []
         if self._session_user_agent_extra:
-            extra.append(
-                RawStringUserAgentComponent(self._session_user_agent_extra)
-            )
+            extra.append(RawStringUserAgentComponent(self._session_user_agent_extra))
         if self._client_config and self._client_config.user_agent_extra:
             extra.append(
-                RawStringUserAgentComponent(
-                    self._client_config.user_agent_extra
-                )
+                RawStringUserAgentComponent(self._client_config.user_agent_extra)
             )
         return extra
 
-    def _build_legacy_ua_string(self, config_ua_override):
+    def _build_legacy_ua_string(
+        self,
+        config_ua_override,
+    ):
         components = [config_ua_override]
         if self._session_user_agent_extra:
             components.append(self._session_user_agent_extra)
         if self._client_config.user_agent_extra:
             components.append(self._client_config.user_agent_extra)
-        return ' '.join(components)
+        return " ".join(components)
 
 
 def _get_crt_version():

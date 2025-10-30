@@ -7,6 +7,7 @@ CoreFoundation messing about and memory management. The concerns in this module
 are almost entirely about trying to avoid memory leaks and providing
 appropriate and useful assistance to the higher-level code.
 """
+
 from __future__ import annotations
 
 import base64
@@ -33,9 +34,7 @@ from .bindings import (  # type: ignore[attr-defined]
 )
 
 # This regular expression is used to grab PEM data out of a PEM bundle.
-_PEM_CERTS_RE = re.compile(
-    b"-----BEGIN CERTIFICATE-----\n(.*?)\n-----END CERTIFICATE-----", re.DOTALL
-)
+_PEM_CERTS_RE = re.compile(b"-----BEGIN CERTIFICATE-----\n(.*?)\n-----END CERTIFICATE-----", re.DOTALL)
 
 
 def _cf_data_from_bytes(bytestring: bytes) -> CFData:
@@ -43,14 +42,10 @@ def _cf_data_from_bytes(bytestring: bytes) -> CFData:
     Given a bytestring, create a CFData object from it. This CFData object must
     be CFReleased by the caller.
     """
-    return CoreFoundation.CFDataCreate(
-        CoreFoundation.kCFAllocatorDefault, bytestring, len(bytestring)
-    )
+    return CoreFoundation.CFDataCreate(CoreFoundation.kCFAllocatorDefault, bytestring, len(bytestring))
 
 
-def _cf_dictionary_from_tuples(
-    tuples: list[tuple[typing.Any, typing.Any]]
-) -> CFDictionary:
+def _cf_dictionary_from_tuples(tuples: list[tuple[typing.Any, typing.Any]]) -> CFDictionary:
     """
     Given a list of Python tuples, create an associated CFDictionary.
     """
@@ -126,14 +121,10 @@ def _cf_string_to_unicode(value: CFString) -> str | None:
     """
     value_as_void_p = ctypes.cast(value, ctypes.POINTER(ctypes.c_void_p))
 
-    string = CoreFoundation.CFStringGetCStringPtr(
-        value_as_void_p, CFConst.kCFStringEncodingUTF8
-    )
+    string = CoreFoundation.CFStringGetCStringPtr(value_as_void_p, CFConst.kCFStringEncodingUTF8)
     if string is None:
         buffer = ctypes.create_string_buffer(1024)
-        result = CoreFoundation.CFStringGetCString(
-            value_as_void_p, buffer, 1024, CFConst.kCFStringEncodingUTF8
-        )
+        result = CoreFoundation.CFStringGetCString(value_as_void_p, buffer, 1024, CFConst.kCFStringEncodingUTF8)
         if not result:
             raise OSError("Error copying C string from CFStringRef")
         string = buffer.value
@@ -142,9 +133,7 @@ def _cf_string_to_unicode(value: CFString) -> str | None:
     return string  # type: ignore[no-any-return]
 
 
-def _assert_no_error(
-    error: int, exception_class: type[BaseException] | None = None
-) -> None:
+def _assert_no_error(error: int, exception_class: type[BaseException] | None = None) -> None:
     """
     Checks the return code and throws an exception if there is an error to
     report
@@ -173,9 +162,7 @@ def _cert_array_from_pem(pem_bundle: bytes) -> CFArray:
     # Normalize the PEM bundle's line endings.
     pem_bundle = pem_bundle.replace(b"\r\n", b"\n")
 
-    der_certs = [
-        base64.b64decode(match.group(1)) for match in _PEM_CERTS_RE.finditer(pem_bundle)
-    ]
+    der_certs = [base64.b64decode(match.group(1)) for match in _PEM_CERTS_RE.finditer(pem_bundle)]
     if not der_certs:
         raise ssl.SSLError("No root certificates specified")
 
@@ -192,9 +179,7 @@ def _cert_array_from_pem(pem_bundle: bytes) -> CFArray:
             certdata = _cf_data_from_bytes(der_bytes)
             if not certdata:
                 raise ssl.SSLError("Unable to allocate memory!")
-            cert = Security.SecCertificateCreateWithData(
-                CoreFoundation.kCFAllocatorDefault, certdata
-            )
+            cert = Security.SecCertificateCreateWithData(CoreFoundation.kCFAllocatorDefault, certdata)
             CoreFoundation.CFRelease(certdata)
             if not cert:
                 raise ssl.SSLError("Unable to build cert object!")
@@ -253,18 +238,14 @@ def _temporary_keychain() -> tuple[SecKeychainRef, str]:
 
     # We now want to create the keychain itself.
     keychain = Security.SecKeychainRef()
-    status = Security.SecKeychainCreate(
-        keychain_path, len(password), password, False, None, ctypes.byref(keychain)
-    )
+    status = Security.SecKeychainCreate(keychain_path, len(password), password, False, None, ctypes.byref(keychain))
     _assert_no_error(status)
 
     # Having created the keychain, we want to pass it off to the caller.
     return keychain, tempdirectory
 
 
-def _load_items_from_file(
-    keychain: SecKeychainRef, path: str
-) -> tuple[list[CFTypeRef], list[CFTypeRef]]:
+def _load_items_from_file(keychain: SecKeychainRef, path: str) -> tuple[list[CFTypeRef], list[CFTypeRef]]:
     """
     Given a single file, loads all the trust objects from it into arrays and
     the keychain.
@@ -279,9 +260,7 @@ def _load_items_from_file(
         raw_filedata = f.read()
 
     try:
-        filedata = CoreFoundation.CFDataCreate(
-            CoreFoundation.kCFAllocatorDefault, raw_filedata, len(raw_filedata)
-        )
+        filedata = CoreFoundation.CFDataCreate(CoreFoundation.kCFAllocatorDefault, raw_filedata, len(raw_filedata))
         result_array = CoreFoundation.CFArrayRef()
         result = Security.SecItemImport(
             filedata,  # cert data
@@ -367,9 +346,7 @@ def _load_client_cert_chain(keychain: SecKeychainRef, *paths: str | None) -> CFA
         # not, we want to grab one from the first cert we have.
         if not identities:
             new_identity = Security.SecIdentityRef()
-            status = Security.SecIdentityCreateWithCertificate(
-                keychain, certificates[0], ctypes.byref(new_identity)
-            )
+            status = Security.SecIdentityCreateWithCertificate(keychain, certificates[0], ctypes.byref(new_identity))
             _assert_no_error(status)
             identities.append(new_identity)
 

@@ -7,43 +7,82 @@ requests.exceptions
 This module contains the set of Requests' exceptions.
 
 """
-from .packages.urllib3.exceptions import HTTPError as BaseHTTPError
+from .packages.urllib3.exceptions import (
+    HTTPError as BaseHTTPError,
+)
 
 
-class RequestException(IOError):
+class RequestException(
+    IOError
+):
     """There was an ambiguous exception that occurred while handling your
     request."""
 
-    def __init__(self, *args, **kwargs):
+    def __init__(
+        self,
+        *args,
+        **kwargs
+    ):
         """
         Initialize RequestException with `request` and `response` objects.
         """
-        response = kwargs.pop('response', None)
+        response = kwargs.pop(
+            "response",
+            None,
+        )
         self.response = response
-        self.request = kwargs.pop('request', None)
-        if (response is not None and not self.request and
-                hasattr(response, 'request')):
-            self.request = self.response.request
-        super(RequestException, self).__init__(*args, **kwargs)
+        self.request = kwargs.pop(
+            "request",
+            None,
+        )
+        if (
+            response
+            is not None
+            and not self.request
+            and hasattr(
+                response,
+                "request",
+            )
+        ):
+            self.request = (
+                self.response.request
+            )
+        super(
+            RequestException,
+            self,
+        ).__init__(
+            *args,
+            **kwargs
+        )
 
 
-class HTTPError(RequestException):
+class HTTPError(
+    RequestException
+):
     """An HTTP error occurred."""
 
 
-class ConnectionError(RequestException):
+class ConnectionError(
+    RequestException
+):
     """A Connection error occurred."""
 
 
-class ProxyError(ConnectionError):
+class ProxyError(
+    ConnectionError
+):
     """A proxy error occurred."""
 
 
-class SSLError(ConnectionError):
+class SSLError(
+    ConnectionError
+):
     """An SSL error occurred."""
 
 
-class Timeout(RequestException):
+class Timeout(
+    RequestException
+):
     """The request timed out.
 
     Catching this error will catch both
@@ -52,48 +91,76 @@ class Timeout(RequestException):
     """
 
 
-class ConnectTimeout(ConnectionError, Timeout):
+class ConnectTimeout(
+    ConnectionError,
+    Timeout,
+):
     """The request timed out while trying to connect to the remote server.
 
     Requests that produced this error are safe to retry.
     """
 
 
-class ReadTimeout(Timeout):
+class ReadTimeout(
+    Timeout
+):
     """The server did not send any data in the allotted amount of time."""
 
 
-class URLRequired(RequestException):
+class URLRequired(
+    RequestException
+):
     """A valid URL is required to make a request."""
 
 
-class TooManyRedirects(RequestException):
+class TooManyRedirects(
+    RequestException
+):
     """Too many redirects."""
 
 
-class MissingSchema(RequestException, ValueError):
+class MissingSchema(
+    RequestException,
+    ValueError,
+):
     """The URL schema (e.g. http or https) is missing."""
 
 
-class InvalidSchema(RequestException, ValueError):
+class InvalidSchema(
+    RequestException,
+    ValueError,
+):
     """See defaults.py for valid schemas."""
 
 
-class InvalidURL(RequestException, ValueError):
-    """ The URL provided was somehow invalid. """
+class InvalidURL(
+    RequestException,
+    ValueError,
+):
+    """The URL provided was somehow invalid."""
 
 
-class ChunkedEncodingError(RequestException):
+class ChunkedEncodingError(
+    RequestException
+):
     """The server declared chunked encoding but sent an invalid chunk."""
 
 
-class ContentDecodingError(RequestException, BaseHTTPError):
+class ContentDecodingError(
+    RequestException,
+    BaseHTTPError,
+):
     """Failed to decode response content"""
 
 
-class StreamConsumedError(RequestException, TypeError):
+class StreamConsumedError(
+    RequestException,
+    TypeError,
+):
     """The content for this response was already consumed"""
 
 
-class RetryError(RequestException):
+class RetryError(
+    RequestException
+):
     """Custom retries logic failed"""

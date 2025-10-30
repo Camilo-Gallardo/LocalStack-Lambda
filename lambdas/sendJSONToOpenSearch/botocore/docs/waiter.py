@@ -12,56 +12,90 @@
 # language governing permissions and limitations under the License.
 import os
 
-from botocore import xform_name
-from botocore.compat import OrderedDict
-from botocore.docs.bcdoc.restdoc import DocumentStructure
-from botocore.docs.method import document_model_driven_method
-from botocore.docs.utils import DocumentedShape
-from botocore.utils import get_service_module_name
+from botocore import (
+    xform_name,
+)
+from botocore.compat import (
+    OrderedDict,
+)
+from botocore.docs.bcdoc.restdoc import (
+    DocumentStructure,
+)
+from botocore.docs.method import (
+    document_model_driven_method,
+)
+from botocore.docs.utils import (
+    DocumentedShape,
+)
+from botocore.utils import (
+    get_service_module_name,
+)
 
 
 class WaiterDocumenter:
-    def __init__(self, client, service_waiter_model, root_docs_path):
+    def __init__(
+        self,
+        client,
+        service_waiter_model,
+        root_docs_path,
+    ):
         self._client = client
         self._client_class_name = self._client.__class__.__name__
         self._service_name = self._client.meta.service_model.service_name
         self._service_waiter_model = service_waiter_model
         self._root_docs_path = root_docs_path
         self._USER_GUIDE_LINK = (
-            'https://boto3.amazonaws.com/'
-            'v1/documentation/api/latest/guide/clients.html#waiters'
+            "https://boto3.amazonaws.com/"
+            "v1/documentation/api/latest/guide/clients.html#waiters"
         )
 
-    def document_waiters(self, section):
+    def document_waiters(
+        self,
+        section,
+    ):
         """Documents the various waiters for a service.
 
         :param section: The section to write to.
         """
-        section.style.h2('Waiters')
+        section.style.h2("Waiters")
         self._add_overview(section)
         section.style.new_line()
-        section.writeln('The available waiters are:')
+        section.writeln("The available waiters are:")
         section.style.toctree()
         for waiter_name in self._service_waiter_model.waiter_names:
-            section.style.tocitem(f'{self._service_name}/waiter/{waiter_name}')
+            section.style.tocitem(f"{self._service_name}/waiter/{waiter_name}")
             # Create a new DocumentStructure for each waiter and add contents.
             waiter_doc_structure = DocumentStructure(
-                waiter_name, target='html'
+                waiter_name,
+                target="html",
             )
-            self._add_single_waiter(waiter_doc_structure, waiter_name)
+            self._add_single_waiter(
+                waiter_doc_structure,
+                waiter_name,
+            )
             # Write waiters in individual/nested files.
             # Path: <root>/reference/services/<service>/waiter/<waiter_name>.rst
             waiter_dir_path = os.path.join(
-                self._root_docs_path, self._service_name, 'waiter'
+                self._root_docs_path,
+                self._service_name,
+                "waiter",
             )
-            waiter_doc_structure.write_to_file(waiter_dir_path, waiter_name)
+            waiter_doc_structure.write_to_file(
+                waiter_dir_path,
+                waiter_name,
+            )
 
-    def _add_single_waiter(self, section, waiter_name):
-        breadcrumb_section = section.add_new_section('breadcrumb')
+    def _add_single_waiter(
+        self,
+        section,
+        waiter_name,
+    ):
+        breadcrumb_section = section.add_new_section("breadcrumb")
         breadcrumb_section.style.ref(
-            self._client_class_name, f'../../{self._service_name}'
+            self._client_class_name,
+            f"../../{self._service_name}",
         )
-        breadcrumb_section.write(f' / Waiter / {waiter_name}')
+        breadcrumb_section.write(f" / Waiter / {waiter_name}")
         section.add_title_section(waiter_name)
         waiter_section = section.add_new_section(waiter_name)
         waiter_section.style.start_sphinx_py_class(
@@ -72,7 +106,7 @@ class WaiterDocumenter:
         waiter_section.style.start_codeblock()
         waiter_section.style.new_line()
         waiter_section.write(
-            'waiter = client.get_waiter(\'%s\')' % xform_name(waiter_name)
+            "waiter = client.get_waiter('%s')" % xform_name(waiter_name)
         )
         waiter_section.style.end_codeblock()
 
@@ -86,19 +120,22 @@ class WaiterDocumenter:
             service_waiter_model=self._service_waiter_model,
         )
 
-    def _add_overview(self, section):
+    def _add_overview(
+        self,
+        section,
+    ):
         section.style.new_line()
         section.write(
-            'Waiters are available on a client instance '
-            'via the ``get_waiter`` method. For more detailed instructions '
-            'and examples on the usage or waiters, see the '
-            'waiters '
+            "Waiters are available on a client instance "
+            "via the ``get_waiter`` method. For more detailed instructions "
+            "and examples on the usage or waiters, see the "
+            "waiters "
         )
         section.style.external_link(
-            title='user guide',
+            title="user guide",
             link=self._USER_GUIDE_LINK,
         )
-        section.write('.')
+        section.write(".")
         section.style.new_line()
 
 
@@ -130,40 +167,40 @@ def document_wait_method(
 
     waiter_config_members = OrderedDict()
 
-    waiter_config_members['Delay'] = DocumentedShape(
-        name='Delay',
-        type_name='integer',
+    waiter_config_members["Delay"] = DocumentedShape(
+        name="Delay",
+        type_name="integer",
         documentation=(
-            '<p>The amount of time in seconds to wait between '
-            'attempts. Default: {}</p>'.format(waiter_model.delay)
+            "<p>The amount of time in seconds to wait between "
+            "attempts. Default: {}</p>".format(waiter_model.delay)
         ),
     )
 
-    waiter_config_members['MaxAttempts'] = DocumentedShape(
-        name='MaxAttempts',
-        type_name='integer',
+    waiter_config_members["MaxAttempts"] = DocumentedShape(
+        name="MaxAttempts",
+        type_name="integer",
         documentation=(
-            '<p>The maximum number of attempts to be made. '
-            'Default: {}</p>'.format(waiter_model.max_attempts)
+            "<p>The maximum number of attempts to be made. "
+            "Default: {}</p>".format(waiter_model.max_attempts)
         ),
     )
 
     botocore_waiter_params = [
         DocumentedShape(
-            name='WaiterConfig',
-            type_name='structure',
+            name="WaiterConfig",
+            type_name="structure",
             documentation=(
-                '<p>A dictionary that provides parameters to control '
-                'waiting behavior.</p>'
+                "<p>A dictionary that provides parameters to control "
+                "waiting behavior.</p>"
             ),
             members=waiter_config_members,
         )
     ]
 
     wait_description = (
-        'Polls :py:meth:`{}.Client.{}` every {} '
-        'seconds until a successful state is reached. An error is '
-        'returned after {} failed checks.'.format(
+        "Polls :py:meth:`{}.Client.{}` every {} "
+        "seconds until a successful state is reached. An error is "
+        "returned after {} failed checks.".format(
             get_service_module_name(service_model),
             xform_name(waiter_model.operation),
             waiter_model.delay,
@@ -173,11 +210,11 @@ def document_wait_method(
 
     document_model_driven_method(
         section,
-        'wait',
+        "wait",
         operation_model,
         event_emitter=event_emitter,
         method_description=wait_description,
-        example_prefix='waiter.wait',
+        example_prefix="waiter.wait",
         include_input=botocore_waiter_params,
         document_output=False,
         include_signature=include_signature,

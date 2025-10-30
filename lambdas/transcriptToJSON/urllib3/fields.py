@@ -1,19 +1,35 @@
-from __future__ import annotations
+from __future__ import (
+    annotations,
+)
 
 import email.utils
 import mimetypes
 import typing
 
-_TYPE_FIELD_VALUE = typing.Union[str, bytes]
+_TYPE_FIELD_VALUE = typing.Union[
+    str,
+    bytes,
+]
 _TYPE_FIELD_VALUE_TUPLE = typing.Union[
     _TYPE_FIELD_VALUE,
-    typing.Tuple[str, _TYPE_FIELD_VALUE],
-    typing.Tuple[str, _TYPE_FIELD_VALUE, str],
+    typing.Tuple[
+        str,
+        _TYPE_FIELD_VALUE,
+    ],
+    typing.Tuple[
+        str,
+        _TYPE_FIELD_VALUE,
+        str,
+    ],
 ]
 
 
 def guess_content_type(
-    filename: str | None, default: str = "application/octet-stream"
+    filename: (
+        str
+        | None
+    ),
+    default: str = "application/octet-stream",
 ) -> str:
     """
     Guess the "Content-Type" of a file.
@@ -24,11 +40,21 @@ def guess_content_type(
         If no "Content-Type" can be guessed, default to `default`.
     """
     if filename:
-        return mimetypes.guess_type(filename)[0] or default
+        return (
+            mimetypes.guess_type(
+                filename
+            )[
+                0
+            ]
+            or default
+        )
     return default
 
 
-def format_header_param_rfc2231(name: str, value: _TYPE_FIELD_VALUE) -> str:
+def format_header_param_rfc2231(
+    name: str,
+    value: _TYPE_FIELD_VALUE,
+) -> str:
     """
     Helper function to format and quote a single header parameter using the
     strategy defined in RFC 2231.
@@ -58,25 +84,45 @@ def format_header_param_rfc2231(name: str, value: _TYPE_FIELD_VALUE) -> str:
         stacklevel=2,
     )
 
-    if isinstance(value, bytes):
-        value = value.decode("utf-8")
+    if isinstance(
+        value,
+        bytes,
+    ):
+        value = value.decode(
+            "utf-8"
+        )
 
-    if not any(ch in value for ch in '"\\\r\n'):
+    if not any(
+        ch
+        in value
+        for ch in '"\\\r\n'
+    ):
         result = f'{name}="{value}"'
         try:
-            result.encode("ascii")
-        except (UnicodeEncodeError, UnicodeDecodeError):
+            result.encode(
+                "ascii"
+            )
+        except (
+            UnicodeEncodeError,
+            UnicodeDecodeError,
+        ):
             pass
         else:
             return result
 
-    value = email.utils.encode_rfc2231(value, "utf-8")
+    value = email.utils.encode_rfc2231(
+        value,
+        "utf-8",
+    )
     value = f"{name}*={value}"
 
     return value
 
 
-def format_multipart_header_param(name: str, value: _TYPE_FIELD_VALUE) -> str:
+def format_multipart_header_param(
+    name: str,
+    value: _TYPE_FIELD_VALUE,
+) -> str:
     """
     Format and quote a single multipart header parameter.
 
@@ -106,15 +152,29 @@ def format_multipart_header_param(name: str, value: _TYPE_FIELD_VALUE) -> str:
         ``format_header_param``. The old names will be removed in
         urllib3 v2.1.0.
     """
-    if isinstance(value, bytes):
-        value = value.decode("utf-8")
+    if isinstance(
+        value,
+        bytes,
+    ):
+        value = value.decode(
+            "utf-8"
+        )
 
     # percent encode \n \r "
-    value = value.translate({10: "%0A", 13: "%0D", 34: "%22"})
+    value = value.translate(
+        {
+            10: "%0A",
+            13: "%0D",
+            34: "%22",
+        }
+    )
     return f'{name}="{value}"'
 
 
-def format_header_param_html5(name: str, value: _TYPE_FIELD_VALUE) -> str:
+def format_header_param_html5(
+    name: str,
+    value: _TYPE_FIELD_VALUE,
+) -> str:
     """
     .. deprecated:: 2.0.0
         Renamed to :func:`format_multipart_header_param`. Will be
@@ -129,10 +189,16 @@ def format_header_param_html5(name: str, value: _TYPE_FIELD_VALUE) -> str:
         DeprecationWarning,
         stacklevel=2,
     )
-    return format_multipart_header_param(name, value)
+    return format_multipart_header_param(
+        name,
+        value,
+    )
 
 
-def format_header_param(name: str, value: _TYPE_FIELD_VALUE) -> str:
+def format_header_param(
+    name: str,
+    value: _TYPE_FIELD_VALUE,
+) -> str:
     """
     .. deprecated:: 2.0.0
         Renamed to :func:`format_multipart_header_param`. Will be
@@ -147,7 +213,10 @@ def format_header_param(name: str, value: _TYPE_FIELD_VALUE) -> str:
         DeprecationWarning,
         stacklevel=2,
     )
-    return format_multipart_header_param(name, value)
+    return format_multipart_header_param(
+        name,
+        value,
+    )
 
 
 class RequestField:
@@ -172,18 +241,47 @@ class RequestField:
         self,
         name: str,
         data: _TYPE_FIELD_VALUE,
-        filename: str | None = None,
-        headers: typing.Mapping[str, str] | None = None,
-        header_formatter: typing.Callable[[str, _TYPE_FIELD_VALUE], str] | None = None,
+        filename: (
+            str
+            | None
+        ) = None,
+        headers: (
+            typing.Mapping[
+                str,
+                str,
+            ]
+            | None
+        ) = None,
+        header_formatter: (
+            typing.Callable[
+                [
+                    str,
+                    _TYPE_FIELD_VALUE,
+                ],
+                str,
+            ]
+            | None
+        ) = None,
     ):
         self._name = name
         self._filename = filename
         self.data = data
-        self.headers: dict[str, str | None] = {}
+        self.headers: dict[
+            str,
+            str
+            | None,
+        ] = (
+            {}
+        )
         if headers:
-            self.headers = dict(headers)
+            self.headers = dict(
+                headers
+            )
 
-        if header_formatter is not None:
+        if (
+            header_formatter
+            is not None
+        ):
             import warnings
 
             warnings.warn(
@@ -201,7 +299,16 @@ class RequestField:
         cls,
         fieldname: str,
         value: _TYPE_FIELD_VALUE_TUPLE,
-        header_formatter: typing.Callable[[str, _TYPE_FIELD_VALUE], str] | None = None,
+        header_formatter: (
+            typing.Callable[
+                [
+                    str,
+                    _TYPE_FIELD_VALUE,
+                ],
+                str,
+            ]
+            | None
+        ) = None,
     ) -> RequestField:
         """
         A :class:`~urllib3.fields.RequestField` factory from old-style tuple parameters.
@@ -219,33 +326,74 @@ class RequestField:
 
         Field names and filenames must be unicode.
         """
-        filename: str | None
-        content_type: str | None
+        filename: (
+            str
+            | None
+        )
+        content_type: (
+            str
+            | None
+        )
         data: _TYPE_FIELD_VALUE
 
-        if isinstance(value, tuple):
-            if len(value) == 3:
-                filename, data, content_type = typing.cast(
-                    typing.Tuple[str, _TYPE_FIELD_VALUE, str], value
+        if isinstance(
+            value,
+            tuple,
+        ):
+            if (
+                len(
+                    value
+                )
+                == 3
+            ):
+                (
+                    filename,
+                    data,
+                    content_type,
+                ) = typing.cast(
+                    typing.Tuple[
+                        str,
+                        _TYPE_FIELD_VALUE,
+                        str,
+                    ],
+                    value,
                 )
             else:
-                filename, data = typing.cast(
-                    typing.Tuple[str, _TYPE_FIELD_VALUE], value
+                (
+                    filename,
+                    data,
+                ) = typing.cast(
+                    typing.Tuple[
+                        str,
+                        _TYPE_FIELD_VALUE,
+                    ],
+                    value,
                 )
-                content_type = guess_content_type(filename)
+                content_type = guess_content_type(
+                    filename
+                )
         else:
             filename = None
             content_type = None
             data = value
 
         request_param = cls(
-            fieldname, data, filename=filename, header_formatter=header_formatter
+            fieldname,
+            data,
+            filename=filename,
+            header_formatter=header_formatter,
         )
-        request_param.make_multipart(content_type=content_type)
+        request_param.make_multipart(
+            content_type=content_type
+        )
 
         return request_param
 
-    def _render_part(self, name: str, value: _TYPE_FIELD_VALUE) -> str:
+    def _render_part(
+        self,
+        name: str,
+        value: _TYPE_FIELD_VALUE,
+    ) -> str:
         """
         Override this method to change how each multipart header
         parameter is formatted. By default, this calls
@@ -259,13 +407,26 @@ class RequestField:
 
         :meta public:
         """
-        return self.header_formatter(name, value)
+        return self.header_formatter(
+            name,
+            value,
+        )
 
     def _render_parts(
         self,
         header_parts: (
-            dict[str, _TYPE_FIELD_VALUE | None]
-            | typing.Sequence[tuple[str, _TYPE_FIELD_VALUE | None]]
+            dict[
+                str,
+                _TYPE_FIELD_VALUE
+                | None,
+            ]
+            | typing.Sequence[
+                tuple[
+                    str,
+                    _TYPE_FIELD_VALUE
+                    | None,
+                ]
+            ]
         ),
     ) -> str:
         """
@@ -278,44 +439,106 @@ class RequestField:
             A sequence of (k, v) tuples or a :class:`dict` of (k, v) to format
             as `k1="v1"; k2="v2"; ...`.
         """
-        iterable: typing.Iterable[tuple[str, _TYPE_FIELD_VALUE | None]]
+        iterable: typing.Iterable[
+            tuple[
+                str,
+                _TYPE_FIELD_VALUE
+                | None,
+            ]
+        ]
 
-        parts = []
-        if isinstance(header_parts, dict):
-            iterable = header_parts.items()
+        parts = (
+            []
+        )
+        if isinstance(
+            header_parts,
+            dict,
+        ):
+            iterable = (
+                header_parts.items()
+            )
         else:
             iterable = header_parts
 
-        for name, value in iterable:
-            if value is not None:
-                parts.append(self._render_part(name, value))
+        for (
+            name,
+            value,
+        ) in iterable:
+            if (
+                value
+                is not None
+            ):
+                parts.append(
+                    self._render_part(
+                        name,
+                        value,
+                    )
+                )
 
-        return "; ".join(parts)
+        return "; ".join(
+            parts
+        )
 
-    def render_headers(self) -> str:
+    def render_headers(
+        self,
+    ) -> str:
         """
         Renders the headers for this request field.
         """
-        lines = []
+        lines = (
+            []
+        )
 
-        sort_keys = ["Content-Disposition", "Content-Type", "Content-Location"]
+        sort_keys = [
+            "Content-Disposition",
+            "Content-Type",
+            "Content-Location",
+        ]
         for sort_key in sort_keys:
-            if self.headers.get(sort_key, False):
-                lines.append(f"{sort_key}: {self.headers[sort_key]}")
+            if self.headers.get(
+                sort_key,
+                False,
+            ):
+                lines.append(
+                    f"{sort_key}: {self.headers[sort_key]}"
+                )
 
-        for header_name, header_value in self.headers.items():
-            if header_name not in sort_keys:
+        for (
+            header_name,
+            header_value,
+        ) in (
+            self.headers.items()
+        ):
+            if (
+                header_name
+                not in sort_keys
+            ):
                 if header_value:
-                    lines.append(f"{header_name}: {header_value}")
+                    lines.append(
+                        f"{header_name}: {header_value}"
+                    )
 
-        lines.append("\r\n")
-        return "\r\n".join(lines)
+        lines.append(
+            "\r\n"
+        )
+        return "\r\n".join(
+            lines
+        )
 
     def make_multipart(
         self,
-        content_disposition: str | None = None,
-        content_type: str | None = None,
-        content_location: str | None = None,
+        content_disposition: (
+            str
+            | None
+        ) = None,
+        content_type: (
+            str
+            | None
+        ) = None,
+        content_location: (
+            str
+            | None
+        ) = None,
     ) -> None:
         """
         Makes this request field into a multipart request field.
@@ -331,15 +554,33 @@ class RequestField:
             The 'Content-Location' of the request body.
 
         """
-        content_disposition = (content_disposition or "form-data") + "; ".join(
+        content_disposition = (
+            content_disposition
+            or "form-data"
+        ) + "; ".join(
             [
                 "",
                 self._render_parts(
-                    (("name", self._name), ("filename", self._filename))
+                    (
+                        (
+                            "name",
+                            self._name,
+                        ),
+                        (
+                            "filename",
+                            self._filename,
+                        ),
+                    )
                 ),
             ]
         )
 
-        self.headers["Content-Disposition"] = content_disposition
-        self.headers["Content-Type"] = content_type
-        self.headers["Content-Location"] = content_location
+        self.headers[
+            "Content-Disposition"
+        ] = content_disposition
+        self.headers[
+            "Content-Type"
+        ] = content_type
+        self.headers[
+            "Content-Location"
+        ] = content_location

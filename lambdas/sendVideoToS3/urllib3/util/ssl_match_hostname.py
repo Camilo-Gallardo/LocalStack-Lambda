@@ -4,15 +4,22 @@
 # stdlib.   http://docs.python.org/3/license.html
 # It is modified to remove commonName support.
 
-from __future__ import annotations
+from __future__ import (
+    annotations,
+)
 
 import ipaddress
 import re
 import typing
-from ipaddress import IPv4Address, IPv6Address
+from ipaddress import (
+    IPv4Address,
+    IPv6Address,
+)
 
 if typing.TYPE_CHECKING:
-    from .ssl_ import _TYPE_PEER_CERT_RET_DICT
+    from .ssl_ import (
+        _TYPE_PEER_CERT_RET_DICT,
+    )
 
 __version__ = "3.5.0.1"
 
@@ -22,7 +29,9 @@ class CertificateError(ValueError):
 
 
 def _dnsname_match(
-    dn: typing.Any, hostname: str, max_wildcards: int = 1
+    dn: typing.Any,
+    hostname: str,
+    max_wildcards: int = 1,
 ) -> typing.Match[str] | None | bool:
     """Matching according to RFC 6125, section 6.4.3
 
@@ -67,17 +76,28 @@ def _dnsname_match(
         pats.append(re.escape(leftmost))
     else:
         # Otherwise, '*' matches any dotless string, e.g. www*
-        pats.append(re.escape(leftmost).replace(r"\*", "[^.]*"))
+        pats.append(
+            re.escape(leftmost).replace(
+                r"\*",
+                "[^.]*",
+            )
+        )
 
     # add the remaining fragments, ignore any wildcards
     for frag in remainder:
         pats.append(re.escape(frag))
 
-    pat = re.compile(r"\A" + r"\.".join(pats) + r"\Z", re.IGNORECASE)
+    pat = re.compile(
+        r"\A" + r"\.".join(pats) + r"\Z",
+        re.IGNORECASE,
+    )
     return pat.match(hostname)
 
 
-def _ipaddress_match(ipname: str, host_ip: IPv4Address | IPv6Address) -> bool:
+def _ipaddress_match(
+    ipname: str,
+    host_ip: IPv4Address | IPv6Address,
+) -> bool:
     """Exact matching of IP addresses.
 
     RFC 9110 section 4.3.5: "A reference identity of IP-ID contains the decoded
@@ -125,33 +145,69 @@ def match_hostname(
         # Not an IP address (common case)
         host_ip = None
     dnsnames = []
-    san: tuple[tuple[str, str], ...] = cert.get("subjectAltName", ())
+    san: tuple[
+        tuple[
+            str,
+            str,
+        ],
+        ...,
+    ] = cert.get(
+        "subjectAltName",
+        (),
+    )
     key: str
     value: str
-    for key, value in san:
+    for (
+        key,
+        value,
+    ) in san:
         if key == "DNS":
-            if host_ip is None and _dnsname_match(value, hostname):
+            if host_ip is None and _dnsname_match(
+                value,
+                hostname,
+            ):
                 return
             dnsnames.append(value)
         elif key == "IP Address":
-            if host_ip is not None and _ipaddress_match(value, host_ip):
+            if host_ip is not None and _ipaddress_match(
+                value,
+                host_ip,
+            ):
                 return
             dnsnames.append(value)
 
     # We only check 'commonName' if it's enabled and we're not verifying
     # an IP address. IP addresses aren't valid within 'commonName'.
     if hostname_checks_common_name and host_ip is None and not dnsnames:
-        for sub in cert.get("subject", ()):
-            for key, value in sub:
+        for sub in cert.get(
+            "subject",
+            (),
+        ):
+            for (
+                key,
+                value,
+            ) in sub:
                 if key == "commonName":
-                    if _dnsname_match(value, hostname):
+                    if _dnsname_match(
+                        value,
+                        hostname,
+                    ):
                         return
                     dnsnames.append(value)
 
     if len(dnsnames) > 1:
         raise CertificateError(
             "hostname %r "
-            "doesn't match either of %s" % (hostname, ", ".join(map(repr, dnsnames)))
+            "doesn't match either of %s"
+            % (
+                hostname,
+                ", ".join(
+                    map(
+                        repr,
+                        dnsnames,
+                    )
+                ),
+            )
         )
     elif len(dnsnames) == 1:
         raise CertificateError(f"hostname {hostname!r} doesn't match {dnsnames[0]!r}")

@@ -15,12 +15,28 @@ import logging
 import re
 import threading
 
-from s3transfer.bandwidth import BandwidthLimiter, LeakyBucket
-from s3transfer.constants import ALLOWED_DOWNLOAD_ARGS, KB, MB
-from s3transfer.copies import CopySubmissionTask
-from s3transfer.delete import DeleteSubmissionTask
-from s3transfer.download import DownloadSubmissionTask
-from s3transfer.exceptions import CancelledError, FatalError
+from s3transfer.bandwidth import (
+    BandwidthLimiter,
+    LeakyBucket,
+)
+from s3transfer.constants import (
+    ALLOWED_DOWNLOAD_ARGS,
+    KB,
+    MB,
+)
+from s3transfer.copies import (
+    CopySubmissionTask,
+)
+from s3transfer.delete import (
+    DeleteSubmissionTask,
+)
+from s3transfer.download import (
+    DownloadSubmissionTask,
+)
+from s3transfer.exceptions import (
+    CancelledError,
+    FatalError,
+)
 from s3transfer.futures import (
     IN_MEMORY_DOWNLOAD_TAG,
     IN_MEMORY_UPLOAD_TAG,
@@ -29,7 +45,9 @@ from s3transfer.futures import (
     TransferFuture,
     TransferMeta,
 )
-from s3transfer.upload import UploadSubmissionTask
+from s3transfer.upload import (
+    UploadSubmissionTask,
+)
 from s3transfer.utils import (
     CallArgs,
     OSUtils,
@@ -40,20 +58,25 @@ from s3transfer.utils import (
     signal_transferring,
 )
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger(
+    __name__
+)
 
 
 class TransferConfig:
     def __init__(
         self,
-        multipart_threshold=8 * MB,
-        multipart_chunksize=8 * MB,
+        multipart_threshold=8
+        * MB,
+        multipart_chunksize=8
+        * MB,
         max_request_concurrency=10,
         max_submission_concurrency=5,
         max_request_queue_size=1000,
         max_submission_queue_size=1000,
         max_io_queue_size=1000,
-        io_chunksize=256 * KB,
+        io_chunksize=256
+        * KB,
         num_download_attempts=5,
         max_in_memory_upload_chunks=10,
         max_in_memory_download_chunks=10,
@@ -144,12 +167,28 @@ class TransferConfig:
         self.max_bandwidth = max_bandwidth
         self._validate_attrs_are_nonzero()
 
-    def _validate_attrs_are_nonzero(self):
-        for attr, attr_val in self.__dict__.items():
-            if attr_val is not None and attr_val <= 0:
+    def _validate_attrs_are_nonzero(
+        self,
+    ):
+        for (
+            attr,
+            attr_val,
+        ) in (
+            self.__dict__.items()
+        ):
+            if (
+                attr_val
+                is not None
+                and attr_val
+                <= 0
+            ):
                 raise ValueError(
-                    'Provided parameter %s of value %s must be greater than '
-                    '0.' % (attr, attr_val)
+                    "Provided parameter %s of value %s must be greater than "
+                    "0."
+                    % (
+                        attr,
+                        attr_val,
+                    )
                 )
 
 
@@ -157,64 +196,73 @@ class TransferManager:
     ALLOWED_DOWNLOAD_ARGS = ALLOWED_DOWNLOAD_ARGS
 
     ALLOWED_UPLOAD_ARGS = [
-        'ACL',
-        'CacheControl',
-        'ChecksumAlgorithm',
-        'ContentDisposition',
-        'ContentEncoding',
-        'ContentLanguage',
-        'ContentType',
-        'ExpectedBucketOwner',
-        'Expires',
-        'GrantFullControl',
-        'GrantRead',
-        'GrantReadACP',
-        'GrantWriteACP',
-        'Metadata',
-        'ObjectLockLegalHoldStatus',
-        'ObjectLockMode',
-        'ObjectLockRetainUntilDate',
-        'RequestPayer',
-        'ServerSideEncryption',
-        'StorageClass',
-        'SSECustomerAlgorithm',
-        'SSECustomerKey',
-        'SSECustomerKeyMD5',
-        'SSEKMSKeyId',
-        'SSEKMSEncryptionContext',
-        'Tagging',
-        'WebsiteRedirectLocation',
+        "ACL",
+        "CacheControl",
+        "ChecksumAlgorithm",
+        "ContentDisposition",
+        "ContentEncoding",
+        "ContentLanguage",
+        "ContentType",
+        "ExpectedBucketOwner",
+        "Expires",
+        "GrantFullControl",
+        "GrantRead",
+        "GrantReadACP",
+        "GrantWriteACP",
+        "Metadata",
+        "ObjectLockLegalHoldStatus",
+        "ObjectLockMode",
+        "ObjectLockRetainUntilDate",
+        "RequestPayer",
+        "ServerSideEncryption",
+        "StorageClass",
+        "SSECustomerAlgorithm",
+        "SSECustomerKey",
+        "SSECustomerKeyMD5",
+        "SSEKMSKeyId",
+        "SSEKMSEncryptionContext",
+        "Tagging",
+        "WebsiteRedirectLocation",
     ]
 
-    ALLOWED_COPY_ARGS = ALLOWED_UPLOAD_ARGS + [
-        'CopySourceIfMatch',
-        'CopySourceIfModifiedSince',
-        'CopySourceIfNoneMatch',
-        'CopySourceIfUnmodifiedSince',
-        'CopySourceSSECustomerAlgorithm',
-        'CopySourceSSECustomerKey',
-        'CopySourceSSECustomerKeyMD5',
-        'MetadataDirective',
-        'TaggingDirective',
-    ]
+    ALLOWED_COPY_ARGS = (
+        ALLOWED_UPLOAD_ARGS
+        + [
+            "CopySourceIfMatch",
+            "CopySourceIfModifiedSince",
+            "CopySourceIfNoneMatch",
+            "CopySourceIfUnmodifiedSince",
+            "CopySourceSSECustomerAlgorithm",
+            "CopySourceSSECustomerKey",
+            "CopySourceSSECustomerKeyMD5",
+            "MetadataDirective",
+            "TaggingDirective",
+        ]
+    )
 
     ALLOWED_DELETE_ARGS = [
-        'MFA',
-        'VersionId',
-        'RequestPayer',
-        'ExpectedBucketOwner',
+        "MFA",
+        "VersionId",
+        "RequestPayer",
+        "ExpectedBucketOwner",
     ]
 
     VALIDATE_SUPPORTED_BUCKET_VALUES = True
 
     _UNSUPPORTED_BUCKET_PATTERNS = {
-        'S3 Object Lambda': re.compile(
-            r'^arn:(aws).*:s3-object-lambda:[a-z\-0-9]+:[0-9]{12}:'
-            r'accesspoint[/:][a-zA-Z0-9\-]{1,63}'
+        "S3 Object Lambda": re.compile(
+            r"^arn:(aws).*:s3-object-lambda:[a-z\-0-9]+:[0-9]{12}:"
+            r"accesspoint[/:][a-zA-Z0-9\-]{1,63}"
         ),
     }
 
-    def __init__(self, client, config=None, osutil=None, executor_cls=None):
+    def __init__(
+        self,
+        client,
+        config=None,
+        osutil=None,
+        executor_cls=None,
+    ):
         """A transfer manager interface for Amazon S3
 
         :param client: Client to be used by the manager
@@ -228,12 +276,24 @@ class TransferManager:
         """
         self._client = client
         self._config = config
-        if config is None:
-            self._config = TransferConfig()
+        if (
+            config
+            is None
+        ):
+            self._config = (
+                TransferConfig()
+            )
         self._osutil = osutil
-        if osutil is None:
-            self._osutil = OSUtils()
-        self._coordinator_controller = TransferCoordinatorController()
+        if (
+            osutil
+            is None
+        ):
+            self._osutil = (
+                OSUtils()
+            )
+        self._coordinator_controller = (
+            TransferCoordinatorController()
+        )
         # A counter to create unique id's for each transfer submitted.
         self._id_counter = 0
 
@@ -271,24 +331,47 @@ class TransferManager:
         # The component responsible for limiting bandwidth usage if it
         # is configured.
         self._bandwidth_limiter = None
-        if self._config.max_bandwidth is not None:
+        if (
+            self._config.max_bandwidth
+            is not None
+        ):
             logger.debug(
-                'Setting max_bandwidth to %s', self._config.max_bandwidth
+                "Setting max_bandwidth to %s",
+                self._config.max_bandwidth,
             )
-            leaky_bucket = LeakyBucket(self._config.max_bandwidth)
-            self._bandwidth_limiter = BandwidthLimiter(leaky_bucket)
+            leaky_bucket = LeakyBucket(
+                self._config.max_bandwidth
+            )
+            self._bandwidth_limiter = BandwidthLimiter(
+                leaky_bucket
+            )
 
         self._register_handlers()
 
     @property
-    def client(self):
-        return self._client
+    def client(
+        self,
+    ):
+        return (
+            self._client
+        )
 
     @property
-    def config(self):
-        return self._config
+    def config(
+        self,
+    ):
+        return (
+            self._config
+        )
 
-    def upload(self, fileobj, bucket, key, extra_args=None, subscribers=None):
+    def upload(
+        self,
+        fileobj,
+        bucket,
+        key,
+        extra_args=None,
+        subscribers=None,
+    ):
         """Uploads a file to S3
 
         :type fileobj: str or seekable file-like object
@@ -314,12 +397,27 @@ class TransferManager:
         :rtype: s3transfer.futures.TransferFuture
         :returns: Transfer future representing the upload
         """
-        if extra_args is None:
-            extra_args = {}
-        if subscribers is None:
-            subscribers = []
-        self._validate_all_known_args(extra_args, self.ALLOWED_UPLOAD_ARGS)
-        self._validate_if_bucket_supported(bucket)
+        if (
+            extra_args
+            is None
+        ):
+            extra_args = (
+                {}
+            )
+        if (
+            subscribers
+            is None
+        ):
+            subscribers = (
+                []
+            )
+        self._validate_all_known_args(
+            extra_args,
+            self.ALLOWED_UPLOAD_ARGS,
+        )
+        self._validate_if_bucket_supported(
+            bucket
+        )
         call_args = CallArgs(
             fileobj=fileobj,
             bucket=bucket,
@@ -327,15 +425,30 @@ class TransferManager:
             extra_args=extra_args,
             subscribers=subscribers,
         )
-        extra_main_kwargs = {}
-        if self._bandwidth_limiter:
-            extra_main_kwargs['bandwidth_limiter'] = self._bandwidth_limiter
+        extra_main_kwargs = (
+            {}
+        )
+        if (
+            self._bandwidth_limiter
+        ):
+            extra_main_kwargs[
+                "bandwidth_limiter"
+            ] = (
+                self._bandwidth_limiter
+            )
         return self._submit_transfer(
-            call_args, UploadSubmissionTask, extra_main_kwargs
+            call_args,
+            UploadSubmissionTask,
+            extra_main_kwargs,
         )
 
     def download(
-        self, bucket, key, fileobj, extra_args=None, subscribers=None
+        self,
+        bucket,
+        key,
+        fileobj,
+        extra_args=None,
+        subscribers=None,
     ):
         """Downloads a file from S3
 
@@ -362,12 +475,27 @@ class TransferManager:
         :rtype: s3transfer.futures.TransferFuture
         :returns: Transfer future representing the download
         """
-        if extra_args is None:
-            extra_args = {}
-        if subscribers is None:
-            subscribers = []
-        self._validate_all_known_args(extra_args, self.ALLOWED_DOWNLOAD_ARGS)
-        self._validate_if_bucket_supported(bucket)
+        if (
+            extra_args
+            is None
+        ):
+            extra_args = (
+                {}
+            )
+        if (
+            subscribers
+            is None
+        ):
+            subscribers = (
+                []
+            )
+        self._validate_all_known_args(
+            extra_args,
+            self.ALLOWED_DOWNLOAD_ARGS,
+        )
+        self._validate_if_bucket_supported(
+            bucket
+        )
         call_args = CallArgs(
             bucket=bucket,
             key=key,
@@ -375,11 +503,21 @@ class TransferManager:
             extra_args=extra_args,
             subscribers=subscribers,
         )
-        extra_main_kwargs = {'io_executor': self._io_executor}
-        if self._bandwidth_limiter:
-            extra_main_kwargs['bandwidth_limiter'] = self._bandwidth_limiter
+        extra_main_kwargs = {
+            "io_executor": self._io_executor
+        }
+        if (
+            self._bandwidth_limiter
+        ):
+            extra_main_kwargs[
+                "bandwidth_limiter"
+            ] = (
+                self._bandwidth_limiter
+            )
         return self._submit_transfer(
-            call_args, DownloadSubmissionTask, extra_main_kwargs
+            call_args,
+            DownloadSubmissionTask,
+            extra_main_kwargs,
         )
 
     def copy(
@@ -425,16 +563,43 @@ class TransferManager:
         :rtype: s3transfer.futures.TransferFuture
         :returns: Transfer future representing the copy
         """
-        if extra_args is None:
-            extra_args = {}
-        if subscribers is None:
-            subscribers = []
-        if source_client is None:
-            source_client = self._client
-        self._validate_all_known_args(extra_args, self.ALLOWED_COPY_ARGS)
-        if isinstance(copy_source, dict):
-            self._validate_if_bucket_supported(copy_source.get('Bucket'))
-        self._validate_if_bucket_supported(bucket)
+        if (
+            extra_args
+            is None
+        ):
+            extra_args = (
+                {}
+            )
+        if (
+            subscribers
+            is None
+        ):
+            subscribers = (
+                []
+            )
+        if (
+            source_client
+            is None
+        ):
+            source_client = (
+                self._client
+            )
+        self._validate_all_known_args(
+            extra_args,
+            self.ALLOWED_COPY_ARGS,
+        )
+        if isinstance(
+            copy_source,
+            dict,
+        ):
+            self._validate_if_bucket_supported(
+                copy_source.get(
+                    "Bucket"
+                )
+            )
+        self._validate_if_bucket_supported(
+            bucket
+        )
         call_args = CallArgs(
             copy_source=copy_source,
             bucket=bucket,
@@ -443,9 +608,18 @@ class TransferManager:
             subscribers=subscribers,
             source_client=source_client,
         )
-        return self._submit_transfer(call_args, CopySubmissionTask)
+        return self._submit_transfer(
+            call_args,
+            CopySubmissionTask,
+        )
 
-    def delete(self, bucket, key, extra_args=None, subscribers=None):
+    def delete(
+        self,
+        bucket,
+        key,
+        extra_args=None,
+        subscribers=None,
+    ):
         """Delete an S3 object.
 
         :type bucket: str
@@ -467,67 +641,131 @@ class TransferManager:
         :return: Transfer future representing the deletion.
 
         """
-        if extra_args is None:
-            extra_args = {}
-        if subscribers is None:
-            subscribers = []
-        self._validate_all_known_args(extra_args, self.ALLOWED_DELETE_ARGS)
-        self._validate_if_bucket_supported(bucket)
+        if (
+            extra_args
+            is None
+        ):
+            extra_args = (
+                {}
+            )
+        if (
+            subscribers
+            is None
+        ):
+            subscribers = (
+                []
+            )
+        self._validate_all_known_args(
+            extra_args,
+            self.ALLOWED_DELETE_ARGS,
+        )
+        self._validate_if_bucket_supported(
+            bucket
+        )
         call_args = CallArgs(
             bucket=bucket,
             key=key,
             extra_args=extra_args,
             subscribers=subscribers,
         )
-        return self._submit_transfer(call_args, DeleteSubmissionTask)
+        return self._submit_transfer(
+            call_args,
+            DeleteSubmissionTask,
+        )
 
-    def _validate_if_bucket_supported(self, bucket):
+    def _validate_if_bucket_supported(
+        self,
+        bucket,
+    ):
         # s3 high level operations don't support some resources
         # (eg. S3 Object Lambda) only direct API calls are available
         # for such resources
-        if self.VALIDATE_SUPPORTED_BUCKET_VALUES:
-            for resource, pattern in self._UNSUPPORTED_BUCKET_PATTERNS.items():
-                match = pattern.match(bucket)
+        if (
+            self.VALIDATE_SUPPORTED_BUCKET_VALUES
+        ):
+            for (
+                resource,
+                pattern,
+            ) in (
+                self._UNSUPPORTED_BUCKET_PATTERNS.items()
+            ):
+                match = pattern.match(
+                    bucket
+                )
                 if match:
                     raise ValueError(
-                        'TransferManager methods do not support %s '
-                        'resource. Use direct client calls instead.' % resource
+                        "TransferManager methods do not support %s "
+                        "resource. Use direct client calls instead."
+                        % resource
                     )
 
-    def _validate_all_known_args(self, actual, allowed):
+    def _validate_all_known_args(
+        self,
+        actual,
+        allowed,
+    ):
         for kwarg in actual:
-            if kwarg not in allowed:
+            if (
+                kwarg
+                not in allowed
+            ):
                 raise ValueError(
                     "Invalid extra_args key '%s', "
-                    "must be one of: %s" % (kwarg, ', '.join(allowed))
+                    "must be one of: %s"
+                    % (
+                        kwarg,
+                        ", ".join(
+                            allowed
+                        ),
+                    )
                 )
 
     def _submit_transfer(
-        self, call_args, submission_task_cls, extra_main_kwargs=None
+        self,
+        call_args,
+        submission_task_cls,
+        extra_main_kwargs=None,
     ):
-        if not extra_main_kwargs:
-            extra_main_kwargs = {}
+        if (
+            not extra_main_kwargs
+        ):
+            extra_main_kwargs = (
+                {}
+            )
 
         # Create a TransferFuture to return back to the user
-        transfer_future, components = self._get_future_with_components(
+        (
+            transfer_future,
+            components,
+        ) = self._get_future_with_components(
             call_args
         )
 
         # Add any provided done callbacks to the created transfer future
         # to be invoked on the transfer future being complete.
-        for callback in get_callbacks(transfer_future, 'done'):
-            components['coordinator'].add_done_callback(callback)
+        for callback in get_callbacks(
+            transfer_future,
+            "done",
+        ):
+            components[
+                "coordinator"
+            ].add_done_callback(
+                callback
+            )
 
         # Get the main kwargs needed to instantiate the submission task
         main_kwargs = self._get_submission_task_main_kwargs(
-            transfer_future, extra_main_kwargs
+            transfer_future,
+            extra_main_kwargs,
         )
 
         # Submit a SubmissionTask that will submit all of the necessary
         # tasks needed to complete the S3 transfer.
         self._submission_executor.submit(
             submission_task_cls(
-                transfer_coordinator=components['coordinator'],
+                transfer_coordinator=components[
+                    "coordinator"
+                ],
                 main_kwargs=main_kwargs,
             )
         )
@@ -537,10 +775,17 @@ class TransferManager:
 
         return transfer_future
 
-    def _get_future_with_components(self, call_args):
-        transfer_id = self._id_counter
+    def _get_future_with_components(
+        self,
+        call_args,
+    ):
+        transfer_id = (
+            self._id_counter
+        )
         # Creates a new transfer future along with its components
-        transfer_coordinator = TransferCoordinator(transfer_id=transfer_id)
+        transfer_coordinator = TransferCoordinator(
+            transfer_id=transfer_id
+        )
         # Track the transfer coordinator for transfers to manage.
         self._coordinator_controller.add_transfer_coordinator(
             transfer_coordinator
@@ -552,58 +797,98 @@ class TransferManager:
             transfer_coordinator,
         )
         components = {
-            'meta': TransferMeta(call_args, transfer_id=transfer_id),
-            'coordinator': transfer_coordinator,
+            "meta": TransferMeta(
+                call_args,
+                transfer_id=transfer_id,
+            ),
+            "coordinator": transfer_coordinator,
         }
-        transfer_future = TransferFuture(**components)
-        return transfer_future, components
+        transfer_future = TransferFuture(
+            **components
+        )
+        return (
+            transfer_future,
+            components,
+        )
 
     def _get_submission_task_main_kwargs(
-        self, transfer_future, extra_main_kwargs
+        self,
+        transfer_future,
+        extra_main_kwargs,
     ):
         main_kwargs = {
-            'client': self._client,
-            'config': self._config,
-            'osutil': self._osutil,
-            'request_executor': self._request_executor,
-            'transfer_future': transfer_future,
+            "client": self._client,
+            "config": self._config,
+            "osutil": self._osutil,
+            "request_executor": self._request_executor,
+            "transfer_future": transfer_future,
         }
-        main_kwargs.update(extra_main_kwargs)
+        main_kwargs.update(
+            extra_main_kwargs
+        )
         return main_kwargs
 
-    def _register_handlers(self):
+    def _register_handlers(
+        self,
+    ):
         # Register handlers to enable/disable callbacks on uploads.
-        event_name = 'request-created.s3'
+        event_name = "request-created.s3"
         self._client.meta.events.register_first(
             event_name,
             signal_not_transferring,
-            unique_id='s3upload-not-transferring',
+            unique_id="s3upload-not-transferring",
         )
         self._client.meta.events.register_last(
-            event_name, signal_transferring, unique_id='s3upload-transferring'
+            event_name,
+            signal_transferring,
+            unique_id="s3upload-transferring",
         )
 
-    def __enter__(self):
+    def __enter__(
+        self,
+    ):
         return self
 
-    def __exit__(self, exc_type, exc_value, *args):
+    def __exit__(
+        self,
+        exc_type,
+        exc_value,
+        *args
+    ):
         cancel = False
-        cancel_msg = ''
+        cancel_msg = ""
         cancel_exc_type = FatalError
         # If a exception was raised in the context handler, signal to cancel
         # all of the inprogress futures in the shutdown.
         if exc_type:
             cancel = True
-            cancel_msg = str(exc_value)
-            if not cancel_msg:
-                cancel_msg = repr(exc_value)
+            cancel_msg = str(
+                exc_value
+            )
+            if (
+                not cancel_msg
+            ):
+                cancel_msg = repr(
+                    exc_value
+                )
             # If it was a KeyboardInterrupt, the cancellation was initiated
             # by the user.
-            if isinstance(exc_value, KeyboardInterrupt):
+            if isinstance(
+                exc_value,
+                KeyboardInterrupt,
+            ):
                 cancel_exc_type = CancelledError
-        self._shutdown(cancel, cancel_msg, cancel_exc_type)
+        self._shutdown(
+            cancel,
+            cancel_msg,
+            cancel_exc_type,
+        )
 
-    def shutdown(self, cancel=False, cancel_msg=''):
+    def shutdown(
+        self,
+        cancel=False,
+        cancel_msg="",
+    ):
         """Shutdown the TransferManager
 
         It will wait till all transfers complete before it completely shuts
@@ -618,13 +903,25 @@ class TransferManager:
         :param cancel_msg: The message to specify if canceling all in-progress
             transfers.
         """
-        self._shutdown(cancel, cancel, cancel_msg)
+        self._shutdown(
+            cancel,
+            cancel,
+            cancel_msg,
+        )
 
-    def _shutdown(self, cancel, cancel_msg, exc_type=CancelledError):
+    def _shutdown(
+        self,
+        cancel,
+        cancel_msg,
+        exc_type=CancelledError,
+    ):
         if cancel:
             # Cancel all in-flight transfers if requested, before waiting
             # for them to complete.
-            self._coordinator_controller.cancel(cancel_msg, exc_type)
+            self._coordinator_controller.cancel(
+                cancel_msg,
+                exc_type,
+            )
         try:
             # Wait until there are no more in-progress transfers. This is
             # wrapped in a try statement because this can be interrupted
@@ -636,7 +933,9 @@ class TransferManager:
             # an error raised in the try statement we want to cancel all of
             # the inflight transfers before shutting down to speed that
             # process up.
-            self._coordinator_controller.cancel('KeyboardInterrupt()')
+            self._coordinator_controller.cancel(
+                "KeyboardInterrupt()"
+            )
             raise
         finally:
             # Shutdown all of the executors.
@@ -646,25 +945,38 @@ class TransferManager:
 
 
 class TransferCoordinatorController:
-    def __init__(self):
+    def __init__(
+        self,
+    ):
         """Abstraction to control all transfer coordinators
 
         This abstraction allows the manager to wait for inprogress transfers
         to complete and cancel all inprogress transfers.
         """
-        self._lock = threading.Lock()
-        self._tracked_transfer_coordinators = set()
+        self._lock = (
+            threading.Lock()
+        )
+        self._tracked_transfer_coordinators = (
+            set()
+        )
 
     @property
-    def tracked_transfer_coordinators(self):
+    def tracked_transfer_coordinators(
+        self,
+    ):
         """The set of transfer coordinators being tracked"""
         with self._lock:
             # We return a copy because the set is mutable and if you were to
             # iterate over the set, it may be changing in length due to
             # additions and removals of transfer coordinators.
-            return copy.copy(self._tracked_transfer_coordinators)
+            return copy.copy(
+                self._tracked_transfer_coordinators
+            )
 
-    def add_transfer_coordinator(self, transfer_coordinator):
+    def add_transfer_coordinator(
+        self,
+        transfer_coordinator,
+    ):
         """Adds a transfer coordinator of a transfer to be canceled if needed
 
         :type transfer_coordinator: s3transfer.futures.TransferCoordinator
@@ -672,9 +984,14 @@ class TransferCoordinatorController:
             particular transfer
         """
         with self._lock:
-            self._tracked_transfer_coordinators.add(transfer_coordinator)
+            self._tracked_transfer_coordinators.add(
+                transfer_coordinator
+            )
 
-    def remove_transfer_coordinator(self, transfer_coordinator):
+    def remove_transfer_coordinator(
+        self,
+        transfer_coordinator,
+    ):
         """Remove a transfer coordinator from cancellation consideration
 
         Typically, this method is invoked by the transfer coordinator itself
@@ -685,9 +1002,15 @@ class TransferCoordinatorController:
             particular transfer
         """
         with self._lock:
-            self._tracked_transfer_coordinators.remove(transfer_coordinator)
+            self._tracked_transfer_coordinators.remove(
+                transfer_coordinator
+            )
 
-    def cancel(self, msg='', exc_type=CancelledError):
+    def cancel(
+        self,
+        msg="",
+        exc_type=CancelledError,
+    ):
         """Cancels all inprogress transfers
 
         This cancels the inprogress transfers by calling cancel() on all
@@ -698,10 +1021,17 @@ class TransferCoordinatorController:
 
         :param exc_type: The type of exception to set for the cancellation
         """
-        for transfer_coordinator in self.tracked_transfer_coordinators:
-            transfer_coordinator.cancel(msg, exc_type)
+        for transfer_coordinator in (
+            self.tracked_transfer_coordinators
+        ):
+            transfer_coordinator.cancel(
+                msg,
+                exc_type,
+            )
 
-    def wait(self):
+    def wait(
+        self,
+    ):
         """Wait until there are no more inprogress transfers
 
         This will not stop when failures are encountered and not propagate any
@@ -710,16 +1040,20 @@ class TransferCoordinatorController:
         """
         try:
             transfer_coordinator = None
-            for transfer_coordinator in self.tracked_transfer_coordinators:
+            for transfer_coordinator in (
+                self.tracked_transfer_coordinators
+            ):
                 transfer_coordinator.result()
         except KeyboardInterrupt:
-            logger.debug('Received KeyboardInterrupt in wait()')
+            logger.debug(
+                "Received KeyboardInterrupt in wait()"
+            )
             # If Keyboard interrupt is raised while waiting for
             # the result, then exit out of the wait and raise the
             # exception
             if transfer_coordinator:
                 logger.debug(
-                    'On KeyboardInterrupt was waiting for %s',
+                    "On KeyboardInterrupt was waiting for %s",
                     transfer_coordinator,
                 )
             raise

@@ -19,11 +19,19 @@ import socket
 import stat
 import string
 import threading
-from collections import defaultdict
+from collections import (
+    defaultdict,
+)
 
-from botocore.exceptions import IncompleteReadError, ReadTimeoutError
-
-from s3transfer.compat import SOCKET_ERROR, fallocate, rename_file
+from botocore.exceptions import (
+    IncompleteReadError,
+    ReadTimeoutError,
+)
+from s3transfer.compat import (
+    SOCKET_ERROR,
+    fallocate,
+    rename_file,
+)
 
 MAX_PARTS = 10000
 # The maximum file size you can upload via S3 per request.
@@ -42,30 +50,54 @@ S3_RETRYABLE_DOWNLOAD_ERRORS = (
 )
 
 
-def random_file_extension(num_digits=8):
-    return ''.join(random.choice(string.hexdigits) for _ in range(num_digits))
+def random_file_extension(
+    num_digits=8,
+):
+    return "".join(random.choice(string.hexdigits) for _ in range(num_digits))
 
 
-def signal_not_transferring(request, operation_name, **kwargs):
-    if operation_name in ['PutObject', 'UploadPart'] and hasattr(
-        request.body, 'signal_not_transferring'
+def signal_not_transferring(
+    request,
+    operation_name,
+    **kwargs,
+):
+    if operation_name in [
+        "PutObject",
+        "UploadPart",
+    ] and hasattr(
+        request.body,
+        "signal_not_transferring",
     ):
         request.body.signal_not_transferring()
 
 
-def signal_transferring(request, operation_name, **kwargs):
-    if operation_name in ['PutObject', 'UploadPart'] and hasattr(
-        request.body, 'signal_transferring'
+def signal_transferring(
+    request,
+    operation_name,
+    **kwargs,
+):
+    if operation_name in [
+        "PutObject",
+        "UploadPart",
+    ] and hasattr(
+        request.body,
+        "signal_transferring",
     ):
         request.body.signal_transferring()
 
 
-def calculate_num_parts(size, part_size):
+def calculate_num_parts(
+    size,
+    part_size,
+):
     return int(math.ceil(size / float(part_size)))
 
 
 def calculate_range_parameter(
-    part_size, part_index, num_parts, total_size=None
+    part_size,
+    part_index,
+    num_parts,
+    total_size=None,
 ):
     """Calculate the range parameter for multipart downloads/copies
 
@@ -85,16 +117,19 @@ def calculate_range_parameter(
     # Used to calculate the Range parameter
     start_range = part_index * part_size
     if part_index == num_parts - 1:
-        end_range = ''
+        end_range = ""
         if total_size is not None:
             end_range = str(total_size - 1)
     else:
         end_range = start_range + part_size - 1
-    range_param = f'bytes={start_range}-{end_range}'
+    range_param = f"bytes={start_range}-{end_range}"
     return range_param
 
 
-def get_callbacks(transfer_future, callback_type):
+def get_callbacks(
+    transfer_future,
+    callback_type,
+):
     """Retrieves callbacks from a subscriber
 
     :type transfer_future: s3transfer.futures.TransferFuture
@@ -113,17 +148,27 @@ def get_callbacks(transfer_future, callback_type):
     """
     callbacks = []
     for subscriber in transfer_future.meta.call_args.subscribers:
-        callback_name = 'on_' + callback_type
-        if hasattr(subscriber, callback_name):
+        callback_name = "on_" + callback_type
+        if hasattr(
+            subscriber,
+            callback_name,
+        ):
             callbacks.append(
                 functools.partial(
-                    getattr(subscriber, callback_name), future=transfer_future
+                    getattr(
+                        subscriber,
+                        callback_name,
+                    ),
+                    future=transfer_future,
                 )
             )
     return callbacks
 
 
-def invoke_progress_callbacks(callbacks, bytes_transferred):
+def invoke_progress_callbacks(
+    callbacks,
+    bytes_transferred,
+):
     """Calls all progress callbacks
 
     :param callbacks: A list of progress callbacks to invoke
@@ -139,7 +184,10 @@ def invoke_progress_callbacks(callbacks, bytes_transferred):
             callback(bytes_transferred=bytes_transferred)
 
 
-def get_filtered_dict(original_dict, whitelisted_keys):
+def get_filtered_dict(
+    original_dict,
+    whitelisted_keys,
+):
     """Gets a dictionary filtered by whitelisted keys
 
     :param original_dict: The original dictionary of arguments to source keys
@@ -151,22 +199,35 @@ def get_filtered_dict(original_dict, whitelisted_keys):
         whose key was included in the whitelist
     """
     filtered_dict = {}
-    for key, value in original_dict.items():
+    for (
+        key,
+        value,
+    ) in original_dict.items():
         if key in whitelisted_keys:
             filtered_dict[key] = value
     return filtered_dict
 
 
 class CallArgs:
-    def __init__(self, **kwargs):
+    def __init__(
+        self,
+        **kwargs,
+    ):
         """A class that records call arguments
 
         The call arguments must be passed as keyword arguments. It will set
         each keyword argument as an attribute of the object along with its
         associated value.
         """
-        for arg, value in kwargs.items():
-            setattr(self, arg, value)
+        for (
+            arg,
+            value,
+        ) in kwargs.items():
+            setattr(
+                self,
+                arg,
+                value,
+            )
 
 
 class FunctionContainer:
@@ -176,18 +237,32 @@ class FunctionContainer:
     and kwargs.
     """
 
-    def __init__(self, func, *args, **kwargs):
+    def __init__(
+        self,
+        func,
+        *args,
+        **kwargs,
+    ):
         self._func = func
         self._args = args
         self._kwargs = kwargs
 
-    def __repr__(self):
-        return 'Function: {} with args {} and kwargs {}'.format(
-            self._func, self._args, self._kwargs
+    def __repr__(
+        self,
+    ):
+        return "Function: {} with args {} and kwargs {}".format(
+            self._func,
+            self._args,
+            self._kwargs,
         )
 
-    def __call__(self):
-        return self._func(*self._args, **self._kwargs)
+    def __call__(
+        self,
+    ):
+        return self._func(
+            *self._args,
+            **self._kwargs,
+        )
 
 
 class CountCallbackInvoker:
@@ -196,39 +271,47 @@ class CountCallbackInvoker:
     :param callback: Callback invoke when finalized count reaches zero
     """
 
-    def __init__(self, callback):
+    def __init__(
+        self,
+        callback,
+    ):
         self._lock = threading.Lock()
         self._callback = callback
         self._count = 0
         self._is_finalized = False
 
     @property
-    def current_count(self):
+    def current_count(
+        self,
+    ):
         with self._lock:
             return self._count
 
-    def increment(self):
+    def increment(
+        self,
+    ):
         """Increment the count by one"""
         with self._lock:
             if self._is_finalized:
                 raise RuntimeError(
-                    'Counter has been finalized it can no longer be '
-                    'incremented.'
+                    "Counter has been finalized it can no longer be " "incremented."
                 )
             self._count += 1
 
-    def decrement(self):
+    def decrement(
+        self,
+    ):
         """Decrement the count by one"""
         with self._lock:
             if self._count == 0:
-                raise RuntimeError(
-                    'Counter is at zero. It cannot dip below zero'
-                )
+                raise RuntimeError("Counter is at zero. It cannot dip below zero")
             self._count -= 1
             if self._is_finalized and self._count == 0:
                 self._callback()
 
-    def finalize(self):
+    def finalize(
+        self,
+    ):
         """Finalize the counter
 
         Once finalized, the counter never be incremented and the callback
@@ -243,12 +326,25 @@ class CountCallbackInvoker:
 class OSUtils:
     _MAX_FILENAME_LEN = 255
 
-    def get_file_size(self, filename):
+    def get_file_size(
+        self,
+        filename,
+    ):
         return os.path.getsize(filename)
 
-    def open_file_chunk_reader(self, filename, start_byte, size, callbacks):
+    def open_file_chunk_reader(
+        self,
+        filename,
+        start_byte,
+        size,
+        callbacks,
+    ):
         return ReadFileChunk.from_filename(
-            filename, start_byte, size, callbacks, enable_callbacks=False
+            filename,
+            start_byte,
+            size,
+            callbacks,
+            enable_callbacks=False,
         )
 
     def open_file_chunk_reader_from_fileobj(
@@ -268,10 +364,20 @@ class OSUtils:
             close_callbacks=close_callbacks,
         )
 
-    def open(self, filename, mode):
-        return open(filename, mode)
+    def open(
+        self,
+        filename,
+        mode,
+    ):
+        return open(
+            filename,
+            mode,
+        )
 
-    def remove_file(self, filename):
+    def remove_file(
+        self,
+        filename,
+    ):
         """Remove a file, noop if file does not exist."""
         # Unlike os.remove, if the file does not exist,
         # then this method does nothing.
@@ -280,10 +386,20 @@ class OSUtils:
         except OSError:
             pass
 
-    def rename_file(self, current_filename, new_filename):
-        rename_file(current_filename, new_filename)
+    def rename_file(
+        self,
+        current_filename,
+        new_filename,
+    ):
+        rename_file(
+            current_filename,
+            new_filename,
+        )
 
-    def is_special_file(cls, filename):
+    def is_special_file(
+        cls,
+        filename,
+    ):
         """Checks to see if a file is a special UNIX file.
 
         It checks if the file is a character special device, block special
@@ -312,24 +428,46 @@ class OSUtils:
             return True
         return False
 
-    def get_temp_filename(self, filename):
+    def get_temp_filename(
+        self,
+        filename,
+    ):
         suffix = os.extsep + random_file_extension()
         path = os.path.dirname(filename)
         name = os.path.basename(filename)
         temp_filename = name[: self._MAX_FILENAME_LEN - len(suffix)] + suffix
-        return os.path.join(path, temp_filename)
+        return os.path.join(
+            path,
+            temp_filename,
+        )
 
-    def allocate(self, filename, size):
+    def allocate(
+        self,
+        filename,
+        size,
+    ):
         try:
-            with self.open(filename, 'wb') as f:
-                fallocate(f, size)
+            with self.open(
+                filename,
+                "wb",
+            ) as f:
+                fallocate(
+                    f,
+                    size,
+                )
         except OSError:
             self.remove_file(filename)
             raise
 
 
 class DeferredOpenFile:
-    def __init__(self, filename, start_byte=0, mode='rb', open_function=open):
+    def __init__(
+        self,
+        filename,
+        start_byte=0,
+        mode="rb",
+        open_function=open,
+    ):
         """A class that defers the opening of a file till needed
 
         This is useful for deferring opening of a file till it is needed
@@ -356,42 +494,72 @@ class DeferredOpenFile:
         self._mode = mode
         self._open_function = open_function
 
-    def _open_if_needed(self):
+    def _open_if_needed(
+        self,
+    ):
         if self._fileobj is None:
-            self._fileobj = self._open_function(self._filename, self._mode)
+            self._fileobj = self._open_function(
+                self._filename,
+                self._mode,
+            )
             if self._start_byte != 0:
                 self._fileobj.seek(self._start_byte)
 
     @property
-    def name(self):
+    def name(
+        self,
+    ):
         return self._filename
 
-    def read(self, amount=None):
+    def read(
+        self,
+        amount=None,
+    ):
         self._open_if_needed()
         return self._fileobj.read(amount)
 
-    def write(self, data):
+    def write(
+        self,
+        data,
+    ):
         self._open_if_needed()
         self._fileobj.write(data)
 
-    def seek(self, where, whence=0):
+    def seek(
+        self,
+        where,
+        whence=0,
+    ):
         self._open_if_needed()
-        self._fileobj.seek(where, whence)
+        self._fileobj.seek(
+            where,
+            whence,
+        )
 
-    def tell(self):
+    def tell(
+        self,
+    ):
         if self._fileobj is None:
             return self._start_byte
         return self._fileobj.tell()
 
-    def close(self):
+    def close(
+        self,
+    ):
         if self._fileobj:
             self._fileobj.close()
 
-    def __enter__(self):
+    def __enter__(
+        self,
+    ):
         self._open_if_needed()
         return self
 
-    def __exit__(self, *args, **kwargs):
+    def __exit__(
+        self,
+        *args,
+        **kwargs,
+    ):
         self.close()
 
 
@@ -491,47 +659,97 @@ class ReadFileChunk:
         :return: A new instance of ``ReadFileChunk``
 
         """
-        f = open(filename, 'rb')
+        f = open(
+            filename,
+            "rb",
+        )
         f.seek(start_byte)
         file_size = os.fstat(f.fileno()).st_size
-        return cls(f, chunk_size, file_size, callbacks, enable_callbacks)
+        return cls(
+            f,
+            chunk_size,
+            file_size,
+            callbacks,
+            enable_callbacks,
+        )
 
     def _calculate_file_size(
-        self, fileobj, requested_size, start_byte, actual_file_size
+        self,
+        fileobj,
+        requested_size,
+        start_byte,
+        actual_file_size,
     ):
         max_chunk_size = actual_file_size - start_byte
-        return min(max_chunk_size, requested_size)
+        return min(
+            max_chunk_size,
+            requested_size,
+        )
 
-    def read(self, amount=None):
-        amount_left = max(self._size - self._amount_read, 0)
+    def read(
+        self,
+        amount=None,
+    ):
+        amount_left = max(
+            self._size - self._amount_read,
+            0,
+        )
         if amount is None:
             amount_to_read = amount_left
         else:
-            amount_to_read = min(amount_left, amount)
+            amount_to_read = min(
+                amount_left,
+                amount,
+            )
         data = self._fileobj.read(amount_to_read)
         self._amount_read += len(data)
         if self._callbacks is not None and self._callbacks_enabled:
-            invoke_progress_callbacks(self._callbacks, len(data))
+            invoke_progress_callbacks(
+                self._callbacks,
+                len(data),
+            )
         return data
 
-    def signal_transferring(self):
+    def signal_transferring(
+        self,
+    ):
         self.enable_callback()
-        if hasattr(self._fileobj, 'signal_transferring'):
+        if hasattr(
+            self._fileobj,
+            "signal_transferring",
+        ):
             self._fileobj.signal_transferring()
 
-    def signal_not_transferring(self):
+    def signal_not_transferring(
+        self,
+    ):
         self.disable_callback()
-        if hasattr(self._fileobj, 'signal_not_transferring'):
+        if hasattr(
+            self._fileobj,
+            "signal_not_transferring",
+        ):
             self._fileobj.signal_not_transferring()
 
-    def enable_callback(self):
+    def enable_callback(
+        self,
+    ):
         self._callbacks_enabled = True
 
-    def disable_callback(self):
+    def disable_callback(
+        self,
+    ):
         self._callbacks_enabled = False
 
-    def seek(self, where, whence=0):
-        if whence not in (0, 1, 2):
+    def seek(
+        self,
+        where,
+        whence=0,
+    ):
+        if whence not in (
+            0,
+            1,
+            2,
+        ):
             # Mimic io's error for invalid whence values
             raise ValueError(f"invalid whence ({whence}, should be 0, 1 or 2)")
 
@@ -543,27 +761,51 @@ class ReadFileChunk:
         elif whence == 2:
             where += self._size
 
-        self._fileobj.seek(max(where, self._start_byte))
+        self._fileobj.seek(
+            max(
+                where,
+                self._start_byte,
+            )
+        )
         if self._callbacks is not None and self._callbacks_enabled:
             # To also rewind the callback() for an accurate progress report
-            bounded_where = max(min(where - self._start_byte, self._size), 0)
-            bounded_amount_read = min(self._amount_read, self._size)
+            bounded_where = max(
+                min(
+                    where - self._start_byte,
+                    self._size,
+                ),
+                0,
+            )
+            bounded_amount_read = min(
+                self._amount_read,
+                self._size,
+            )
             amount = bounded_where - bounded_amount_read
             invoke_progress_callbacks(
-                self._callbacks, bytes_transferred=amount
+                self._callbacks,
+                bytes_transferred=amount,
             )
-        self._amount_read = max(where - self._start_byte, 0)
+        self._amount_read = max(
+            where - self._start_byte,
+            0,
+        )
 
-    def close(self):
+    def close(
+        self,
+    ):
         if self._close_callbacks is not None and self._callbacks_enabled:
             for callback in self._close_callbacks:
                 callback()
         self._fileobj.close()
 
-    def tell(self):
+    def tell(
+        self,
+    ):
         return self._amount_read
 
-    def __len__(self):
+    def __len__(
+        self,
+    ):
         # __len__ is defined because requests will try to determine the length
         # of the stream to set a content length.  In the normal case
         # of the file it will just stat the file, but we need to change that
@@ -571,13 +813,21 @@ class ReadFileChunk:
         # of stat'ing the file.
         return self._size
 
-    def __enter__(self):
+    def __enter__(
+        self,
+    ):
         return self
 
-    def __exit__(self, *args, **kwargs):
+    def __exit__(
+        self,
+        *args,
+        **kwargs,
+    ):
         self.close()
 
-    def __iter__(self):
+    def __iter__(
+        self,
+    ):
         # This is a workaround for http://bugs.python.org/issue17575
         # Basically httplib will try to iterate over the contents, even
         # if its a file like object.  This wasn't noticed because we've
@@ -589,15 +839,29 @@ class ReadFileChunk:
 class StreamReaderProgress:
     """Wrapper for a read only stream that adds progress callbacks."""
 
-    def __init__(self, stream, callbacks=None):
+    def __init__(
+        self,
+        stream,
+        callbacks=None,
+    ):
         self._stream = stream
         self._callbacks = callbacks
         if callbacks is None:
             self._callbacks = []
 
-    def read(self, *args, **kwargs):
-        value = self._stream.read(*args, **kwargs)
-        invoke_progress_callbacks(self._callbacks, len(value))
+    def read(
+        self,
+        *args,
+        **kwargs,
+    ):
+        value = self._stream.read(
+            *args,
+            **kwargs,
+        )
+        invoke_progress_callbacks(
+            self._callbacks,
+            len(value),
+        )
         return value
 
 
@@ -606,14 +870,21 @@ class NoResourcesAvailable(Exception):
 
 
 class TaskSemaphore:
-    def __init__(self, count):
+    def __init__(
+        self,
+        count,
+    ):
         """A semaphore for the purpose of limiting the number of tasks
 
         :param count: The size of semaphore
         """
         self._semaphore = threading.Semaphore(count)
 
-    def acquire(self, tag, blocking=True):
+    def acquire(
+        self,
+        tag,
+        blocking=True,
+    ):
         """Acquire the semaphore
 
         :param tag: A tag identifying what is acquiring the semaphore. Note
@@ -625,11 +896,18 @@ class TaskSemaphore:
 
         :returns: A token (can be None) to use when releasing the semaphore
         """
-        logger.debug("Acquiring %s", tag)
+        logger.debug(
+            "Acquiring %s",
+            tag,
+        )
         if not self._semaphore.acquire(blocking):
             raise NoResourcesAvailable("Cannot acquire tag '%s'" % tag)
 
-    def release(self, tag, acquire_token):
+    def release(
+        self,
+        tag,
+        acquire_token,
+    ):
         """Release the semaphore
 
         :param tag: A tag identifying what is releasing the semaphore
@@ -665,7 +943,10 @@ class SlidingWindowSemaphore(TaskSemaphore):
 
     """
 
-    def __init__(self, count):
+    def __init__(
+        self,
+        count,
+    ):
         self._count = count
         # Dict[tag, next_sequence_number].
         self._tag_sequences = defaultdict(int)
@@ -675,12 +956,21 @@ class SlidingWindowSemaphore(TaskSemaphore):
         # Dict[tag, List[sequence_number]]
         self._pending_release = {}
 
-    def current_count(self):
+    def current_count(
+        self,
+    ):
         with self._lock:
             return self._count
 
-    def acquire(self, tag, blocking=True):
-        logger.debug("Acquiring %s", tag)
+    def acquire(
+        self,
+        tag,
+        blocking=True,
+    ):
+        logger.debug(
+            "Acquiring %s",
+            tag,
+        )
         self._condition.acquire()
         try:
             if self._count == 0:
@@ -701,9 +991,17 @@ class SlidingWindowSemaphore(TaskSemaphore):
         finally:
             self._condition.release()
 
-    def release(self, tag, acquire_token):
+    def release(
+        self,
+        tag,
+        acquire_token,
+    ):
         sequence_number = acquire_token
-        logger.debug("Releasing acquire %s/%s", tag, sequence_number)
+        logger.debug(
+            "Releasing acquire %s/%s",
+            tag,
+            sequence_number,
+        )
         self._condition.acquire()
         try:
             if tag not in self._tag_sequences:
@@ -715,7 +1013,10 @@ class SlidingWindowSemaphore(TaskSemaphore):
                 self._lowest_sequence[tag] += 1
                 self._count += 1
                 self._condition.notify()
-                queued = self._pending_release.get(tag, [])
+                queued = self._pending_release.get(
+                    tag,
+                    [],
+                )
                 while queued:
                     if self._lowest_sequence[tag] == queued[-1]:
                         queued.pop()
@@ -727,14 +1028,19 @@ class SlidingWindowSemaphore(TaskSemaphore):
                 # We can't do anything right now because we're still waiting
                 # for the min sequence for the tag to be released.  We have
                 # to queue this for pending release.
-                self._pending_release.setdefault(tag, []).append(
-                    sequence_number
-                )
+                self._pending_release.setdefault(
+                    tag,
+                    [],
+                ).append(sequence_number)
                 self._pending_release[tag].sort(reverse=True)
             else:
                 raise ValueError(
                     "Attempted to release unknown sequence number "
-                    "%s for tag: %s" % (sequence_number, tag)
+                    "%s for tag: %s"
+                    % (
+                        sequence_number,
+                        tag,
+                    )
                 )
         finally:
             self._condition.release()
@@ -751,7 +1057,11 @@ class ChunksizeAdjuster:
         self.min_size = min_size
         self.max_parts = max_parts
 
-    def adjust_chunksize(self, current_chunksize, file_size=None):
+    def adjust_chunksize(
+        self,
+        current_chunksize,
+        file_size=None,
+    ):
         """Get a chunksize close to current that fits within all S3 limits.
 
         :type current_chunksize: int
@@ -765,26 +1075,44 @@ class ChunksizeAdjuster:
         """
         chunksize = current_chunksize
         if file_size is not None:
-            chunksize = self._adjust_for_max_parts(chunksize, file_size)
+            chunksize = self._adjust_for_max_parts(
+                chunksize,
+                file_size,
+            )
         return self._adjust_for_chunksize_limits(chunksize)
 
-    def _adjust_for_chunksize_limits(self, current_chunksize):
+    def _adjust_for_chunksize_limits(
+        self,
+        current_chunksize,
+    ):
         if current_chunksize > self.max_size:
             logger.debug(
                 "Chunksize greater than maximum chunksize. "
-                "Setting to %s from %s." % (self.max_size, current_chunksize)
+                "Setting to %s from %s."
+                % (
+                    self.max_size,
+                    current_chunksize,
+                )
             )
             return self.max_size
         elif current_chunksize < self.min_size:
             logger.debug(
                 "Chunksize less than minimum chunksize. "
-                "Setting to %s from %s." % (self.min_size, current_chunksize)
+                "Setting to %s from %s."
+                % (
+                    self.min_size,
+                    current_chunksize,
+                )
             )
             return self.min_size
         else:
             return current_chunksize
 
-    def _adjust_for_max_parts(self, current_chunksize, file_size):
+    def _adjust_for_max_parts(
+        self,
+        current_chunksize,
+        file_size,
+    ):
         chunksize = current_chunksize
         num_parts = int(math.ceil(file_size / float(chunksize)))
 
@@ -796,7 +1124,10 @@ class ChunksizeAdjuster:
             logger.debug(
                 "Chunksize would result in the number of parts exceeding the "
                 "maximum. Setting to %s from %s."
-                % (chunksize, current_chunksize)
+                % (
+                    chunksize,
+                    current_chunksize,
+                )
             )
 
         return chunksize

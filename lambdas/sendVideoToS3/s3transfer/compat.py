@@ -16,10 +16,16 @@ import os
 import socket
 import sys
 
-from botocore.compat import six
+from botocore.compat import (
+    six,
+)
 
-if sys.platform.startswith('win'):
-    def rename_file(current_filename, new_filename):
+if sys.platform.startswith("win"):
+
+    def rename_file(
+        current_filename,
+        new_filename,
+    ):
         try:
             os.remove(new_filename)
         except OSError as e:
@@ -29,12 +35,18 @@ if sys.platform.startswith('win'):
                 # for any other reason we should be propagating
                 # that exception.
                 raise
-        os.rename(current_filename, new_filename)
+        os.rename(
+            current_filename,
+            new_filename,
+        )
+
 else:
     rename_file = os.rename
 
 
-def accepts_kwargs(func):
+def accepts_kwargs(
+    func,
+):
     return inspect.getfullargspec(func)[2]
 
 
@@ -46,7 +58,9 @@ SOCKET_ERROR = ConnectionError
 MAXINT = None
 
 
-def seekable(fileobj):
+def seekable(
+    fileobj,
+):
     """Backwards compat function to determine if a fileobj is seekable
 
     :param fileobj: The file-like object to determine if seekable
@@ -55,13 +69,25 @@ def seekable(fileobj):
     """
     # If the fileobj has a seekable attr, try calling the seekable()
     # method on it.
-    if hasattr(fileobj, 'seekable'):
+    if hasattr(
+        fileobj,
+        "seekable",
+    ):
         return fileobj.seekable()
     # If there is no seekable attr, check if the object can be seeked
     # or telled. If it can, try to seek to the current position.
-    elif hasattr(fileobj, 'seek') and hasattr(fileobj, 'tell'):
+    elif hasattr(
+        fileobj,
+        "seek",
+    ) and hasattr(
+        fileobj,
+        "tell",
+    ):
         try:
-            fileobj.seek(0, 1)
+            fileobj.seek(
+                0,
+                1,
+            )
             return True
         except OSError:
             # If an io related error was thrown then it is not seekable.
@@ -70,25 +96,45 @@ def seekable(fileobj):
     return False
 
 
-def readable(fileobj):
+def readable(
+    fileobj,
+):
     """Determines whether or not a file-like object is readable.
 
     :param fileobj: The file-like object to determine if readable
 
     :returns: True, if readable. False otherwise.
     """
-    if hasattr(fileobj, 'readable'):
+    if hasattr(
+        fileobj,
+        "readable",
+    ):
         return fileobj.readable()
 
-    return hasattr(fileobj, 'read')
+    return hasattr(
+        fileobj,
+        "read",
+    )
 
 
-def fallocate(fileobj, size):
-    if hasattr(os, 'posix_fallocate'):
-        os.posix_fallocate(fileobj.fileno(), 0, size)
+def fallocate(
+    fileobj,
+    size,
+):
+    if hasattr(
+        os,
+        "posix_fallocate",
+    ):
+        os.posix_fallocate(
+            fileobj.fileno(),
+            0,
+            size,
+        )
     else:
         fileobj.truncate(size)
 
 
 # Import at end of file to avoid circular dependencies
-from multiprocessing.managers import BaseManager  # noqa: F401,E402
+from multiprocessing.managers import (
+    BaseManager,
+)  # noqa: F401,E402

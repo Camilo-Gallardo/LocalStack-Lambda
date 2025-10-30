@@ -14,15 +14,24 @@
 import copy
 import os
 
-import botocore.session
-from botocore.client import Config
-from botocore.exceptions import DataNotFoundError, UnknownServiceError
-
 import boto3
 import boto3.utils
-from boto3.exceptions import ResourceNotExistsError, UnknownAPIVersionError
+import botocore.session
+from boto3.exceptions import (
+    ResourceNotExistsError,
+    UnknownAPIVersionError,
+)
+from botocore.client import (
+    Config,
+)
+from botocore.exceptions import (
+    DataNotFoundError,
+    UnknownServiceError,
+)
 
-from .resources.factory import ResourceFactory
+from .resources.factory import (
+    ResourceFactory,
+)
 
 
 class Session:
@@ -55,85 +64,154 @@ class Session:
         botocore_session=None,
         profile_name=None,
     ):
-        if botocore_session is not None:
+        if (
+            botocore_session
+            is not None
+        ):
             self._session = botocore_session
         else:
             # Create a new default session
-            self._session = botocore.session.get_session()
+            self._session = (
+                botocore.session.get_session()
+            )
 
         # Setup custom user-agent string if it isn't already customized
-        if self._session.user_agent_name == 'Botocore':
-            botocore_info = 'Botocore/{}'.format(
+        if (
+            self._session.user_agent_name
+            == "Botocore"
+        ):
+            botocore_info = "Botocore/{}".format(
                 self._session.user_agent_version
             )
-            if self._session.user_agent_extra:
-                self._session.user_agent_extra += ' ' + botocore_info
+            if (
+                self._session.user_agent_extra
+            ):
+                self._session.user_agent_extra += (
+                    " "
+                    + botocore_info
+                )
             else:
                 self._session.user_agent_extra = botocore_info
-            self._session.user_agent_name = 'Boto3'
-            self._session.user_agent_version = boto3.__version__
-
-        if profile_name is not None:
-            self._session.set_config_variable('profile', profile_name)
-
-        if aws_access_key_id or aws_secret_access_key or aws_session_token:
-            self._session.set_credentials(
-                aws_access_key_id, aws_secret_access_key, aws_session_token
+            self._session.user_agent_name = "Boto3"
+            self._session.user_agent_version = (
+                boto3.__version__
             )
 
-        if region_name is not None:
-            self._session.set_config_variable('region', region_name)
+        if (
+            profile_name
+            is not None
+        ):
+            self._session.set_config_variable(
+                "profile",
+                profile_name,
+            )
+
+        if (
+            aws_access_key_id
+            or aws_secret_access_key
+            or aws_session_token
+        ):
+            self._session.set_credentials(
+                aws_access_key_id,
+                aws_secret_access_key,
+                aws_session_token,
+            )
+
+        if (
+            region_name
+            is not None
+        ):
+            self._session.set_config_variable(
+                "region",
+                region_name,
+            )
 
         self.resource_factory = ResourceFactory(
-            self._session.get_component('event_emitter')
+            self._session.get_component(
+                "event_emitter"
+            )
         )
         self._setup_loader()
         self._register_default_handlers()
 
-    def __repr__(self):
-        return '{}(region_name={})'.format(
+    def __repr__(
+        self,
+    ):
+        return "{}(region_name={})".format(
             self.__class__.__name__,
-            repr(self._session.get_config_variable('region')),
+            repr(
+                self._session.get_config_variable(
+                    "region"
+                )
+            ),
         )
 
     @property
-    def profile_name(self):
+    def profile_name(
+        self,
+    ):
         """
         The **read-only** profile name.
         """
-        return self._session.profile or 'default'
+        return (
+            self._session.profile
+            or "default"
+        )
 
     @property
-    def region_name(self):
+    def region_name(
+        self,
+    ):
         """
         The **read-only** region name.
         """
-        return self._session.get_config_variable('region')
+        return self._session.get_config_variable(
+            "region"
+        )
 
     @property
-    def events(self):
+    def events(
+        self,
+    ):
         """
         The event emitter for a session
         """
-        return self._session.get_component('event_emitter')
+        return self._session.get_component(
+            "event_emitter"
+        )
 
     @property
-    def available_profiles(self):
+    def available_profiles(
+        self,
+    ):
         """
         The profiles available to the session credentials
         """
-        return self._session.available_profiles
+        return (
+            self._session.available_profiles
+        )
 
-    def _setup_loader(self):
+    def _setup_loader(
+        self,
+    ):
         """
         Setup loader paths so that we can load resources.
         """
-        self._loader = self._session.get_component('data_loader')
+        self._loader = self._session.get_component(
+            "data_loader"
+        )
         self._loader.search_paths.append(
-            os.path.join(os.path.dirname(__file__), 'data')
+            os.path.join(
+                os.path.dirname(
+                    __file__
+                ),
+                "data",
+            )
         )
 
-    def get_available_services(self):
+    def get_available_services(
+        self,
+    ):
         """
         Get a list of available services that can be loaded as low-level
         clients via :py:meth:`Session.client`.
@@ -141,9 +219,13 @@ class Session:
         :rtype: list
         :return: List of service names
         """
-        return self._session.get_available_services()
+        return (
+            self._session.get_available_services()
+        )
 
-    def get_available_resources(self):
+    def get_available_resources(
+        self,
+    ):
         """
         Get a list of available services that can be loaded as resource
         clients via :py:meth:`Session.resource`.
@@ -151,18 +233,27 @@ class Session:
         :rtype: list
         :return: List of service names
         """
-        return self._loader.list_available_services(type_name='resources-1')
+        return self._loader.list_available_services(
+            type_name="resources-1"
+        )
 
-    def get_available_partitions(self):
+    def get_available_partitions(
+        self,
+    ):
         """Lists the available partitions
 
         :rtype: list
         :return: Returns a list of partition names (e.g., ["aws", "aws-cn"])
         """
-        return self._session.get_available_partitions()
+        return (
+            self._session.get_available_partitions()
+        )
 
     def get_available_regions(
-        self, service_name, partition_name='aws', allow_non_regional=False
+        self,
+        service_name,
+        partition_name="aws",
+        allow_non_regional=False,
     ):
         """Lists the region and endpoint names of a particular partition.
 
@@ -192,7 +283,9 @@ class Session:
             allow_non_regional=allow_non_regional,
         )
 
-    def get_credentials(self):
+    def get_credentials(
+        self,
+    ):
         """
         Return the :class:`botocore.credentials.Credentials` object
         associated with this session.  If the credentials have not
@@ -200,9 +293,14 @@ class Session:
         have already been loaded, this will return the cached
         credentials.
         """
-        return self._session.get_credentials()
+        return (
+            self._session.get_credentials()
+        )
 
-    def get_partition_for_region(self, region_name):
+    def get_partition_for_region(
+        self,
+        region_name,
+    ):
         """Lists the partition name of a particular region.
 
         :type region_name: string
@@ -212,7 +310,9 @@ class Session:
         :rtype: string
         :return: Returns the respective partition name (e.g., aws).
         """
-        return self._session.get_partition_for_region(region_name)
+        return self._session.get_partition_for_region(
+            region_name
+        )
 
     def client(
         self,
@@ -394,26 +494,41 @@ class Session:
         """
         try:
             resource_model = self._loader.load_service_model(
-                service_name, 'resources-1', api_version
+                service_name,
+                "resources-1",
+                api_version,
             )
         except UnknownServiceError:
-            available = self.get_available_resources()
+            available = (
+                self.get_available_resources()
+            )
             has_low_level_client = (
-                service_name in self.get_available_services()
+                service_name
+                in self.get_available_services()
             )
             raise ResourceNotExistsError(
-                service_name, available, has_low_level_client
+                service_name,
+                available,
+                has_low_level_client,
             )
         except DataNotFoundError:
             # This is because we've provided an invalid API version.
             available_api_versions = self._loader.list_api_versions(
-                service_name, 'resources-1'
+                service_name,
+                "resources-1",
             )
             raise UnknownAPIVersionError(
-                service_name, api_version, ', '.join(available_api_versions)
+                service_name,
+                api_version,
+                ", ".join(
+                    available_api_versions
+                ),
             )
 
-        if api_version is None:
+        if (
+            api_version
+            is None
+        ):
             # Even though botocore's load_service_model() can handle
             # using the latest api_version if not provided, we need
             # to track this api_version in boto3 in order to ensure
@@ -430,19 +545,30 @@ class Session:
             # and loader.determine_latest_version(..., 'resources-1')
             # both load the same api version of the file.
             api_version = self._loader.determine_latest_version(
-                service_name, 'resources-1'
+                service_name,
+                "resources-1",
             )
 
         # Creating a new resource instance requires the low-level client
         # and service model, the resource version and resource JSON data.
         # We pass these to the factory and get back a class, which is
         # instantiated on top of the low-level client.
-        if config is not None:
-            if config.user_agent_extra is None:
-                config = copy.deepcopy(config)
-                config.user_agent_extra = 'Resource'
+        if (
+            config
+            is not None
+        ):
+            if (
+                config.user_agent_extra
+                is None
+            ):
+                config = copy.deepcopy(
+                    config
+                )
+                config.user_agent_extra = "Resource"
         else:
-            config = Config(user_agent_extra='Resource')
+            config = Config(
+                user_agent_extra="Resource"
+            )
         client = self.client(
             service_name,
             region_name=region_name,
@@ -455,78 +581,96 @@ class Session:
             aws_session_token=aws_session_token,
             config=config,
         )
-        service_model = client.meta.service_model
+        service_model = (
+            client.meta.service_model
+        )
 
         # Create a ServiceContext object to serve as a reference to
         # important read-only information about the general service.
         service_context = boto3.utils.ServiceContext(
             service_name=service_name,
             service_model=service_model,
-            resource_json_definitions=resource_model['resources'],
+            resource_json_definitions=resource_model[
+                "resources"
+            ],
             service_waiter_model=boto3.utils.LazyLoadedWaiterModel(
-                self._session, service_name, api_version
+                self._session,
+                service_name,
+                api_version,
             ),
         )
 
         # Create the service resource class.
         cls = self.resource_factory.load_from_definition(
             resource_name=service_name,
-            single_resource_json_definition=resource_model['service'],
+            single_resource_json_definition=resource_model[
+                "service"
+            ],
             service_context=service_context,
         )
 
-        return cls(client=client)
+        return cls(
+            client=client
+        )
 
-    def _register_default_handlers(self):
+    def _register_default_handlers(
+        self,
+    ):
 
         # S3 customizations
         self._session.register(
-            'creating-client-class.s3',
+            "creating-client-class.s3",
             boto3.utils.lazy_call(
-                'boto3.s3.inject.inject_s3_transfer_methods'
+                "boto3.s3.inject.inject_s3_transfer_methods"
             ),
         )
         self._session.register(
-            'creating-resource-class.s3.Bucket',
-            boto3.utils.lazy_call('boto3.s3.inject.inject_bucket_methods'),
-        )
-        self._session.register(
-            'creating-resource-class.s3.Object',
-            boto3.utils.lazy_call('boto3.s3.inject.inject_object_methods'),
-        )
-        self._session.register(
-            'creating-resource-class.s3.ObjectSummary',
+            "creating-resource-class.s3.Bucket",
             boto3.utils.lazy_call(
-                'boto3.s3.inject.inject_object_summary_methods'
+                "boto3.s3.inject.inject_bucket_methods"
+            ),
+        )
+        self._session.register(
+            "creating-resource-class.s3.Object",
+            boto3.utils.lazy_call(
+                "boto3.s3.inject.inject_object_methods"
+            ),
+        )
+        self._session.register(
+            "creating-resource-class.s3.ObjectSummary",
+            boto3.utils.lazy_call(
+                "boto3.s3.inject.inject_object_summary_methods"
             ),
         )
 
         # DynamoDb customizations
         self._session.register(
-            'creating-resource-class.dynamodb',
+            "creating-resource-class.dynamodb",
             boto3.utils.lazy_call(
-                'boto3.dynamodb.transform.register_high_level_interface'
+                "boto3.dynamodb.transform.register_high_level_interface"
             ),
-            unique_id='high-level-dynamodb',
+            unique_id="high-level-dynamodb",
         )
         self._session.register(
-            'creating-resource-class.dynamodb.Table',
+            "creating-resource-class.dynamodb.Table",
             boto3.utils.lazy_call(
-                'boto3.dynamodb.table.register_table_methods'
+                "boto3.dynamodb.table.register_table_methods"
             ),
-            unique_id='high-level-dynamodb-table',
+            unique_id="high-level-dynamodb-table",
         )
 
         # EC2 Customizations
         self._session.register(
-            'creating-resource-class.ec2.ServiceResource',
-            boto3.utils.lazy_call('boto3.ec2.createtags.inject_create_tags'),
+            "creating-resource-class.ec2.ServiceResource",
+            boto3.utils.lazy_call(
+                "boto3.ec2.createtags.inject_create_tags"
+            ),
         )
 
         self._session.register(
-            'creating-resource-class.ec2.Instance',
+            "creating-resource-class.ec2.Instance",
             boto3.utils.lazy_call(
-                'boto3.ec2.deletetags.inject_delete_tags',
+                "boto3.ec2.deletetags.inject_delete_tags",
                 event_emitter=self.events,
             ),
         )

@@ -12,8 +12,13 @@
 # language governing permissions and limitations under the License.
 import copy
 
-from botocore.compat import OrderedDict
-from botocore.endpoint import DEFAULT_TIMEOUT, MAX_POOL_CONNECTIONS
+from botocore.compat import (
+    OrderedDict,
+)
+from botocore.endpoint import (
+    DEFAULT_TIMEOUT,
+    MAX_POOL_CONNECTIONS,
+)
 from botocore.exceptions import (
     InvalidMaxRetryAttemptsError,
     InvalidRetryConfigurationError,
@@ -233,127 +238,321 @@ class Config:
 
     OPTION_DEFAULTS = OrderedDict(
         [
-            ('region_name', None),
-            ('signature_version', None),
-            ('user_agent', None),
-            ('user_agent_extra', None),
-            ('user_agent_appid', None),
-            ('connect_timeout', DEFAULT_TIMEOUT),
-            ('read_timeout', DEFAULT_TIMEOUT),
-            ('parameter_validation', True),
-            ('max_pool_connections', MAX_POOL_CONNECTIONS),
-            ('proxies', None),
-            ('proxies_config', None),
-            ('s3', None),
-            ('retries', None),
-            ('client_cert', None),
-            ('inject_host_prefix', True),
-            ('endpoint_discovery_enabled', None),
-            ('use_dualstack_endpoint', None),
-            ('use_fips_endpoint', None),
-            ('ignore_configured_endpoint_urls', None),
-            ('defaults_mode', None),
-            ('tcp_keepalive', None),
-            ('request_min_compression_size_bytes', None),
-            ('disable_request_compression', None),
-            ('client_context_params', None),
+            (
+                "region_name",
+                None,
+            ),
+            (
+                "signature_version",
+                None,
+            ),
+            (
+                "user_agent",
+                None,
+            ),
+            (
+                "user_agent_extra",
+                None,
+            ),
+            (
+                "user_agent_appid",
+                None,
+            ),
+            (
+                "connect_timeout",
+                DEFAULT_TIMEOUT,
+            ),
+            (
+                "read_timeout",
+                DEFAULT_TIMEOUT,
+            ),
+            (
+                "parameter_validation",
+                True,
+            ),
+            (
+                "max_pool_connections",
+                MAX_POOL_CONNECTIONS,
+            ),
+            (
+                "proxies",
+                None,
+            ),
+            (
+                "proxies_config",
+                None,
+            ),
+            (
+                "s3",
+                None,
+            ),
+            (
+                "retries",
+                None,
+            ),
+            (
+                "client_cert",
+                None,
+            ),
+            (
+                "inject_host_prefix",
+                True,
+            ),
+            (
+                "endpoint_discovery_enabled",
+                None,
+            ),
+            (
+                "use_dualstack_endpoint",
+                None,
+            ),
+            (
+                "use_fips_endpoint",
+                None,
+            ),
+            (
+                "ignore_configured_endpoint_urls",
+                None,
+            ),
+            (
+                "defaults_mode",
+                None,
+            ),
+            (
+                "tcp_keepalive",
+                None,
+            ),
+            (
+                "request_min_compression_size_bytes",
+                None,
+            ),
+            (
+                "disable_request_compression",
+                None,
+            ),
+            (
+                "client_context_params",
+                None,
+            ),
         ]
     )
 
     NON_LEGACY_OPTION_DEFAULTS = {
-        'connect_timeout': None,
+        "connect_timeout": None,
     }
 
-    def __init__(self, *args, **kwargs):
+    def __init__(
+        self,
+        *args,
+        **kwargs,
+    ):
         self._user_provided_options = self._record_user_provided_options(
-            args, kwargs
+            args,
+            kwargs,
         )
 
         # Merge the user_provided options onto the default options
-        config_vars = copy.copy(self.OPTION_DEFAULTS)
-        defaults_mode = self._user_provided_options.get(
-            'defaults_mode', 'legacy'
+        config_vars = copy.copy(
+            self.OPTION_DEFAULTS
         )
-        if defaults_mode != 'legacy':
-            config_vars.update(self.NON_LEGACY_OPTION_DEFAULTS)
-        config_vars.update(self._user_provided_options)
+        defaults_mode = self._user_provided_options.get(
+            "defaults_mode",
+            "legacy",
+        )
+        if (
+            defaults_mode
+            != "legacy"
+        ):
+            config_vars.update(
+                self.NON_LEGACY_OPTION_DEFAULTS
+            )
+        config_vars.update(
+            self._user_provided_options
+        )
 
         # Set the attributes based on the config_vars
-        for key, value in config_vars.items():
-            setattr(self, key, value)
+        for (
+            key,
+            value,
+        ) in (
+            config_vars.items()
+        ):
+            setattr(
+                self,
+                key,
+                value,
+            )
 
         # Validate the s3 options
-        self._validate_s3_configuration(self.s3)
+        self._validate_s3_configuration(
+            self.s3
+        )
 
-        self._validate_retry_configuration(self.retries)
+        self._validate_retry_configuration(
+            self.retries
+        )
 
-    def _record_user_provided_options(self, args, kwargs):
-        option_order = list(self.OPTION_DEFAULTS)
-        user_provided_options = {}
+    def _record_user_provided_options(
+        self,
+        args,
+        kwargs,
+    ):
+        option_order = list(
+            self.OPTION_DEFAULTS
+        )
+        user_provided_options = (
+            {}
+        )
 
         # Iterate through the kwargs passed through to the constructor and
         # map valid keys to the dictionary
-        for key, value in kwargs.items():
-            if key in self.OPTION_DEFAULTS:
-                user_provided_options[key] = value
+        for (
+            key,
+            value,
+        ) in (
+            kwargs.items()
+        ):
+            if (
+                key
+                in self.OPTION_DEFAULTS
+            ):
+                user_provided_options[
+                    key
+                ] = value
             # The key must exist in the available options
             else:
-                raise TypeError(f"Got unexpected keyword argument '{key}'")
+                raise TypeError(
+                    f"Got unexpected keyword argument '{key}'"
+                )
 
         # The number of args should not be longer than the allowed
         # options
-        if len(args) > len(option_order):
+        if len(
+            args
+        ) > len(
+            option_order
+        ):
             raise TypeError(
                 f"Takes at most {len(option_order)} arguments ({len(args)} given)"
             )
 
         # Iterate through the args passed through to the constructor and map
         # them to appropriate keys.
-        for i, arg in enumerate(args):
+        for (
+            i,
+            arg,
+        ) in enumerate(
+            args
+        ):
             # If a kwarg was specified for the arg, then error out
-            if option_order[i] in user_provided_options:
+            if (
+                option_order[
+                    i
+                ]
+                in user_provided_options
+            ):
                 raise TypeError(
                     f"Got multiple values for keyword argument '{option_order[i]}'"
                 )
-            user_provided_options[option_order[i]] = arg
+            user_provided_options[
+                option_order[
+                    i
+                ]
+            ] = arg
 
         return user_provided_options
 
-    def _validate_s3_configuration(self, s3):
-        if s3 is not None:
-            addressing_style = s3.get('addressing_style')
-            if addressing_style not in ['virtual', 'auto', 'path', None]:
+    def _validate_s3_configuration(
+        self,
+        s3,
+    ):
+        if (
+            s3
+            is not None
+        ):
+            addressing_style = s3.get(
+                "addressing_style"
+            )
+            if (
+                addressing_style
+                not in [
+                    "virtual",
+                    "auto",
+                    "path",
+                    None,
+                ]
+            ):
                 raise InvalidS3AddressingStyleError(
                     s3_addressing_style=addressing_style
                 )
 
-    def _validate_retry_configuration(self, retries):
-        valid_options = ('max_attempts', 'mode', 'total_max_attempts')
-        valid_modes = ('legacy', 'standard', 'adaptive')
-        if retries is not None:
-            for key, value in retries.items():
-                if key not in valid_options:
+    def _validate_retry_configuration(
+        self,
+        retries,
+    ):
+        valid_options = (
+            "max_attempts",
+            "mode",
+            "total_max_attempts",
+        )
+        valid_modes = (
+            "legacy",
+            "standard",
+            "adaptive",
+        )
+        if (
+            retries
+            is not None
+        ):
+            for (
+                key,
+                value,
+            ) in (
+                retries.items()
+            ):
+                if (
+                    key
+                    not in valid_options
+                ):
                     raise InvalidRetryConfigurationError(
                         retry_config_option=key,
                         valid_options=valid_options,
                     )
-                if key == 'max_attempts' and value < 0:
+                if (
+                    key
+                    == "max_attempts"
+                    and value
+                    < 0
+                ):
                     raise InvalidMaxRetryAttemptsError(
                         provided_max_attempts=value,
                         min_value=0,
                     )
-                if key == 'total_max_attempts' and value < 1:
+                if (
+                    key
+                    == "total_max_attempts"
+                    and value
+                    < 1
+                ):
                     raise InvalidMaxRetryAttemptsError(
                         provided_max_attempts=value,
                         min_value=1,
                     )
-                if key == 'mode' and value not in valid_modes:
+                if (
+                    key
+                    == "mode"
+                    and value
+                    not in valid_modes
+                ):
                     raise InvalidRetryModeError(
                         provided_retry_mode=value,
                         valid_modes=valid_modes,
                     )
 
-    def merge(self, other_config):
+    def merge(
+        self,
+        other_config,
+    ):
         """Merges the config object with another config object
 
         This will merge in all non-default values from the provided config
@@ -367,10 +566,16 @@ class Config:
             config objects.
         """
         # Make a copy of the current attributes in the config object.
-        config_options = copy.copy(self._user_provided_options)
+        config_options = copy.copy(
+            self._user_provided_options
+        )
 
         # Merge in the user provided options from the other config
-        config_options.update(other_config._user_provided_options)
+        config_options.update(
+            other_config._user_provided_options
+        )
 
         # Return a new config object with the merged properties.
-        return Config(**config_options)
+        return Config(
+            **config_options
+        )

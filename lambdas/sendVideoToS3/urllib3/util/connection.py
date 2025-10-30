@@ -1,18 +1,38 @@
-from __future__ import annotations
+from __future__ import (
+    annotations,
+)
 
 import socket
 import typing
 
-from ..exceptions import LocationParseError
-from .timeout import _DEFAULT_TIMEOUT, _TYPE_TIMEOUT
+from ..exceptions import (
+    LocationParseError,
+)
+from .timeout import (
+    _DEFAULT_TIMEOUT,
+    _TYPE_TIMEOUT,
+)
 
-_TYPE_SOCKET_OPTIONS = typing.Sequence[typing.Tuple[int, int, typing.Union[int, bytes]]]
+_TYPE_SOCKET_OPTIONS = typing.Sequence[
+    typing.Tuple[
+        int,
+        int,
+        typing.Union[
+            int,
+            bytes,
+        ],
+    ]
+]
 
 if typing.TYPE_CHECKING:
-    from .._base_connection import BaseHTTPConnection
+    from .._base_connection import (
+        BaseHTTPConnection,
+    )
 
 
-def is_connection_dropped(conn: BaseHTTPConnection) -> bool:  # Platform-specific
+def is_connection_dropped(
+    conn: BaseHTTPConnection,
+) -> bool:  # Platform-specific
     """
     Returns True if the connection is dropped and should be closed.
     :param conn: :class:`urllib3.connection.HTTPConnection` object.
@@ -25,9 +45,18 @@ def is_connection_dropped(conn: BaseHTTPConnection) -> bool:  # Platform-specifi
 # One additional modification is that we avoid binding to IPv6 servers
 # discovered in DNS if the system doesn't have IPv6 functionality.
 def create_connection(
-    address: tuple[str, int],
+    address: tuple[
+        str,
+        int,
+    ],
     timeout: _TYPE_TIMEOUT = _DEFAULT_TIMEOUT,
-    source_address: tuple[str, int] | None = None,
+    source_address: (
+        tuple[
+            str,
+            int,
+        ]
+        | None
+    ) = None,
     socket_options: _TYPE_SOCKET_OPTIONS | None = None,
 ) -> socket.socket:
     """Connect to *address* and return the socket object.
@@ -42,7 +71,10 @@ def create_connection(
     An host of '' or port 0 tells the OS to use the default.
     """
 
-    host, port = address
+    (
+        host,
+        port,
+    ) = address
     if host.startswith("["):
         host = host.strip("[]")
     err = None
@@ -57,14 +89,32 @@ def create_connection(
     except UnicodeError:
         raise LocationParseError(f"'{host}', label empty or too long") from None
 
-    for res in socket.getaddrinfo(host, port, family, socket.SOCK_STREAM):
-        af, socktype, proto, canonname, sa = res
+    for res in socket.getaddrinfo(
+        host,
+        port,
+        family,
+        socket.SOCK_STREAM,
+    ):
+        (
+            af,
+            socktype,
+            proto,
+            canonname,
+            sa,
+        ) = res
         sock = None
         try:
-            sock = socket.socket(af, socktype, proto)
+            sock = socket.socket(
+                af,
+                socktype,
+                proto,
+            )
 
             # If provided, set socket level options before connecting.
-            _set_socket_options(sock, socket_options)
+            _set_socket_options(
+                sock,
+                socket_options,
+            )
 
             if timeout is not _DEFAULT_TIMEOUT:
                 sock.settimeout(timeout)
@@ -91,7 +141,8 @@ def create_connection(
 
 
 def _set_socket_options(
-    sock: socket.socket, options: _TYPE_SOCKET_OPTIONS | None
+    sock: socket.socket,
+    options: _TYPE_SOCKET_OPTIONS | None,
 ) -> None:
     if options is None:
         return
@@ -111,7 +162,9 @@ def allowed_gai_family() -> socket.AddressFamily:
     return family
 
 
-def _has_ipv6(host: str) -> bool:
+def _has_ipv6(
+    host: str,
+) -> bool:
     """Returns True if the system can bind an IPv6 address."""
     sock = None
     has_ipv6 = False
@@ -124,7 +177,12 @@ def _has_ipv6(host: str) -> bool:
         # https://bugs.python.org/issue658327
         try:
             sock = socket.socket(socket.AF_INET6)
-            sock.bind((host, 0))
+            sock.bind(
+                (
+                    host,
+                    0,
+                )
+            )
             has_ipv6 = True
         except Exception:
             pass

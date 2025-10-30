@@ -13,7 +13,9 @@
 import copy
 import logging
 
-from s3transfer.utils import get_callbacks
+from s3transfer.utils import (
+    get_callbacks,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -81,48 +83,66 @@ class Task:
 
         self._is_final = is_final
 
-    def __repr__(self):
+    def __repr__(
+        self,
+    ):
         # These are the general main_kwarg parameters that we want to
         # display in the repr.
         params_to_display = [
-            'bucket',
-            'key',
-            'part_number',
-            'final_filename',
-            'transfer_future',
-            'offset',
-            'extra_args',
+            "bucket",
+            "key",
+            "part_number",
+            "final_filename",
+            "transfer_future",
+            "offset",
+            "extra_args",
         ]
         main_kwargs_to_display = self._get_kwargs_with_params_to_include(
-            self._main_kwargs, params_to_display
+            self._main_kwargs,
+            params_to_display,
         )
-        return '{}(transfer_id={}, {})'.format(
+        return "{}(transfer_id={}, {})".format(
             self.__class__.__name__,
             self._transfer_coordinator.transfer_id,
             main_kwargs_to_display,
         )
 
     @property
-    def transfer_id(self):
+    def transfer_id(
+        self,
+    ):
         """The id for the transfer request that the task belongs to"""
         return self._transfer_coordinator.transfer_id
 
-    def _get_kwargs_with_params_to_include(self, kwargs, include):
+    def _get_kwargs_with_params_to_include(
+        self,
+        kwargs,
+        include,
+    ):
         filtered_kwargs = {}
         for param in include:
             if param in kwargs:
                 filtered_kwargs[param] = kwargs[param]
         return filtered_kwargs
 
-    def _get_kwargs_with_params_to_exclude(self, kwargs, exclude):
+    def _get_kwargs_with_params_to_exclude(
+        self,
+        kwargs,
+        exclude,
+    ):
         filtered_kwargs = {}
-        for param, value in kwargs.items():
+        for (
+            param,
+            value,
+        ) in kwargs.items():
             if param in exclude:
                 continue
             filtered_kwargs[param] = value
         return filtered_kwargs
 
-    def __call__(self):
+    def __call__(
+        self,
+    ):
         """The callable to use when submitting a Task to an executor"""
         try:
             # Wait for all of futures this task depends on.
@@ -149,12 +169,16 @@ class Task:
                 # are waiting on its completion.
                 self._transfer_coordinator.announce_done()
 
-    def _execute_main(self, kwargs):
+    def _execute_main(
+        self,
+        kwargs,
+    ):
         # Do not display keyword args that should not be printed, especially
         # if they are going to make the logs hard to follow.
-        params_to_exclude = ['data']
+        params_to_exclude = ["data"]
         kwargs_to_display = self._get_kwargs_with_params_to_exclude(
-            kwargs, params_to_exclude
+            kwargs,
+            params_to_exclude,
         )
         # Log what is about to be executed.
         logger.debug(f"Executing task {self} with kwargs {kwargs_to_display}")
@@ -166,26 +190,43 @@ class Task:
             self._transfer_coordinator.set_result(return_value)
         return return_value
 
-    def _log_and_set_exception(self, exception):
+    def _log_and_set_exception(
+        self,
+        exception,
+    ):
         # If an exception is ever thrown than set the exception for the
         # entire TransferFuture.
-        logger.debug("Exception raised.", exc_info=True)
+        logger.debug(
+            "Exception raised.",
+            exc_info=True,
+        )
         self._transfer_coordinator.set_exception(exception)
 
-    def _main(self, **kwargs):
+    def _main(
+        self,
+        **kwargs,
+    ):
         """The method that will be ran in the executor
 
         This method must be implemented by subclasses from Task. main() can
         be implemented with any arguments decided upon by the subclass.
         """
-        raise NotImplementedError('_main() must be implemented')
+        raise NotImplementedError("_main() must be implemented")
 
-    def _wait_on_dependent_futures(self):
+    def _wait_on_dependent_futures(
+        self,
+    ):
         # Gather all of the futures into that main() depends on.
         futures_to_wait_on = []
-        for _, future in self._pending_main_kwargs.items():
+        for (
+            _,
+            future,
+        ) in self._pending_main_kwargs.items():
             # If the pending main keyword arg is a list then extend the list.
-            if isinstance(future, list):
+            if isinstance(
+                future,
+                list,
+            ):
                 futures_to_wait_on.extend(future)
             # If the pending main keyword arg is a future append it to the list.
             else:
@@ -193,7 +234,10 @@ class Task:
         # Now wait for all of the futures to complete.
         self._wait_until_all_complete(futures_to_wait_on)
 
-    def _wait_until_all_complete(self, futures):
+    def _wait_until_all_complete(
+        self,
+        futures,
+    ):
         # This is a basic implementation of the concurrent.futures.wait()
         #
         # concurrent.futures.wait() is not used instead because of this
@@ -203,28 +247,45 @@ class Task:
         # concurrency bug by removing any association with concurrent.futures
         # implementation of waiters.
         logger.debug(
-            '%s about to wait for the following futures %s', self, futures
+            "%s about to wait for the following futures %s",
+            self,
+            futures,
         )
         for future in futures:
             try:
-                logger.debug('%s about to wait for %s', self, future)
+                logger.debug(
+                    "%s about to wait for %s",
+                    self,
+                    future,
+                )
                 future.result()
             except Exception:
                 # result() can also produce exceptions. We want to ignore
                 # these to be deferred to error handling down the road.
                 pass
-        logger.debug('%s done waiting for dependent futures', self)
+        logger.debug(
+            "%s done waiting for dependent futures",
+            self,
+        )
 
-    def _get_all_main_kwargs(self):
+    def _get_all_main_kwargs(
+        self,
+    ):
         # Copy over all of the kwargs that we know is available.
         kwargs = copy.copy(self._main_kwargs)
 
         # Iterate through the kwargs whose values are pending on the result
         # of a future.
-        for key, pending_value in self._pending_main_kwargs.items():
+        for (
+            key,
+            pending_value,
+        ) in self._pending_main_kwargs.items():
             # If the value is a list of futures, iterate though the list
             # appending on the result from each future.
-            if isinstance(pending_value, list):
+            if isinstance(
+                pending_value,
+                list,
+            ):
                 result = []
                 for future in pending_value:
                     result.append(future.result())
@@ -244,7 +305,11 @@ class SubmissionTask(Task):
     to execute a particular transfer.
     """
 
-    def _main(self, transfer_future, **kwargs):
+    def _main(
+        self,
+        transfer_future,
+        **kwargs,
+    ):
         """
         :type transfer_future: s3transfer.futures.TransferFuture
         :param transfer_future: The transfer future associated with the
@@ -257,7 +322,10 @@ class SubmissionTask(Task):
             self._transfer_coordinator.set_status_to_queued()
 
             # Before submitting any tasks, run all of the on_queued callbacks
-            on_queued_callbacks = get_callbacks(transfer_future, 'queued')
+            on_queued_callbacks = get_callbacks(
+                transfer_future,
+                "queued",
+            )
             for on_queued_callback in on_queued_callbacks:
                 on_queued_callback()
 
@@ -266,7 +334,10 @@ class SubmissionTask(Task):
 
             # Call the submit method to start submitting tasks to execute the
             # transfer.
-            self._submit(transfer_future=transfer_future, **kwargs)
+            self._submit(
+                transfer_future=transfer_future,
+                **kwargs,
+            )
         except BaseException as e:
             # If there was an exception raised during the submission of task
             # there is a chance that the final task that signals if a transfer
@@ -291,7 +362,11 @@ class SubmissionTask(Task):
             # and done callbacks as well.
             self._transfer_coordinator.announce_done()
 
-    def _submit(self, transfer_future, **kwargs):
+    def _submit(
+        self,
+        transfer_future,
+        **kwargs,
+    ):
         """The submission method to be implemented
 
         :type transfer_future: s3transfer.futures.TransferFuture
@@ -301,9 +376,11 @@ class SubmissionTask(Task):
         :param kwargs: Any additional keyword arguments you want to be passed
             in
         """
-        raise NotImplementedError('_submit() must be implemented')
+        raise NotImplementedError("_submit() must be implemented")
 
-    def _wait_for_all_submitted_futures_to_complete(self):
+    def _wait_for_all_submitted_futures_to_complete(
+        self,
+    ):
         # We want to wait for all futures that were submitted to
         # complete as we do not want the cleanup callbacks or done callbacks
         # to be called to early. The main problem is any task that was
@@ -334,7 +411,13 @@ class SubmissionTask(Task):
 class CreateMultipartUploadTask(Task):
     """Task to initiate a multipart upload"""
 
-    def _main(self, client, bucket, key, extra_args):
+    def _main(
+        self,
+        client,
+        bucket,
+        key,
+        extra_args,
+    ):
         """
         :param client: The client to use when calling CreateMultipartUpload
         :param bucket: The name of the bucket to upload to
@@ -346,9 +429,11 @@ class CreateMultipartUploadTask(Task):
         """
         # Create the multipart upload.
         response = client.create_multipart_upload(
-            Bucket=bucket, Key=key, **extra_args
+            Bucket=bucket,
+            Key=key,
+            **extra_args,
         )
-        upload_id = response['UploadId']
+        upload_id = response["UploadId"]
 
         # Add a cleanup if the multipart upload fails at any point.
         self._transfer_coordinator.add_failure_cleanup(
@@ -363,7 +448,15 @@ class CreateMultipartUploadTask(Task):
 class CompleteMultipartUploadTask(Task):
     """Task to complete a multipart upload"""
 
-    def _main(self, client, bucket, key, upload_id, parts, extra_args):
+    def _main(
+        self,
+        client,
+        bucket,
+        key,
+        upload_id,
+        parts,
+        extra_args,
+    ):
         """
         :param client: The client to use when calling CompleteMultipartUpload
         :param bucket: The name of the bucket to upload to
@@ -382,6 +475,6 @@ class CompleteMultipartUploadTask(Task):
             Bucket=bucket,
             Key=key,
             UploadId=upload_id,
-            MultipartUpload={'Parts': parts},
+            MultipartUpload={"Parts": parts},
             **extra_args,
         )

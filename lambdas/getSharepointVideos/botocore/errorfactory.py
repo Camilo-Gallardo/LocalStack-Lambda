@@ -10,14 +10,21 @@
 # distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF
 # ANY KIND, either express or implied. See the License for the specific
 # language governing permissions and limitations under the License.
-from botocore.exceptions import ClientError
-from botocore.utils import get_service_module_name
+from botocore.exceptions import (
+    ClientError,
+)
+from botocore.utils import (
+    get_service_module_name,
+)
 
 
 class BaseClientExceptions:
     ClientError = ClientError
 
-    def __init__(self, code_to_exception):
+    def __init__(
+        self,
+        code_to_exception,
+    ):
         """Base class for exceptions object on a client
 
         :type code_to_exception: dict
@@ -27,7 +34,10 @@ class BaseClientExceptions:
         """
         self._code_to_exception = code_to_exception
 
-    def from_code(self, error_code):
+    def from_code(
+        self,
+        error_code,
+    ):
         """Retrieves the error class based on the error code
 
         This is helpful for identifying the exception class needing to be
@@ -41,24 +51,34 @@ class BaseClientExceptions:
             code. If the error code does not match any of the known
             modeled exceptions then return a generic ClientError.
         """
-        return self._code_to_exception.get(error_code, self.ClientError)
+        return self._code_to_exception.get(
+            error_code,
+            self.ClientError,
+        )
 
-    def __getattr__(self, name):
+    def __getattr__(
+        self,
+        name,
+    ):
         exception_cls_names = [
-            exception_cls.__name__
-            for exception_cls in self._code_to_exception.values()
+            exception_cls.__name__ for exception_cls in self._code_to_exception.values()
         ]
         raise AttributeError(
-            fr"{self} object has no attribute {name}. "
-            fr"Valid exceptions are: {', '.join(exception_cls_names)}"
+            rf"{self} object has no attribute {name}. "
+            rf"Valid exceptions are: {', '.join(exception_cls_names)}"
         )
 
 
 class ClientExceptionsFactory:
-    def __init__(self):
+    def __init__(
+        self,
+    ):
         self._client_exceptions_cache = {}
 
-    def create_client_exceptions(self, service_model):
+    def create_client_exceptions(
+        self,
+        service_model,
+    ):
         """Creates a ClientExceptions object for the particular service client
 
         :type service_model: botocore.model.ServiceModel
@@ -74,17 +94,26 @@ class ClientExceptionsFactory:
             self._client_exceptions_cache[service_name] = client_exceptions
         return self._client_exceptions_cache[service_name]
 
-    def _create_client_exceptions(self, service_model):
+    def _create_client_exceptions(
+        self,
+        service_model,
+    ):
         cls_props = {}
         code_to_exception = {}
         for error_shape in service_model.error_shapes:
             exception_name = str(error_shape.name)
-            exception_cls = type(exception_name, (ClientError,), {})
+            exception_cls = type(
+                exception_name,
+                (ClientError,),
+                {},
+            )
             cls_props[exception_name] = exception_cls
             code = str(error_shape.error_code)
             code_to_exception[code] = exception_cls
-        cls_name = str(get_service_module_name(service_model) + 'Exceptions')
+        cls_name = str(get_service_module_name(service_model) + "Exceptions")
         client_exceptions_cls = type(
-            cls_name, (BaseClientExceptions,), cls_props
+            cls_name,
+            (BaseClientExceptions,),
+            cls_props,
         )
         return client_exceptions_cls(code_to_exception)

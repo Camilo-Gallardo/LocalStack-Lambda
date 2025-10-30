@@ -1,14 +1,27 @@
-from __future__ import absolute_import
+from __future__ import (
+    absolute_import,
+)
 
 import socket
 
-from ..contrib import _appengine_environ
-from ..exceptions import LocationParseError
-from ..packages import six
-from .wait import NoWayToWaitForSocketError, wait_for_read
+from ..contrib import (
+    _appengine_environ,
+)
+from ..exceptions import (
+    LocationParseError,
+)
+from ..packages import (
+    six,
+)
+from .wait import (
+    NoWayToWaitForSocketError,
+    wait_for_read,
+)
 
 
-def is_connection_dropped(conn):  # Platform-specific
+def is_connection_dropped(
+    conn,
+):  # Platform-specific
     """
     Returns True if the connection is dropped and should be closed.
 
@@ -18,14 +31,21 @@ def is_connection_dropped(conn):  # Platform-specific
     Note: For platforms like AppEngine, this will always return ``False`` to
     let the platform handle connection recycling transparently for us.
     """
-    sock = getattr(conn, "sock", False)
+    sock = getattr(
+        conn,
+        "sock",
+        False,
+    )
     if sock is False:  # Platform-specific: AppEngine
         return False
     if sock is None:  # Connection already closed (such as by httplib).
         return True
     try:
         # Returns True if readable, which here means it's been dropped
-        return wait_for_read(sock, timeout=0.0)
+        return wait_for_read(
+            sock,
+            timeout=0.0,
+        )
     except NoWayToWaitForSocketError:  # Platform-specific: AppEngine
         return False
 
@@ -52,7 +72,10 @@ def create_connection(
     An host of '' or port 0 tells the OS to use the default.
     """
 
-    host, port = address
+    (
+        host,
+        port,
+    ) = address
     if host.startswith("["):
         host = host.strip("[]")
     err = None
@@ -66,17 +89,36 @@ def create_connection(
         host.encode("idna")
     except UnicodeError:
         return six.raise_from(
-            LocationParseError(u"'%s', label empty or too long" % host), None
+            LocationParseError("'%s', label empty or too long" % host),
+            None,
         )
 
-    for res in socket.getaddrinfo(host, port, family, socket.SOCK_STREAM):
-        af, socktype, proto, canonname, sa = res
+    for res in socket.getaddrinfo(
+        host,
+        port,
+        family,
+        socket.SOCK_STREAM,
+    ):
+        (
+            af,
+            socktype,
+            proto,
+            canonname,
+            sa,
+        ) = res
         sock = None
         try:
-            sock = socket.socket(af, socktype, proto)
+            sock = socket.socket(
+                af,
+                socktype,
+                proto,
+            )
 
             # If provided, set socket level options before connecting.
-            _set_socket_options(sock, socket_options)
+            _set_socket_options(
+                sock,
+                socket_options,
+            )
 
             if timeout is not socket._GLOBAL_DEFAULT_TIMEOUT:
                 sock.settimeout(timeout)
@@ -97,7 +139,10 @@ def create_connection(
     raise socket.error("getaddrinfo returns an empty list")
 
 
-def _set_socket_options(sock, options):
+def _set_socket_options(
+    sock,
+    options,
+):
     if options is None:
         return
 
@@ -116,7 +161,9 @@ def allowed_gai_family():
     return family
 
 
-def _has_ipv6(host):
+def _has_ipv6(
+    host,
+):
     """Returns True if the system can bind an IPv6 address."""
     sock = None
     has_ipv6 = False
@@ -136,7 +183,12 @@ def _has_ipv6(host):
         # https://bugs.python.org/issue658327
         try:
             sock = socket.socket(socket.AF_INET6)
-            sock.bind((host, 0))
+            sock.bind(
+                (
+                    host,
+                    0,
+                )
+            )
             has_ipv6 = True
         except Exception:
             pass

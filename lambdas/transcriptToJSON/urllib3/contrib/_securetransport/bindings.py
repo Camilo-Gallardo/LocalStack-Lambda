@@ -57,9 +57,7 @@ if platform.system() != "Darwin":
 version = platform.mac_ver()[0]
 version_info = tuple(map(int, version.split(".")))
 if version_info < (10, 8):
-    raise OSError(
-        f"Only OS X 10.8 and newer are supported, not {version_info[0]}.{version_info[1]}"
-    )
+    raise OSError(f"Only OS X 10.8 and newer are supported, not {version_info[0]}.{version_info[1]}")
 
 
 def load_cdll(name: str, macos10_16_path: str) -> CDLL:
@@ -79,9 +77,7 @@ def load_cdll(name: str, macos10_16_path: str) -> CDLL:
         raise ImportError(f"The library {name} failed to load") from None
 
 
-Security = load_cdll(
-    "Security", "/System/Library/Frameworks/Security.framework/Security"
-)
+Security = load_cdll("Security", "/System/Library/Frameworks/Security.framework/Security")
 CoreFoundation = load_cdll(
     "CoreFoundation",
     "/System/Library/Frameworks/CoreFoundation.framework/CoreFoundation",
@@ -192,9 +188,7 @@ try:
     Security.SecPKCS12Import.restype = OSStatus
 
     SSLReadFunc = CFUNCTYPE(OSStatus, SSLConnectionRef, c_void_p, POINTER(c_size_t))
-    SSLWriteFunc = CFUNCTYPE(
-        OSStatus, SSLConnectionRef, POINTER(c_byte), POINTER(c_size_t)
-    )
+    SSLWriteFunc = CFUNCTYPE(OSStatus, SSLConnectionRef, POINTER(c_byte), POINTER(c_size_t))
 
     Security.SSLSetIOFuncs.argtypes = [SSLContextRef, SSLReadFunc, SSLWriteFunc]
     Security.SSLSetIOFuncs.restype = OSStatus
@@ -318,12 +312,8 @@ try:
     Security.SecExternalFormat = SecExternalFormat
     Security.OSStatus = OSStatus
 
-    Security.kSecImportExportPassphrase = CFStringRef.in_dll(
-        Security, "kSecImportExportPassphrase"
-    )
-    Security.kSecImportItemIdentity = CFStringRef.in_dll(
-        Security, "kSecImportItemIdentity"
-    )
+    Security.kSecImportExportPassphrase = CFStringRef.in_dll(Security, "kSecImportExportPassphrase")
+    Security.kSecImportItemIdentity = CFStringRef.in_dll(Security, "kSecImportItemIdentity")
 
     # CoreFoundation time!
     CoreFoundation.CFRetain.argtypes = [CFTypeRef]
@@ -399,18 +389,10 @@ try:
     CoreFoundation.CFArrayGetValueAtIndex.argtypes = [CFArrayRef, CFIndex]
     CoreFoundation.CFArrayGetValueAtIndex.restype = c_void_p
 
-    CoreFoundation.kCFAllocatorDefault = CFAllocatorRef.in_dll(
-        CoreFoundation, "kCFAllocatorDefault"
-    )
-    CoreFoundation.kCFTypeArrayCallBacks = c_void_p.in_dll(
-        CoreFoundation, "kCFTypeArrayCallBacks"
-    )
-    CoreFoundation.kCFTypeDictionaryKeyCallBacks = c_void_p.in_dll(
-        CoreFoundation, "kCFTypeDictionaryKeyCallBacks"
-    )
-    CoreFoundation.kCFTypeDictionaryValueCallBacks = c_void_p.in_dll(
-        CoreFoundation, "kCFTypeDictionaryValueCallBacks"
-    )
+    CoreFoundation.kCFAllocatorDefault = CFAllocatorRef.in_dll(CoreFoundation, "kCFAllocatorDefault")
+    CoreFoundation.kCFTypeArrayCallBacks = c_void_p.in_dll(CoreFoundation, "kCFTypeArrayCallBacks")
+    CoreFoundation.kCFTypeDictionaryKeyCallBacks = c_void_p.in_dll(CoreFoundation, "kCFTypeDictionaryKeyCallBacks")
+    CoreFoundation.kCFTypeDictionaryValueCallBacks = c_void_p.in_dll(CoreFoundation, "kCFTypeDictionaryValueCallBacks")
 
     CoreFoundation.CFTypeRef = CFTypeRef
     CoreFoundation.CFArrayRef = CFArrayRef

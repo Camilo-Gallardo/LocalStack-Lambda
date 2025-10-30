@@ -4,9 +4,15 @@ import os.path
 import socket
 import sys
 import warnings
-from base64 import b64encode
+from base64 import (
+    b64encode,
+)
 
-from urllib3 import PoolManager, Timeout, proxy_from_url
+from urllib3 import (
+    PoolManager,
+    Timeout,
+    proxy_from_url,
+)
 from urllib3.exceptions import (
     ConnectTimeoutError as URLLib3ConnectTimeoutError,
 )
@@ -16,9 +22,15 @@ from urllib3.exceptions import (
     ProtocolError,
     ProxyError,
 )
-from urllib3.exceptions import ReadTimeoutError as URLLib3ReadTimeoutError
-from urllib3.exceptions import SSLError as URLLib3SSLError
-from urllib3.util.retry import Retry
+from urllib3.exceptions import (
+    ReadTimeoutError as URLLib3ReadTimeoutError,
+)
+from urllib3.exceptions import (
+    SSLError as URLLib3SSLError,
+)
+from urllib3.util.retry import (
+    Retry,
+)
 from urllib3.util.ssl_ import (
     OP_NO_COMPRESSION,
     PROTOCOL_TLS,
@@ -27,29 +39,44 @@ from urllib3.util.ssl_ import (
     is_ipaddress,
     ssl,
 )
-from urllib3.util.url import parse_url
+from urllib3.util.url import (
+    parse_url,
+)
 
 try:
-    from urllib3.util.ssl_ import OP_NO_TICKET, PROTOCOL_TLS_CLIENT
+    from urllib3.util.ssl_ import (
+        OP_NO_TICKET,
+        PROTOCOL_TLS_CLIENT,
+    )
 except ImportError:
     # Fallback directly to ssl for version of urllib3 before 1.26.
     # They are available in the standard library starting in Python 3.6.
-    from ssl import OP_NO_TICKET, PROTOCOL_TLS_CLIENT
+    from ssl import (
+        OP_NO_TICKET,
+        PROTOCOL_TLS_CLIENT,
+    )
 
 try:
     # pyopenssl will be removed in urllib3 2.0, we'll fall back to ssl_ at that point.
     # This can be removed once our urllib3 floor is raised to >= 2.0.
     with warnings.catch_warnings():
-        warnings.simplefilter("ignore", category=DeprecationWarning)
+        warnings.simplefilter(
+            "ignore",
+            category=DeprecationWarning,
+        )
         # Always import the original SSLContext, even if it has been patched
         from urllib3.contrib.pyopenssl import (
             orig_util_SSLContext as SSLContext,
         )
 except ImportError:
-    from urllib3.util.ssl_ import SSLContext
+    from urllib3.util.ssl_ import (
+        SSLContext,
+    )
 
 try:
-    from urllib3.util.ssl_ import DEFAULT_CIPHERS
+    from urllib3.util.ssl_ import (
+        DEFAULT_CIPHERS,
+    )
 except ImportError:
     # Defer to system configuration starting with
     # urllib3 2.0. This will choose the ciphers provided by
@@ -79,17 +106,24 @@ filter_ssl_warnings()
 logger = logging.getLogger(__name__)
 DEFAULT_TIMEOUT = 60
 MAX_POOL_CONNECTIONS = 10
-DEFAULT_CA_BUNDLE = os.path.join(os.path.dirname(__file__), 'cacert.pem')
+DEFAULT_CA_BUNDLE = os.path.join(
+    os.path.dirname(__file__),
+    "cacert.pem",
+)
 
 try:
-    from certifi import where
+    from certifi import (
+        where,
+    )
 except ImportError:
 
     def where():
         return DEFAULT_CA_BUNDLE
 
 
-def get_cert_path(verify):
+def get_cert_path(
+    verify,
+):
     if verify is not True:
         return verify
 
@@ -100,7 +134,10 @@ def get_cert_path(verify):
 
 
 def create_urllib3_context(
-    ssl_version=None, cert_reqs=None, options=None, ciphers=None
+    ssl_version=None,
+    cert_reqs=None,
+    options=None,
+    ciphers=None,
 ):
     """This function is a vendored version of the same function in urllib3
 
@@ -145,13 +182,28 @@ def create_urllib3_context(
     # verification is enabled to work around Python issue #37428
     # See: https://bugs.python.org/issue37428
     if (
-        cert_reqs == ssl.CERT_REQUIRED or sys.version_info >= (3, 7, 4)
-    ) and getattr(context, "post_handshake_auth", None) is not None:
+        cert_reqs == ssl.CERT_REQUIRED
+        or sys.version_info
+        >= (
+            3,
+            7,
+            4,
+        )
+    ) and getattr(
+        context,
+        "post_handshake_auth",
+        None,
+    ) is not None:
         context.post_handshake_auth = True
 
     def disable_check_hostname():
         if (
-            getattr(context, "check_hostname", None) is not None
+            getattr(
+                context,
+                "check_hostname",
+                None,
+            )
+            is not None
         ):  # Platform-specific: Python 3.2
             # We do our own verification, including fingerprints and alternative
             # hostnames. So disable it here
@@ -171,7 +223,10 @@ def create_urllib3_context(
 
     # Enable logging of TLS session keys via defacto standard environment variable
     # 'SSLKEYLOGFILE', if the feature is available (Python 3.8+). Skip empty values.
-    if hasattr(context, "keylog_filename"):
+    if hasattr(
+        context,
+        "keylog_filename",
+    ):
         sslkeylogfile = os.environ.get("SSLKEYLOGFILE")
         if sslkeylogfile and not sys.flags.ignore_environment:
             context.keylog_filename = sslkeylogfile
@@ -179,18 +234,25 @@ def create_urllib3_context(
     return context
 
 
-def ensure_boolean(val):
+def ensure_boolean(
+    val,
+):
     """Ensures a boolean value if a string or boolean is provided
 
     For strings, the value for True/False is case insensitive
     """
-    if isinstance(val, bool):
+    if isinstance(
+        val,
+        bool,
+    ):
         return val
     else:
-        return val.lower() == 'true'
+        return val.lower() == "true"
 
 
-def mask_proxy_url(proxy_url):
+def mask_proxy_url(
+    proxy_url,
+):
     """
     Mask proxy url credentials.
 
@@ -199,16 +261,26 @@ def mask_proxy_url(proxy_url):
 
     :return: Masked proxy url, i.e. https://***:***@proxy.com
     """
-    mask = '*' * 3
+    mask = "*" * 3
     parsed_url = urlparse(proxy_url)
     if parsed_url.username:
-        proxy_url = proxy_url.replace(parsed_url.username, mask, 1)
+        proxy_url = proxy_url.replace(
+            parsed_url.username,
+            mask,
+            1,
+        )
     if parsed_url.password:
-        proxy_url = proxy_url.replace(parsed_url.password, mask, 1)
+        proxy_url = proxy_url.replace(
+            parsed_url.password,
+            mask,
+            1,
+        )
     return proxy_url
 
 
-def _is_ipaddress(host):
+def _is_ipaddress(
+    host,
+):
     """Wrap urllib3's is_ipaddress to support bracketed IPv6 addresses."""
     return is_ipaddress(host) or bool(IPV6_ADDRZ_RE.match(host))
 
@@ -221,7 +293,11 @@ class ProxyConfiguration:
     proxy configuration dictionary.
     """
 
-    def __init__(self, proxies=None, proxies_settings=None):
+    def __init__(
+        self,
+        proxies=None,
+        proxies_settings=None,
+    ):
         if proxies is None:
             proxies = {}
         if proxies_settings is None:
@@ -230,7 +306,10 @@ class ProxyConfiguration:
         self._proxies = proxies
         self._proxies_settings = proxies_settings
 
-    def proxy_url_for(self, url):
+    def proxy_url_for(
+        self,
+        url,
+    ):
         """Retrieves the corresponding proxy url for a given url."""
         parsed_url = urlparse(url)
         proxy = self._proxies.get(parsed_url.scheme)
@@ -238,38 +317,65 @@ class ProxyConfiguration:
             proxy = self._fix_proxy_url(proxy)
         return proxy
 
-    def proxy_headers_for(self, proxy_url):
+    def proxy_headers_for(
+        self,
+        proxy_url,
+    ):
         """Retrieves the corresponding proxy headers for a given proxy url."""
         headers = {}
-        username, password = self._get_auth_from_url(proxy_url)
+        (
+            username,
+            password,
+        ) = self._get_auth_from_url(proxy_url)
         if username and password:
-            basic_auth = self._construct_basic_auth(username, password)
-            headers['Proxy-Authorization'] = basic_auth
+            basic_auth = self._construct_basic_auth(
+                username,
+                password,
+            )
+            headers["Proxy-Authorization"] = basic_auth
         return headers
 
     @property
-    def settings(self):
+    def settings(
+        self,
+    ):
         return self._proxies_settings
 
-    def _fix_proxy_url(self, proxy_url):
-        if proxy_url.startswith('http:') or proxy_url.startswith('https:'):
+    def _fix_proxy_url(
+        self,
+        proxy_url,
+    ):
+        if proxy_url.startswith("http:") or proxy_url.startswith("https:"):
             return proxy_url
-        elif proxy_url.startswith('//'):
-            return 'http:' + proxy_url
+        elif proxy_url.startswith("//"):
+            return "http:" + proxy_url
         else:
-            return 'http://' + proxy_url
+            return "http://" + proxy_url
 
-    def _construct_basic_auth(self, username, password):
-        auth_str = f'{username}:{password}'
-        encoded_str = b64encode(auth_str.encode('ascii')).strip().decode()
-        return f'Basic {encoded_str}'
+    def _construct_basic_auth(
+        self,
+        username,
+        password,
+    ):
+        auth_str = f"{username}:{password}"
+        encoded_str = b64encode(auth_str.encode("ascii")).strip().decode()
+        return f"Basic {encoded_str}"
 
-    def _get_auth_from_url(self, url):
+    def _get_auth_from_url(
+        self,
+        url,
+    ):
         parsed_url = urlparse(url)
         try:
             return unquote(parsed_url.username), unquote(parsed_url.password)
-        except (AttributeError, TypeError):
-            return None, None
+        except (
+            AttributeError,
+            TypeError,
+        ):
+            return (
+                None,
+                None,
+            )
 
 
 class URLLib3Session:
@@ -296,23 +402,42 @@ class URLLib3Session:
     ):
         self._verify = verify
         self._proxy_config = ProxyConfiguration(
-            proxies=proxies, proxies_settings=proxies_config
+            proxies=proxies,
+            proxies_settings=proxies_config,
         )
         self._pool_classes_by_scheme = {
-            'http': botocore.awsrequest.AWSHTTPConnectionPool,
-            'https': botocore.awsrequest.AWSHTTPSConnectionPool,
+            "http": botocore.awsrequest.AWSHTTPConnectionPool,
+            "https": botocore.awsrequest.AWSHTTPSConnectionPool,
         }
         if timeout is None:
             timeout = DEFAULT_TIMEOUT
-        if not isinstance(timeout, (int, float)):
-            timeout = Timeout(connect=timeout[0], read=timeout[1])
+        if not isinstance(
+            timeout,
+            (
+                int,
+                float,
+            ),
+        ):
+            timeout = Timeout(
+                connect=timeout[0],
+                read=timeout[1],
+            )
 
         self._cert_file = None
         self._key_file = None
-        if isinstance(client_cert, str):
+        if isinstance(
+            client_cert,
+            str,
+        ):
             self._cert_file = client_cert
-        elif isinstance(client_cert, tuple):
-            self._cert_file, self._key_file = client_cert
+        elif isinstance(
+            client_cert,
+            tuple,
+        ):
+            (
+                self._cert_file,
+                self._key_file,
+            ) = client_cert
 
         self._timeout = timeout
         self._max_pool_connections = max_pool_connections
@@ -323,33 +448,44 @@ class URLLib3Session:
         self._manager = PoolManager(**self._get_pool_manager_kwargs())
         self._manager.pool_classes_by_scheme = self._pool_classes_by_scheme
 
-    def _proxies_kwargs(self, **kwargs):
+    def _proxies_kwargs(
+        self,
+        **kwargs,
+    ):
         proxies_settings = self._proxy_config.settings
         proxies_kwargs = {
-            'use_forwarding_for_https': proxies_settings.get(
-                'proxy_use_forwarding_for_https'
+            "use_forwarding_for_https": proxies_settings.get(
+                "proxy_use_forwarding_for_https"
             ),
             **kwargs,
         }
         return {k: v for k, v in proxies_kwargs.items() if v is not None}
 
-    def _get_pool_manager_kwargs(self, **extra_kwargs):
+    def _get_pool_manager_kwargs(
+        self,
+        **extra_kwargs,
+    ):
         pool_manager_kwargs = {
-            'strict': True,
-            'timeout': self._timeout,
-            'maxsize': self._max_pool_connections,
-            'ssl_context': self._get_ssl_context(),
-            'socket_options': self._socket_options,
-            'cert_file': self._cert_file,
-            'key_file': self._key_file,
+            "strict": True,
+            "timeout": self._timeout,
+            "maxsize": self._max_pool_connections,
+            "ssl_context": self._get_ssl_context(),
+            "socket_options": self._socket_options,
+            "cert_file": self._cert_file,
+            "key_file": self._key_file,
         }
         pool_manager_kwargs.update(**extra_kwargs)
         return pool_manager_kwargs
 
-    def _get_ssl_context(self):
+    def _get_ssl_context(
+        self,
+    ):
         return create_urllib3_context()
 
-    def _get_proxy_manager(self, proxy_url):
+    def _get_proxy_manager(
+        self,
+        proxy_url,
+    ):
         if proxy_url not in self._proxy_managers:
             proxy_headers = self._proxy_config.proxy_headers_for(proxy_url)
             proxy_ssl_context = self._setup_proxy_ssl_context(proxy_url)
@@ -359,33 +495,47 @@ class URLLib3Session:
             proxy_manager_kwargs.update(
                 self._proxies_kwargs(proxy_ssl_context=proxy_ssl_context)
             )
-            proxy_manager = proxy_from_url(proxy_url, **proxy_manager_kwargs)
+            proxy_manager = proxy_from_url(
+                proxy_url,
+                **proxy_manager_kwargs,
+            )
             proxy_manager.pool_classes_by_scheme = self._pool_classes_by_scheme
             self._proxy_managers[proxy_url] = proxy_manager
 
         return self._proxy_managers[proxy_url]
 
-    def _path_url(self, url):
+    def _path_url(
+        self,
+        url,
+    ):
         parsed_url = urlparse(url)
         path = parsed_url.path
         if not path:
-            path = '/'
+            path = "/"
         if parsed_url.query:
-            path = path + '?' + parsed_url.query
+            path = path + "?" + parsed_url.query
         return path
 
-    def _setup_ssl_cert(self, conn, url, verify):
-        if url.lower().startswith('https') and verify:
-            conn.cert_reqs = 'CERT_REQUIRED'
+    def _setup_ssl_cert(
+        self,
+        conn,
+        url,
+        verify,
+    ):
+        if url.lower().startswith("https") and verify:
+            conn.cert_reqs = "CERT_REQUIRED"
             conn.ca_certs = get_cert_path(verify)
         else:
-            conn.cert_reqs = 'CERT_NONE'
+            conn.cert_reqs = "CERT_NONE"
             conn.ca_certs = None
 
-    def _setup_proxy_ssl_context(self, proxy_url):
+    def _setup_proxy_ssl_context(
+        self,
+        proxy_url,
+    ):
         proxies_settings = self._proxy_config.settings
-        proxy_ca_bundle = proxies_settings.get('proxy_ca_bundle')
-        proxy_cert = proxies_settings.get('proxy_client_cert')
+        proxy_ca_bundle = proxies_settings.get("proxy_ca_bundle")
+        proxy_cert = proxies_settings.get("proxy_client_cert")
         if proxy_ca_bundle is None and proxy_cert is None:
             return None
 
@@ -399,23 +549,44 @@ class URLLib3Session:
             if proxy_ca_bundle is not None:
                 context.load_verify_locations(cafile=proxy_ca_bundle)
 
-            if isinstance(proxy_cert, tuple):
-                context.load_cert_chain(proxy_cert[0], keyfile=proxy_cert[1])
-            elif isinstance(proxy_cert, str):
+            if isinstance(
+                proxy_cert,
+                tuple,
+            ):
+                context.load_cert_chain(
+                    proxy_cert[0],
+                    keyfile=proxy_cert[1],
+                )
+            elif isinstance(
+                proxy_cert,
+                str,
+            ):
                 context.load_cert_chain(proxy_cert)
 
             return context
-        except (OSError, URLLib3SSLError, LocationParseError) as e:
+        except (
+            OSError,
+            URLLib3SSLError,
+            LocationParseError,
+        ) as e:
             raise InvalidProxiesConfigError(error=e)
 
-    def _get_connection_manager(self, url, proxy_url=None):
+    def _get_connection_manager(
+        self,
+        url,
+        proxy_url=None,
+    ):
         if proxy_url:
             manager = self._get_proxy_manager(proxy_url)
         else:
             manager = self._manager
         return manager
 
-    def _get_request_target(self, url, proxy_url):
+    def _get_request_target(
+        self,
+        url,
+        proxy_url,
+    ):
         has_proxy = proxy_url is not None
 
         if not has_proxy:
@@ -426,42 +597,69 @@ class URLLib3Session:
         # forwarding for HTTPS through the 'use_forwarding_for_https' parameter.
         proxy_scheme = urlparse(proxy_url).scheme
         using_https_forwarding_proxy = (
-            proxy_scheme == 'https'
-            and self._proxies_kwargs().get('use_forwarding_for_https', False)
+            proxy_scheme == "https"
+            and self._proxies_kwargs().get(
+                "use_forwarding_for_https",
+                False,
+            )
         )
 
-        if using_https_forwarding_proxy or url.startswith('http:'):
+        if using_https_forwarding_proxy or url.startswith("http:"):
             return url
         else:
             return self._path_url(url)
 
-    def _chunked(self, headers):
-        transfer_encoding = headers.get('Transfer-Encoding', b'')
+    def _chunked(
+        self,
+        headers,
+    ):
+        transfer_encoding = headers.get(
+            "Transfer-Encoding",
+            b"",
+        )
         transfer_encoding = ensure_bytes(transfer_encoding)
-        return transfer_encoding.lower() == b'chunked'
+        return transfer_encoding.lower() == b"chunked"
 
-    def close(self):
+    def close(
+        self,
+    ):
         self._manager.clear()
         for manager in self._proxy_managers.values():
             manager.clear()
 
-    def send(self, request):
+    def send(
+        self,
+        request,
+    ):
         try:
             proxy_url = self._proxy_config.proxy_url_for(request.url)
-            manager = self._get_connection_manager(request.url, proxy_url)
+            manager = self._get_connection_manager(
+                request.url,
+                proxy_url,
+            )
             conn = manager.connection_from_url(request.url)
-            self._setup_ssl_cert(conn, request.url, self._verify)
+            self._setup_ssl_cert(
+                conn,
+                request.url,
+                self._verify,
+            )
             if ensure_boolean(
-                os.environ.get('BOTO_EXPERIMENTAL__ADD_PROXY_HOST_HEADER', '')
+                os.environ.get(
+                    "BOTO_EXPERIMENTAL__ADD_PROXY_HOST_HEADER",
+                    "",
+                )
             ):
                 # This is currently an "experimental" feature which provides
                 # no guarantees of backwards compatibility. It may be subject
                 # to change or removal in any patch version. Anyone opting in
                 # to this feature should strictly pin botocore.
                 host = urlparse(request.url).hostname
-                conn.proxy_headers['host'] = host
+                conn.proxy_headers["host"] = host
 
-            request_target = self._get_request_target(request.url, proxy_url)
+            request_target = self._get_request_target(
+                request.url,
+                proxy_url,
+            )
             urllib_response = conn.urlopen(
                 method=request.method,
                 url=request_target,
@@ -489,22 +687,43 @@ class URLLib3Session:
 
             return http_response
         except URLLib3SSLError as e:
-            raise SSLError(endpoint_url=request.url, error=e)
-        except (NewConnectionError, socket.gaierror) as e:
-            raise EndpointConnectionError(endpoint_url=request.url, error=e)
+            raise SSLError(
+                endpoint_url=request.url,
+                error=e,
+            )
+        except (
+            NewConnectionError,
+            socket.gaierror,
+        ) as e:
+            raise EndpointConnectionError(
+                endpoint_url=request.url,
+                error=e,
+            )
         except ProxyError as e:
             raise ProxyConnectionError(
-                proxy_url=mask_proxy_url(proxy_url), error=e
+                proxy_url=mask_proxy_url(proxy_url),
+                error=e,
             )
         except URLLib3ConnectTimeoutError as e:
-            raise ConnectTimeoutError(endpoint_url=request.url, error=e)
+            raise ConnectTimeoutError(
+                endpoint_url=request.url,
+                error=e,
+            )
         except URLLib3ReadTimeoutError as e:
-            raise ReadTimeoutError(endpoint_url=request.url, error=e)
+            raise ReadTimeoutError(
+                endpoint_url=request.url,
+                error=e,
+            )
         except ProtocolError as e:
             raise ConnectionClosedError(
-                error=e, request=request, endpoint_url=request.url
+                error=e,
+                request=request,
+                endpoint_url=request.url,
             )
         except Exception as e:
-            message = 'Exception received when sending urllib3 HTTP request'
-            logger.debug(message, exc_info=True)
+            message = "Exception received when sending urllib3 HTTP request"
+            logger.debug(
+                message,
+                exc_info=True,
+            )
             raise HTTPClientError(error=e)

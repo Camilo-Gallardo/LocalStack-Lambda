@@ -20,7 +20,9 @@ import sys
 import botocore.exceptions
 
 
-def multi_file_load_config(*filenames):
+def multi_file_load_config(
+    *filenames,
+):
     """Load and combine multiple INI configs with profiles.
 
     This function will take a list of filesnames and return
@@ -68,31 +70,67 @@ def multi_file_load_config(*filenames):
     from FileC.
 
     """
-    configs = []
-    profiles = []
+    configs = (
+        []
+    )
+    profiles = (
+        []
+    )
     for filename in filenames:
         try:
-            loaded = load_config(filename)
-        except botocore.exceptions.ConfigNotFound:
+            loaded = load_config(
+                filename
+            )
+        except (
+            botocore.exceptions.ConfigNotFound
+        ):
             continue
-        profiles.append(loaded.pop('profiles'))
-        configs.append(loaded)
-    merged_config = _merge_list_of_dicts(configs)
-    merged_profiles = _merge_list_of_dicts(profiles)
-    merged_config['profiles'] = merged_profiles
+        profiles.append(
+            loaded.pop(
+                "profiles"
+            )
+        )
+        configs.append(
+            loaded
+        )
+    merged_config = _merge_list_of_dicts(
+        configs
+    )
+    merged_profiles = _merge_list_of_dicts(
+        profiles
+    )
+    merged_config[
+        "profiles"
+    ] = merged_profiles
     return merged_config
 
 
-def _merge_list_of_dicts(list_of_dicts):
-    merged_dicts = {}
+def _merge_list_of_dicts(
+    list_of_dicts,
+):
+    merged_dicts = (
+        {}
+    )
     for single_dict in list_of_dicts:
-        for key, value in single_dict.items():
-            if key not in merged_dicts:
-                merged_dicts[key] = value
+        for (
+            key,
+            value,
+        ) in (
+            single_dict.items()
+        ):
+            if (
+                key
+                not in merged_dicts
+            ):
+                merged_dicts[
+                    key
+                ] = value
     return merged_dicts
 
 
-def load_config(config_filename):
+def load_config(
+    config_filename,
+):
     """Parse a INI config with profiles.
 
     This will parse an INI config file and map top level profiles
@@ -102,11 +140,18 @@ def load_config(config_filename):
     top level keys, use ``raw_config_parse`` instead.
 
     """
-    parsed = raw_config_parse(config_filename)
-    return build_profile_map(parsed)
+    parsed = raw_config_parse(
+        config_filename
+    )
+    return build_profile_map(
+        parsed
+    )
 
 
-def raw_config_parse(config_filename, parse_subsections=True):
+def raw_config_parse(
+    config_filename,
+    parse_subsections=True,
+):
     """Returns the parsed INI config contents.
 
     Each section name is a top level key.
@@ -136,82 +181,187 @@ def raw_config_parse(config_filename, parse_subsections=True):
 
     :raises: ConfigNotFound, ConfigParseError
     """
-    config = {}
+    config = (
+        {}
+    )
     path = config_filename
-    if path is not None:
-        path = os.path.expandvars(path)
-        path = os.path.expanduser(path)
-        if not os.path.isfile(path):
-            raise botocore.exceptions.ConfigNotFound(path=_unicode_path(path))
-        cp = configparser.RawConfigParser()
+    if (
+        path
+        is not None
+    ):
+        path = os.path.expandvars(
+            path
+        )
+        path = os.path.expanduser(
+            path
+        )
+        if not os.path.isfile(
+            path
+        ):
+            raise botocore.exceptions.ConfigNotFound(
+                path=_unicode_path(
+                    path
+                )
+            )
+        cp = (
+            configparser.RawConfigParser()
+        )
         try:
-            cp.read([path])
-        except (configparser.Error, UnicodeDecodeError) as e:
+            cp.read(
+                [
+                    path
+                ]
+            )
+        except (
+            configparser.Error,
+            UnicodeDecodeError,
+        ) as e:
             raise botocore.exceptions.ConfigParseError(
-                path=_unicode_path(path), error=e
+                path=_unicode_path(
+                    path
+                ),
+                error=e,
             ) from None
         else:
-            for section in cp.sections():
-                config[section] = {}
-                for option in cp.options(section):
-                    config_value = cp.get(section, option)
-                    if parse_subsections and config_value.startswith('\n'):
+            for section in (
+                cp.sections()
+            ):
+                config[
+                    section
+                ] = (
+                    {}
+                )
+                for option in cp.options(
+                    section
+                ):
+                    config_value = cp.get(
+                        section,
+                        option,
+                    )
+                    if (
+                        parse_subsections
+                        and config_value.startswith(
+                            "\n"
+                        )
+                    ):
                         # Then we need to parse the inner contents as
                         # hierarchical.  We support a single level
                         # of nesting for now.
                         try:
-                            config_value = _parse_nested(config_value)
+                            config_value = _parse_nested(
+                                config_value
+                            )
                         except ValueError as e:
                             raise botocore.exceptions.ConfigParseError(
-                                path=_unicode_path(path), error=e
+                                path=_unicode_path(
+                                    path
+                                ),
+                                error=e,
                             ) from None
-                    config[section][option] = config_value
+                    config[
+                        section
+                    ][
+                        option
+                    ] = config_value
     return config
 
 
-def _unicode_path(path):
-    if isinstance(path, str):
+def _unicode_path(
+    path,
+):
+    if isinstance(
+        path,
+        str,
+    ):
         return path
     # According to the documentation getfilesystemencoding can return None
     # on unix in which case the default encoding is used instead.
-    filesystem_encoding = sys.getfilesystemencoding()
-    if filesystem_encoding is None:
-        filesystem_encoding = sys.getdefaultencoding()
-    return path.decode(filesystem_encoding, 'replace')
+    filesystem_encoding = (
+        sys.getfilesystemencoding()
+    )
+    if (
+        filesystem_encoding
+        is None
+    ):
+        filesystem_encoding = (
+            sys.getdefaultencoding()
+        )
+    return path.decode(
+        filesystem_encoding,
+        "replace",
+    )
 
 
-def _parse_nested(config_value):
+def _parse_nested(
+    config_value,
+):
     # Given a value like this:
     # \n
     # foo = bar
     # bar = baz
     # We need to parse this into
     # {'foo': 'bar', 'bar': 'baz}
-    parsed = {}
-    for line in config_value.splitlines():
-        line = line.strip()
-        if not line:
+    parsed = (
+        {}
+    )
+    for line in (
+        config_value.splitlines()
+    ):
+        line = (
+            line.strip()
+        )
+        if (
+            not line
+        ):
             continue
         # The caller will catch ValueError
         # and raise an appropriate error
         # if this fails.
-        key, value = line.split('=', 1)
-        parsed[key.strip()] = value.strip()
+        (
+            key,
+            value,
+        ) = line.split(
+            "=",
+            1,
+        )
+        parsed[
+            key.strip()
+        ] = (
+            value.strip()
+        )
     return parsed
 
 
-def _parse_section(key, values):
-    result = {}
+def _parse_section(
+    key,
+    values,
+):
+    result = (
+        {}
+    )
     try:
-        parts = shlex.split(key)
+        parts = shlex.split(
+            key
+        )
     except ValueError:
         return result
-    if len(parts) == 2:
-        result[parts[1]] = values
+    if (
+        len(
+            parts
+        )
+        == 2
+    ):
+        result[
+            parts[
+                1
+            ]
+        ] = values
     return result
 
 
-def build_profile_map(parsed_ini_config):
+def build_profile_map(
+    parsed_ini_config,
+):
     """Convert the parsed INI config into a profile map.
 
     The config file format requires that every profile except the
@@ -262,26 +412,75 @@ def build_profile_map(parsed_ini_config):
         make a deepcopy and return that value.
 
     """
-    parsed_config = copy.deepcopy(parsed_ini_config)
-    profiles = {}
-    sso_sessions = {}
-    services = {}
-    final_config = {}
-    for key, values in parsed_config.items():
-        if key.startswith("profile"):
-            profiles.update(_parse_section(key, values))
-        elif key.startswith("sso-session"):
-            sso_sessions.update(_parse_section(key, values))
-        elif key.startswith("services"):
-            services.update(_parse_section(key, values))
-        elif key == 'default':
+    parsed_config = copy.deepcopy(
+        parsed_ini_config
+    )
+    profiles = (
+        {}
+    )
+    sso_sessions = (
+        {}
+    )
+    services = (
+        {}
+    )
+    final_config = (
+        {}
+    )
+    for (
+        key,
+        values,
+    ) in (
+        parsed_config.items()
+    ):
+        if key.startswith(
+            "profile"
+        ):
+            profiles.update(
+                _parse_section(
+                    key,
+                    values,
+                )
+            )
+        elif key.startswith(
+            "sso-session"
+        ):
+            sso_sessions.update(
+                _parse_section(
+                    key,
+                    values,
+                )
+            )
+        elif key.startswith(
+            "services"
+        ):
+            services.update(
+                _parse_section(
+                    key,
+                    values,
+                )
+            )
+        elif (
+            key
+            == "default"
+        ):
             # default section is special and is considered a profile
             # name but we don't require you use 'profile "default"'
             # as a section.
-            profiles[key] = values
+            profiles[
+                key
+            ] = values
         else:
-            final_config[key] = values
-    final_config['profiles'] = profiles
-    final_config['sso_sessions'] = sso_sessions
-    final_config['services'] = services
+            final_config[
+                key
+            ] = values
+    final_config[
+        "profiles"
+    ] = profiles
+    final_config[
+        "sso_sessions"
+    ] = sso_sessions
+    final_config[
+        "services"
+    ] = services
     return final_config

@@ -4,9 +4,14 @@ requests.exceptions
 
 This module contains the set of Requests' exceptions.
 """
-from urllib3.exceptions import HTTPError as BaseHTTPError
 
-from .compat import JSONDecodeError as CompatJSONDecodeError
+from urllib3.exceptions import (
+    HTTPError as BaseHTTPError,
+)
+
+from .compat import (
+    JSONDecodeError as CompatJSONDecodeError,
+)
 
 
 class RequestException(IOError):
@@ -16,10 +21,23 @@ class RequestException(IOError):
 
     def __init__(self, *args, **kwargs):
         """Initialize RequestException with `request` and `response` objects."""
-        response = kwargs.pop("response", None)
+        response = kwargs.pop(
+            "response",
+            None,
+        )
         self.response = response
-        self.request = kwargs.pop("request", None)
-        if response is not None and not self.request and hasattr(response, "request"):
+        self.request = kwargs.pop(
+            "request",
+            None,
+        )
+        if (
+            response is not None
+            and not self.request
+            and hasattr(
+                response,
+                "request",
+            )
+        ):
             self.request = self.response.request
         super().__init__(*args, **kwargs)
 
@@ -28,7 +46,10 @@ class InvalidJSONError(RequestException):
     """A JSON error occurred."""
 
 
-class JSONDecodeError(InvalidJSONError, CompatJSONDecodeError):
+class JSONDecodeError(
+    InvalidJSONError,
+    CompatJSONDecodeError,
+):
     """Couldn't decode the text into json"""
 
     def __init__(self, *args, **kwargs):
@@ -41,7 +62,9 @@ class JSONDecodeError(InvalidJSONError, CompatJSONDecodeError):
         CompatJSONDecodeError.__init__(self, *args)
         InvalidJSONError.__init__(self, *self.args, **kwargs)
 
-    def __reduce__(self):
+    def __reduce__(
+        self,
+    ):
         """
         The __reduce__ method called when pickling the object must
         be the one from the JSONDecodeError (be it json/simplejson)
@@ -77,7 +100,10 @@ class Timeout(RequestException):
     """
 
 
-class ConnectTimeout(ConnectionError, Timeout):
+class ConnectTimeout(
+    ConnectionError,
+    Timeout,
+):
     """The request timed out while trying to connect to the remote server.
 
     Requests that produced this error are safe to retry.
@@ -96,19 +122,31 @@ class TooManyRedirects(RequestException):
     """Too many redirects."""
 
 
-class MissingSchema(RequestException, ValueError):
+class MissingSchema(
+    RequestException,
+    ValueError,
+):
     """The URL scheme (e.g. http or https) is missing."""
 
 
-class InvalidSchema(RequestException, ValueError):
+class InvalidSchema(
+    RequestException,
+    ValueError,
+):
     """The URL scheme provided is either invalid or unsupported."""
 
 
-class InvalidURL(RequestException, ValueError):
+class InvalidURL(
+    RequestException,
+    ValueError,
+):
     """The URL provided was somehow invalid."""
 
 
-class InvalidHeader(RequestException, ValueError):
+class InvalidHeader(
+    RequestException,
+    ValueError,
+):
     """The header value provided was somehow invalid."""
 
 
@@ -120,11 +158,17 @@ class ChunkedEncodingError(RequestException):
     """The server declared chunked encoding but sent an invalid chunk."""
 
 
-class ContentDecodingError(RequestException, BaseHTTPError):
+class ContentDecodingError(
+    RequestException,
+    BaseHTTPError,
+):
     """Failed to decode response content."""
 
 
-class StreamConsumedError(RequestException, TypeError):
+class StreamConsumedError(
+    RequestException,
+    TypeError,
+):
     """The content for this response was already consumed."""
 
 
@@ -143,7 +187,10 @@ class RequestsWarning(Warning):
     """Base warning for Requests."""
 
 
-class FileModeWarning(RequestsWarning, DeprecationWarning):
+class FileModeWarning(
+    RequestsWarning,
+    DeprecationWarning,
+):
     """A file was opened in text mode, but Requests determined its binary length."""
 
 

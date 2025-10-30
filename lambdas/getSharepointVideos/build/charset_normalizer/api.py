@@ -1,8 +1,14 @@
-from __future__ import annotations
+from __future__ import (
+    annotations,
+)
 
 import logging
-from os import PathLike
-from typing import BinaryIO
+from os import (
+    PathLike,
+)
+from typing import (
+    BinaryIO,
+)
 
 from .cd import (
     coherence_ratio,
@@ -10,9 +16,19 @@ from .cd import (
     mb_encoding_languages,
     merge_coherence_ratios,
 )
-from .constant import IANA_SUPPORTED, TOO_BIG_SEQUENCE, TOO_SMALL_SEQUENCE, TRACE
-from .md import mess_ratio
-from .models import CharsetMatch, CharsetMatches
+from .constant import (
+    IANA_SUPPORTED,
+    TOO_BIG_SEQUENCE,
+    TOO_SMALL_SEQUENCE,
+    TRACE,
+)
+from .md import (
+    mess_ratio,
+)
+from .models import (
+    CharsetMatch,
+    CharsetMatches,
+)
 from .utils import (
     any_specified_encoding,
     cut_sequence_chunks,
@@ -60,7 +76,13 @@ def from_bytes(
     Custom logging format and handler can be set manually.
     """
 
-    if not isinstance(sequences, (bytearray, bytes)):
+    if not isinstance(
+        sequences,
+        (
+            bytearray,
+            bytes,
+        ),
+    ):
         raise TypeError(
             "Expected object of type bytes or bytearray, got: {}".format(
                 type(sequences)
@@ -79,7 +101,18 @@ def from_bytes(
         if explain:  # Defensive: ensure exit path clean handler
             logger.removeHandler(explain_handler)
             logger.setLevel(previous_logger_level or logging.WARNING)
-        return CharsetMatches([CharsetMatch(sequences, "utf_8", 0.0, False, [], "")])
+        return CharsetMatches(
+            [
+                CharsetMatch(
+                    sequences,
+                    "utf_8",
+                    0.0,
+                    False,
+                    [],
+                    "",
+                )
+            ]
+        )
 
     if cp_isolation is not None:
         logger.log(
@@ -88,7 +121,13 @@ def from_bytes(
             "limited list of encoding allowed : %s.",
             ", ".join(cp_isolation),
         )
-        cp_isolation = [iana_name(cp, False) for cp in cp_isolation]
+        cp_isolation = [
+            iana_name(
+                cp,
+                False,
+            )
+            for cp in cp_isolation
+        ]
     else:
         cp_isolation = []
 
@@ -99,7 +138,13 @@ def from_bytes(
             "limited list of encoding excluded : %s.",
             ", ".join(cp_exclusion),
         )
-        cp_exclusion = [iana_name(cp, False) for cp in cp_exclusion]
+        cp_exclusion = [
+            iana_name(
+                cp,
+                False,
+            )
+            for cp in cp_exclusion
+        ]
     else:
         cp_exclusion = []
 
@@ -161,7 +206,10 @@ def from_bytes(
 
     early_stop_results: CharsetMatches = CharsetMatches()
 
-    sig_encoding, sig_payload = identify_sig_or_bom(sequences)
+    (
+        sig_encoding,
+        sig_payload,
+    ) = identify_sig_or_bom(sequences)
 
     if sig_encoding is not None:
         prioritized_encodings.append(sig_encoding)
@@ -195,7 +243,14 @@ def from_bytes(
             encoding_iana
         )
 
-        if encoding_iana in {"utf_16", "utf_32"} and not bom_or_sig_available:
+        if (
+            encoding_iana
+            in {
+                "utf_16",
+                "utf_32",
+            }
+            and not bom_or_sig_available
+        ):
             logger.log(
                 TRACE,
                 "Encoding %s won't be tested as-is because it require a BOM. Will try some sub-encoder LE/BE.",
@@ -212,7 +267,10 @@ def from_bytes(
 
         try:
             is_multi_byte_decoder: bool = is_multi_byte_encoding(encoding_iana)
-        except (ModuleNotFoundError, ImportError):
+        except (
+            ModuleNotFoundError,
+            ImportError,
+        ):
             logger.log(
                 TRACE,
                 "Encoding %s does not provide an IncrementalDecoder",
@@ -239,8 +297,14 @@ def from_bytes(
                     ),
                     encoding=encoding_iana,
                 )
-        except (UnicodeDecodeError, LookupError) as e:
-            if not isinstance(e, LookupError):
+        except (
+            UnicodeDecodeError,
+            LookupError,
+        ) as e:
+            if not isinstance(
+                e,
+                LookupError,
+            ):
                 logger.log(
                     TRACE,
                     "Code page %s does not fit given bytes sequence at ALL. %s",
@@ -253,7 +317,10 @@ def from_bytes(
         similar_soft_failure_test: bool = False
 
         for encoding_soft_failed in tested_but_soft_failure:
-            if is_cp_similar(encoding_iana, encoding_soft_failed):
+            if is_cp_similar(
+                encoding_iana,
+                encoding_soft_failed,
+            ):
                 similar_soft_failure_test = True
                 break
 
@@ -267,7 +334,7 @@ def from_bytes(
             continue
 
         r_ = range(
-            0 if not bom_or_sig_available else len(sig_payload),
+            (0 if not bom_or_sig_available else len(sig_payload)),
             length,
             int(length / steps),
         )
@@ -288,7 +355,10 @@ def from_bytes(
 
         max_chunk_gave_up: int = int(len(r_) / 4)
 
-        max_chunk_gave_up = max(max_chunk_gave_up, 2)
+        max_chunk_gave_up = max(
+            max_chunk_gave_up,
+            2,
+        )
         early_stop_count: int = 0
         lazy_str_hard_failure = False
 
@@ -344,7 +414,10 @@ def from_bytes(
             and not is_multi_byte_decoder
         ):
             try:
-                sequences[int(50e3) :].decode(encoding_iana, errors="strict")
+                sequences[int(50e3) :].decode(
+                    encoding_iana,
+                    errors="strict",
+                )
             except UnicodeDecodeError as e:
                 logger.log(
                     TRACE,
@@ -364,13 +437,22 @@ def from_bytes(
                 "Computed mean chaos is %f %%.",
                 encoding_iana,
                 early_stop_count,
-                round(mean_mess_ratio * 100, ndigits=3),
+                round(
+                    mean_mess_ratio * 100,
+                    ndigits=3,
+                ),
             )
             # Preparing those fallbacks in case we got nothing.
             if (
                 enable_fallback
                 and encoding_iana
-                in ["ascii", "utf_8", specified_encoding, "utf_16", "utf_32"]
+                in [
+                    "ascii",
+                    "utf_8",
+                    specified_encoding,
+                    "utf_16",
+                    "utf_32",
+                ]
                 and not lazy_str_hard_failure
             ):
                 fallback_entry = CharsetMatch(
@@ -394,7 +476,10 @@ def from_bytes(
             TRACE,
             "%s passed initial chaos probing. Mean measured chaos is %f %%",
             encoding_iana,
-            round(mean_mess_ratio * 100, ndigits=3),
+            round(
+                mean_mess_ratio * 100,
+                ndigits=3,
+            ),
         )
 
         if not is_multi_byte_decoder:
@@ -406,7 +491,8 @@ def from_bytes(
             logger.log(
                 TRACE,
                 "{} should target any language(s) of {}".format(
-                    encoding_iana, str(target_languages)
+                    encoding_iana,
+                    str(target_languages),
                 ),
             )
 
@@ -419,7 +505,7 @@ def from_bytes(
                 chunk_languages = coherence_ratio(
                     chunk,
                     language_threshold,
-                    ",".join(target_languages) if target_languages else None,
+                    (",".join(target_languages) if target_languages else None),
                 )
 
                 cd_ratios.append(chunk_languages)
@@ -430,7 +516,8 @@ def from_bytes(
             logger.log(
                 TRACE,
                 "We detected language {} using {}".format(
-                    cd_ratios_merged, encoding_iana
+                    cd_ratios_merged,
+                    encoding_iana,
                 ),
             )
 
@@ -444,7 +531,12 @@ def from_bytes(
                 decoded_payload
                 if (
                     is_too_large_sequence is False
-                    or encoding_iana in [specified_encoding, "ascii", "utf_8"]
+                    or encoding_iana
+                    in [
+                        specified_encoding,
+                        "ascii",
+                        "utf_8",
+                    ]
                 )
                 else None
             ),
@@ -454,7 +546,12 @@ def from_bytes(
         results.append(current_match)
 
         if (
-            encoding_iana in [specified_encoding, "ascii", "utf_8"]
+            encoding_iana
+            in [
+                specified_encoding,
+                "ascii",
+                "utf_8",
+            ]
             and mean_mess_ratio < 0.1
         ):
             # If md says nothing to worry about, then... stop immediately!
@@ -588,7 +685,10 @@ def from_path(
     Same thing than the function from_bytes but with one extra step. Opening and reading given file path in binary mode.
     Can raise IOError.
     """
-    with open(path, "rb") as fp:
+    with open(
+        path,
+        "rb",
+    ) as fp:
         return from_fp(
             fp,
             steps,
@@ -620,7 +720,13 @@ def is_binary(
     Based on the same main heuristic algorithms and default kwargs at the sole exception that fallbacks match
     are disabled to be stricter around ASCII-compatible but unlikely to be a string.
     """
-    if isinstance(fp_or_path_or_payload, (str, PathLike)):
+    if isinstance(
+        fp_or_path_or_payload,
+        (
+            str,
+            PathLike,
+        ),
+    ):
         guesses = from_path(
             fp_or_path_or_payload,
             steps=steps,

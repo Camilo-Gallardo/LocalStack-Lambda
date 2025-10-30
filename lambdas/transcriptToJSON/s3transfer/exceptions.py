@@ -10,28 +10,46 @@
 # distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF
 # ANY KIND, either express or implied. See the License for the specific
 # language governing permissions and limitations under the License.
-from concurrent.futures import CancelledError
+from concurrent.futures import (
+    CancelledError,
+)
 
 
-class RetriesExceededError(Exception):
-    def __init__(self, last_exception, msg='Max Retries Exceeded'):
-        super().__init__(msg)
+class RetriesExceededError(
+    Exception
+):
+    def __init__(
+        self,
+        last_exception,
+        msg="Max Retries Exceeded",
+    ):
+        super().__init__(
+            msg
+        )
         self.last_exception = last_exception
 
 
-class S3UploadFailedError(Exception):
+class S3UploadFailedError(
+    Exception
+):
     pass
 
 
-class InvalidSubscriberMethodError(Exception):
+class InvalidSubscriberMethodError(
+    Exception
+):
     pass
 
 
-class TransferNotDoneError(Exception):
+class TransferNotDoneError(
+    Exception
+):
     pass
 
 
-class FatalError(CancelledError):
+class FatalError(
+    CancelledError
+):
     """A CancelledError raised from an error in the TransferManager"""
 
     pass

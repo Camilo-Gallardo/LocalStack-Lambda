@@ -16,7 +16,10 @@ logger = logging.getLogger(__name__)
 
 
 def register_table_methods(base_classes, **kwargs):
-    base_classes.insert(0, TableResource)
+    base_classes.insert(
+        0,
+        TableResource,
+    )
 
 
 # This class can be used to add any additional methods we want
@@ -28,7 +31,10 @@ class TableResource:
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    def batch_writer(self, overwrite_by_pkeys=None):
+    def batch_writer(
+        self,
+        overwrite_by_pkeys=None,
+    ):
         """Create a batch writer object.
 
         This method creates a context manager for writing
@@ -56,7 +62,9 @@ class TableResource:
 
         """
         return BatchWriter(
-            self.name, self.meta.client, overwrite_by_pkeys=overwrite_by_pkeys
+            self.name,
+            self.meta.client,
+            overwrite_by_pkeys=overwrite_by_pkeys,
         )
 
 
@@ -64,7 +72,11 @@ class BatchWriter:
     """Automatically handle batch writes to DynamoDB for a single table."""
 
     def __init__(
-        self, table_name, client, flush_amount=25, overwrite_by_pkeys=None
+        self,
+        table_name,
+        client,
+        flush_amount=25,
+        overwrite_by_pkeys=None,
     ):
         """
 
@@ -99,19 +111,31 @@ class BatchWriter:
         self._flush_amount = flush_amount
         self._overwrite_by_pkeys = overwrite_by_pkeys
 
-    def put_item(self, Item):
-        self._add_request_and_process({'PutRequest': {'Item': Item}})
+    def put_item(
+        self,
+        Item,
+    ):
+        self._add_request_and_process({"PutRequest": {"Item": Item}})
 
-    def delete_item(self, Key):
-        self._add_request_and_process({'DeleteRequest': {'Key': Key}})
+    def delete_item(
+        self,
+        Key,
+    ):
+        self._add_request_and_process({"DeleteRequest": {"Key": Key}})
 
-    def _add_request_and_process(self, request):
+    def _add_request_and_process(
+        self,
+        request,
+    ):
         if self._overwrite_by_pkeys:
             self._remove_dup_pkeys_request_if_any(request)
         self._items_buffer.append(request)
         self._flush_if_needed()
 
-    def _remove_dup_pkeys_request_if_any(self, request):
+    def _remove_dup_pkeys_request_if_any(
+        self,
+        request,
+    ):
         pkey_values_new = self._extract_pkey_values(request)
         for item in self._items_buffer:
             if self._extract_pkey_values(item) == pkey_values_new:
@@ -121,33 +145,41 @@ class BatchWriter:
                     item,
                 )
 
-    def _extract_pkey_values(self, request):
-        if request.get('PutRequest'):
+    def _extract_pkey_values(
+        self,
+        request,
+    ):
+        if request.get("PutRequest"):
             return [
-                request['PutRequest']['Item'][key]
-                for key in self._overwrite_by_pkeys
+                request["PutRequest"]["Item"][key] for key in self._overwrite_by_pkeys
             ]
-        elif request.get('DeleteRequest'):
+        elif request.get("DeleteRequest"):
             return [
-                request['DeleteRequest']['Key'][key]
-                for key in self._overwrite_by_pkeys
+                request["DeleteRequest"]["Key"][key] for key in self._overwrite_by_pkeys
             ]
         return None
 
-    def _flush_if_needed(self):
+    def _flush_if_needed(
+        self,
+    ):
         if len(self._items_buffer) >= self._flush_amount:
             self._flush()
 
-    def _flush(self):
+    def _flush(
+        self,
+    ):
         items_to_send = self._items_buffer[: self._flush_amount]
         self._items_buffer = self._items_buffer[self._flush_amount :]
         response = self._client.batch_write_item(
             RequestItems={self._table_name: items_to_send}
         )
-        unprocessed_items = response['UnprocessedItems']
+        unprocessed_items = response["UnprocessedItems"]
         if not unprocessed_items:
             unprocessed_items = {}
-        item_list = unprocessed_items.get(self._table_name, [])
+        item_list = unprocessed_items.get(
+            self._table_name,
+            [],
+        )
         # Any unprocessed_items are immediately added to the
         # next batch we send.
         self._items_buffer.extend(item_list)
@@ -157,10 +189,17 @@ class BatchWriter:
             len(self._items_buffer),
         )
 
-    def __enter__(self):
+    def __enter__(
+        self,
+    ):
         return self
 
-    def __exit__(self, exc_type, exc_value, tb):
+    def __exit__(
+        self,
+        exc_type,
+        exc_value,
+        tb,
+    ):
         # When we exit, we need to keep flushing whatever's left
         # until there's nothing left in our items buffer.
         while self._items_buffer:

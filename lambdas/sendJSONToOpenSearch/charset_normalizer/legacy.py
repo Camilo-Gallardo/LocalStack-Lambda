@@ -1,14 +1,28 @@
-from __future__ import annotations
+from __future__ import (
+    annotations,
+)
 
-from typing import TYPE_CHECKING, Any
-from warnings import warn
+from typing import (
+    TYPE_CHECKING,
+    Any,
+)
+from warnings import (
+    warn,
+)
 
-from .api import from_bytes
-from .constant import CHARDET_CORRESPONDENCE, TOO_SMALL_SEQUENCE
+from .api import (
+    from_bytes,
+)
+from .constant import (
+    CHARDET_CORRESPONDENCE,
+    TOO_SMALL_SEQUENCE,
+)
 
 # TODO: remove this check when dropping Python 3.7 support
 if TYPE_CHECKING:
-    from typing_extensions import TypedDict
+    from typing_extensions import (
+        TypedDict,
+    )
 
     class ResultDict(TypedDict):
         encoding: str | None
@@ -17,7 +31,9 @@ if TYPE_CHECKING:
 
 
 def detect(
-    byte_str: bytes, should_rename_legacy: bool = False, **kwargs: Any
+    byte_str: bytes,
+    should_rename_legacy: bool = False,
+    **kwargs: Any,
 ) -> ResultDict:
     """
     chardet legacy method
@@ -35,12 +51,21 @@ def detect(
             f"charset-normalizer disregard arguments '{','.join(list(kwargs.keys()))}' in legacy function detect()"
         )
 
-    if not isinstance(byte_str, (bytearray, bytes)):
-        raise TypeError(  # pragma: nocover
+    if not isinstance(
+        byte_str,
+        (
+            bytearray,
+            bytes,
+        ),
+    ):
+        raise TypeError(
             f"Expected object of type bytes or bytearray, got: {type(byte_str)}"
-        )
+        )  # pragma: nocover
 
-    if isinstance(byte_str, bytearray):
+    if isinstance(
+        byte_str,
+        bytearray,
+    ):
         byte_str = bytes(byte_str)
 
     r = from_bytes(byte_str).best()

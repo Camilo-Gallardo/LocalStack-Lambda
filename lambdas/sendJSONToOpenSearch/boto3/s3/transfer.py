@@ -122,25 +122,46 @@ transfer.  For example:
 
 
 """
-from os import PathLike, fspath
+from os import (
+    PathLike,
+    fspath,
+)
 
-from botocore.exceptions import ClientError
+from boto3.exceptions import (
+    RetriesExceededError,
+    S3UploadFailedError,
+)
+from botocore.exceptions import (
+    ClientError,
+)
 from s3transfer.exceptions import (
     RetriesExceededError as S3TransferRetriesExceededError,
 )
-from s3transfer.futures import NonThreadedExecutor
-from s3transfer.manager import TransferConfig as S3TransferConfig
-from s3transfer.manager import TransferManager
-from s3transfer.subscribers import BaseSubscriber
-from s3transfer.utils import OSUtils
-
-from boto3.exceptions import RetriesExceededError, S3UploadFailedError
+from s3transfer.futures import (
+    NonThreadedExecutor,
+)
+from s3transfer.manager import (
+    TransferConfig as S3TransferConfig,
+)
+from s3transfer.manager import (
+    TransferManager,
+)
+from s3transfer.subscribers import (
+    BaseSubscriber,
+)
+from s3transfer.utils import (
+    OSUtils,
+)
 
 KB = 1024
 MB = KB * KB
 
 
-def create_transfer_manager(client, config, osutil=None):
+def create_transfer_manager(
+    client,
+    config,
+    osutil=None,
+):
     """Creates a transfer manager based on configuration
 
     :type client: boto3.client
@@ -158,13 +179,18 @@ def create_transfer_manager(client, config, osutil=None):
     executor_cls = None
     if not config.use_threads:
         executor_cls = NonThreadedExecutor
-    return TransferManager(client, config, osutil, executor_cls)
+    return TransferManager(
+        client,
+        config,
+        osutil,
+        executor_cls,
+    )
 
 
 class TransferConfig(S3TransferConfig):
     ALIAS = {
-        'max_concurrency': 'max_request_concurrency',
-        'max_io_queue': 'max_io_queue_size',
+        "max_concurrency": "max_request_concurrency",
+        "max_io_queue": "max_io_queue_size",
     }
 
     def __init__(
@@ -231,32 +257,61 @@ class TransferConfig(S3TransferConfig):
         # S3TransferConfig so we add aliases so you can still access the
         # old version of the names.
         for alias in self.ALIAS:
-            setattr(self, alias, getattr(self, self.ALIAS[alias]))
+            setattr(
+                self,
+                alias,
+                getattr(
+                    self,
+                    self.ALIAS[alias],
+                ),
+            )
         self.use_threads = use_threads
 
-    def __setattr__(self, name, value):
+    def __setattr__(
+        self,
+        name,
+        value,
+    ):
         # If the alias name is used, make sure we set the name that it points
         # to as that is what actually is used in governing the TransferManager.
         if name in self.ALIAS:
-            super().__setattr__(self.ALIAS[name], value)
+            super().__setattr__(
+                self.ALIAS[name],
+                value,
+            )
         # Always set the value of the actual name provided.
-        super().__setattr__(name, value)
+        super().__setattr__(
+            name,
+            value,
+        )
 
 
 class S3Transfer:
     ALLOWED_DOWNLOAD_ARGS = TransferManager.ALLOWED_DOWNLOAD_ARGS
     ALLOWED_UPLOAD_ARGS = TransferManager.ALLOWED_UPLOAD_ARGS
 
-    def __init__(self, client=None, config=None, osutil=None, manager=None):
+    def __init__(
+        self,
+        client=None,
+        config=None,
+        osutil=None,
+        manager=None,
+    ):
         if not client and not manager:
             raise ValueError(
-                'Either a boto3.Client or s3transfer.manager.TransferManager '
-                'must be provided'
+                "Either a boto3.Client or s3transfer.manager.TransferManager "
+                "must be provided"
             )
-        if manager and any([client, config, osutil]):
+        if manager and any(
+            [
+                client,
+                config,
+                osutil,
+            ]
+        ):
             raise ValueError(
-                'Manager cannot be provided with client, config, '
-                'nor osutil. These parameters are mutually exclusive.'
+                "Manager cannot be provided with client, config, "
+                "nor osutil. These parameters are mutually exclusive."
             )
         if config is None:
             config = TransferConfig()
@@ -265,10 +320,19 @@ class S3Transfer:
         if manager:
             self._manager = manager
         else:
-            self._manager = create_transfer_manager(client, config, osutil)
+            self._manager = create_transfer_manager(
+                client,
+                config,
+                osutil,
+            )
 
     def upload_file(
-        self, filename, bucket, key, callback=None, extra_args=None
+        self,
+        filename,
+        bucket,
+        key,
+        callback=None,
+        extra_args=None,
     ):
         """Upload a file to an S3 object.
 
@@ -279,14 +343,24 @@ class S3Transfer:
             :py:meth:`S3.Client.upload_file`
             :py:meth:`S3.Client.upload_fileobj`
         """
-        if isinstance(filename, PathLike):
+        if isinstance(
+            filename,
+            PathLike,
+        ):
             filename = fspath(filename)
-        if not isinstance(filename, str):
-            raise ValueError('Filename must be a string or a path-like object')
+        if not isinstance(
+            filename,
+            str,
+        ):
+            raise ValueError("Filename must be a string or a path-like object")
 
         subscribers = self._get_subscribers(callback)
         future = self._manager.upload(
-            filename, bucket, key, extra_args, subscribers
+            filename,
+            bucket,
+            key,
+            extra_args,
+            subscribers,
         )
         try:
             future.result()
@@ -297,12 +371,24 @@ class S3Transfer:
         except ClientError as e:
             raise S3UploadFailedError(
                 "Failed to upload {} to {}: {}".format(
-                    filename, '/'.join([bucket, key]), e
+                    filename,
+                    "/".join(
+                        [
+                            bucket,
+                            key,
+                        ]
+                    ),
+                    e,
                 )
             )
 
     def download_file(
-        self, bucket, key, filename, extra_args=None, callback=None
+        self,
+        bucket,
+        key,
+        filename,
+        extra_args=None,
+        callback=None,
     ):
         """Download an S3 object to a file.
 
@@ -313,14 +399,24 @@ class S3Transfer:
             :py:meth:`S3.Client.download_file`
             :py:meth:`S3.Client.download_fileobj`
         """
-        if isinstance(filename, PathLike):
+        if isinstance(
+            filename,
+            PathLike,
+        ):
             filename = fspath(filename)
-        if not isinstance(filename, str):
-            raise ValueError('Filename must be a string or a path-like object')
+        if not isinstance(
+            filename,
+            str,
+        ):
+            raise ValueError("Filename must be a string or a path-like object")
 
         subscribers = self._get_subscribers(callback)
         future = self._manager.download(
-            bucket, key, filename, extra_args, subscribers
+            bucket,
+            key,
+            filename,
+            extra_args,
+            subscribers,
         )
         try:
             future.result()
@@ -332,12 +428,17 @@ class S3Transfer:
         except S3TransferRetriesExceededError as e:
             raise RetriesExceededError(e.last_exception)
 
-    def _get_subscribers(self, callback):
+    def _get_subscribers(
+        self,
+        callback,
+    ):
         if not callback:
             return None
         return [ProgressCallbackInvoker(callback)]
 
-    def __enter__(self):
+    def __enter__(
+        self,
+    ):
         return self
 
     def __exit__(self, *args):
@@ -351,7 +452,10 @@ class ProgressCallbackInvoker(BaseSubscriber):
         how many bytes were transferred.
     """
 
-    def __init__(self, callback):
+    def __init__(
+        self,
+        callback,
+    ):
         self._callback = callback
 
     def on_progress(self, bytes_transferred, **kwargs):

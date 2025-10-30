@@ -1,16 +1,30 @@
-from __future__ import annotations
+from __future__ import (
+    annotations,
+)
 
 import socket
 import typing
 import warnings
-from email.errors import MessageDefect
-from http.client import IncompleteRead as httplib_IncompleteRead
+from email.errors import (
+    MessageDefect,
+)
+from http.client import (
+    IncompleteRead as httplib_IncompleteRead,
+)
 
 if typing.TYPE_CHECKING:
-    from .connection import HTTPConnection
-    from .connectionpool import ConnectionPool
-    from .response import HTTPResponse
-    from .util.retry import Retry
+    from .connection import (
+        HTTPConnection,
+    )
+    from .connectionpool import (
+        ConnectionPool,
+    )
+    from .response import (
+        HTTPResponse,
+    )
+    from .util.retry import (
+        Retry,
+    )
 
 # Base Exceptions
 
@@ -24,32 +38,68 @@ class HTTPWarning(Warning):
 
 
 _TYPE_REDUCE_RESULT = typing.Tuple[
-    typing.Callable[..., object], typing.Tuple[object, ...]
+    typing.Callable[
+        ...,
+        object,
+    ],
+    typing.Tuple[
+        object,
+        ...,
+    ],
 ]
 
 
 class PoolError(HTTPError):
     """Base exception for errors caused within a pool."""
 
-    def __init__(self, pool: ConnectionPool, message: str) -> None:
+    def __init__(
+        self,
+        pool: ConnectionPool,
+        message: str,
+    ) -> None:
         self.pool = pool
         super().__init__(f"{pool}: {message}")
 
-    def __reduce__(self) -> _TYPE_REDUCE_RESULT:
+    def __reduce__(
+        self,
+    ) -> _TYPE_REDUCE_RESULT:
         # For pickling purposes.
-        return self.__class__, (None, None)
+        return (
+            self.__class__,
+            (
+                None,
+                None,
+            ),
+        )
 
 
 class RequestError(PoolError):
     """Base exception for PoolErrors that have associated URLs."""
 
-    def __init__(self, pool: ConnectionPool, url: str, message: str) -> None:
+    def __init__(
+        self,
+        pool: ConnectionPool,
+        url: str,
+        message: str,
+    ) -> None:
         self.url = url
-        super().__init__(pool, message)
+        super().__init__(
+            pool,
+            message,
+        )
 
-    def __reduce__(self) -> _TYPE_REDUCE_RESULT:
+    def __reduce__(
+        self,
+    ) -> _TYPE_REDUCE_RESULT:
         # For pickling purposes.
-        return self.__class__, (None, self.url, None)
+        return (
+            self.__class__,
+            (
+                None,
+                self.url,
+                None,
+            ),
+        )
 
 
 class SSLError(HTTPError):
@@ -62,8 +112,15 @@ class ProxyError(HTTPError):
     # The original error is also available as __cause__.
     original_error: Exception
 
-    def __init__(self, message: str, error: Exception) -> None:
-        super().__init__(message, error)
+    def __init__(
+        self,
+        message: str,
+        error: Exception,
+    ) -> None:
+        super().__init__(
+            message,
+            error,
+        )
         self.original_error = error
 
 
@@ -94,23 +151,37 @@ class MaxRetryError(RequestError):
     """
 
     def __init__(
-        self, pool: ConnectionPool, url: str, reason: Exception | None = None
+        self,
+        pool: ConnectionPool,
+        url: str,
+        reason: Exception | None = None,
     ) -> None:
         self.reason = reason
 
         message = f"Max retries exceeded with url: {url} (Caused by {reason!r})"
 
-        super().__init__(pool, url, message)
+        super().__init__(
+            pool,
+            url,
+            message,
+        )
 
 
 class HostChangedError(RequestError):
     """Raised when an existing pool gets a request for a foreign host."""
 
     def __init__(
-        self, pool: ConnectionPool, url: str, retries: Retry | int = 3
+        self,
+        pool: ConnectionPool,
+        url: str,
+        retries: Retry | int = 3,
     ) -> None:
         message = f"Tried to open a foreign host with url: {url}"
-        super().__init__(pool, url, message)
+        super().__init__(
+            pool,
+            url,
+            message,
+        )
         self.retries = retries
 
 
@@ -126,7 +197,10 @@ class TimeoutError(HTTPError):
     """
 
 
-class ReadTimeoutError(TimeoutError, RequestError):
+class ReadTimeoutError(
+    TimeoutError,
+    RequestError,
+):
     """Raised when a socket timeout occurs while receiving data from a server"""
 
 
@@ -136,15 +210,24 @@ class ConnectTimeoutError(TimeoutError):
     """Raised when a socket timeout occurs while connecting to a server"""
 
 
-class NewConnectionError(ConnectTimeoutError, HTTPError):
+class NewConnectionError(
+    ConnectTimeoutError,
+    HTTPError,
+):
     """Raised when we fail to establish a new connection. Usually ECONNREFUSED."""
 
-    def __init__(self, conn: HTTPConnection, message: str) -> None:
+    def __init__(
+        self,
+        conn: HTTPConnection,
+        message: str,
+    ) -> None:
         self.conn = conn
         super().__init__(f"{conn}: {message}")
 
     @property
-    def pool(self) -> HTTPConnection:
+    def pool(
+        self,
+    ) -> HTTPConnection:
         warnings.warn(
             "The 'pool' property is deprecated and will be removed "
             "in urllib3 v2.1.0. Use 'conn' instead.",
@@ -158,9 +241,17 @@ class NewConnectionError(ConnectTimeoutError, HTTPError):
 class NameResolutionError(NewConnectionError):
     """Raised when host name resolution fails."""
 
-    def __init__(self, host: str, conn: HTTPConnection, reason: socket.gaierror):
+    def __init__(
+        self,
+        host: str,
+        conn: HTTPConnection,
+        reason: socket.gaierror,
+    ):
         message = f"Failed to resolve '{host}' ({reason})"
-        super().__init__(conn, message)
+        super().__init__(
+            conn,
+            message,
+        )
 
 
 class EmptyPoolError(PoolError):
@@ -175,14 +266,20 @@ class ClosedPoolError(PoolError):
     """Raised when a request enters a pool after the pool has been closed."""
 
 
-class LocationValueError(ValueError, HTTPError):
+class LocationValueError(
+    ValueError,
+    HTTPError,
+):
     """Raised when there is something wrong with a given URL input."""
 
 
 class LocationParseError(LocationValueError):
     """Raised when get_host or similar fails to parse the URL input."""
 
-    def __init__(self, location: str) -> None:
+    def __init__(
+        self,
+        location: str,
+    ) -> None:
         message = f"Failed to parse: {location}"
         super().__init__(message)
 
@@ -192,7 +289,10 @@ class LocationParseError(LocationValueError):
 class URLSchemeUnknown(LocationValueError):
     """Raised when a URL input has an unsupported scheme."""
 
-    def __init__(self, scheme: str):
+    def __init__(
+        self,
+        scheme: str,
+    ):
         message = f"Not supported URL scheme {scheme}"
         super().__init__(message)
 
@@ -233,7 +333,10 @@ class DependencyWarning(HTTPWarning):
     """
 
 
-class ResponseNotChunked(ProtocolError, ValueError):
+class ResponseNotChunked(
+    ProtocolError,
+    ValueError,
+):
     """Response needs to be chunked in order to read it as chunks."""
 
 
@@ -244,7 +347,10 @@ class BodyNotHttplibCompatible(HTTPError):
     """
 
 
-class IncompleteRead(HTTPError, httplib_IncompleteRead):
+class IncompleteRead(
+    HTTPError,
+    httplib_IncompleteRead,
+):
     """
     Response length doesn't match expected Content-Length
 
@@ -252,27 +358,42 @@ class IncompleteRead(HTTPError, httplib_IncompleteRead):
     for ``partial`` to avoid creating large objects on streamed reads.
     """
 
-    def __init__(self, partial: int, expected: int) -> None:
+    def __init__(
+        self,
+        partial: int,
+        expected: int,
+    ) -> None:
         self.partial = partial  # type: ignore[assignment]
         self.expected = expected
 
-    def __repr__(self) -> str:
+    def __repr__(
+        self,
+    ) -> str:
         return "IncompleteRead(%i bytes read, %i more expected)" % (
             self.partial,  # type: ignore[str-format]
             self.expected,
         )
 
 
-class InvalidChunkLength(HTTPError, httplib_IncompleteRead):
+class InvalidChunkLength(
+    HTTPError,
+    httplib_IncompleteRead,
+):
     """Invalid chunk length in a chunked response."""
 
-    def __init__(self, response: HTTPResponse, length: bytes) -> None:
+    def __init__(
+        self,
+        response: HTTPResponse,
+        length: bytes,
+    ) -> None:
         self.partial: int = response.tell()  # type: ignore[assignment]
         self.expected: int | None = response.length_remaining
         self.response = response
         self.length = length
 
-    def __repr__(self) -> str:
+    def __repr__(
+        self,
+    ) -> str:
         return "InvalidChunkLength(got length %r, %i bytes read)" % (
             self.length,
             self.partial,
@@ -283,12 +404,18 @@ class InvalidHeader(HTTPError):
     """The header provided was somehow invalid."""
 
 
-class ProxySchemeUnknown(AssertionError, URLSchemeUnknown):
+class ProxySchemeUnknown(
+    AssertionError,
+    URLSchemeUnknown,
+):
     """ProxyManager does not support the supplied scheme"""
 
     # TODO(t-8ch): Stop inheriting from AssertionError in v2.0.
 
-    def __init__(self, scheme: str | None) -> None:
+    def __init__(
+        self,
+        scheme: str | None,
+    ) -> None:
         # 'localhost' is here because our URL parser parses
         # localhost:8080 -> scheme=localhost, remove if we fix this.
         if scheme == "localhost":
@@ -308,7 +435,9 @@ class HeaderParsingError(HTTPError):
     """Raised by assert_header_parsing, but we convert it to a log.warning statement."""
 
     def __init__(
-        self, defects: list[MessageDefect], unparsed_data: bytes | str | None
+        self,
+        defects: list[MessageDefect],
+        unparsed_data: bytes | str | None,
     ) -> None:
         message = f"{defects or 'Unknown'}, unparsed data: {unparsed_data!r}"
         super().__init__(message)

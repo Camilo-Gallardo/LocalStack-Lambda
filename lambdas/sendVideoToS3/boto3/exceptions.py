@@ -36,29 +36,45 @@ class NoVersionFound(Boto3Error):
 # introduced in boto3.
 # Same thing for ResourceNotExistsError below.
 class UnknownAPIVersionError(
-    Boto3Error, botocore.exceptions.DataNotFoundError
+    Boto3Error,
+    botocore.exceptions.DataNotFoundError,
 ):
-    def __init__(self, service_name, bad_api_version, available_api_versions):
+    def __init__(
+        self,
+        service_name,
+        bad_api_version,
+        available_api_versions,
+    ):
         msg = (
             f"The '{service_name}' resource does not an API version of: {bad_api_version}\n"
             f"Valid API versions are: {available_api_versions}"
         )
         # Not using super because we don't want the DataNotFoundError
         # to be called, it has a different __init__ signature.
-        Boto3Error.__init__(self, msg)
+        Boto3Error.__init__(
+            self,
+            msg,
+        )
 
 
 class ResourceNotExistsError(
-    Boto3Error, botocore.exceptions.DataNotFoundError
+    Boto3Error,
+    botocore.exceptions.DataNotFoundError,
 ):
     """Raised when you attempt to create a resource that does not exist."""
 
-    def __init__(self, service_name, available_services, has_low_level_client):
+    def __init__(
+        self,
+        service_name,
+        available_services,
+        has_low_level_client,
+    ):
         msg = (
             "The '{}' resource does not exist.\n"
             "The available resources are:\n"
             "   - {}\n".format(
-                service_name, '\n   - '.join(available_services)
+                service_name,
+                "\n   - ".join(available_services),
             )
         )
         if has_low_level_client:
@@ -68,11 +84,18 @@ class ResourceNotExistsError(
             )
         # Not using super because we don't want the DataNotFoundError
         # to be called, it has a different __init__ signature.
-        Boto3Error.__init__(self, msg)
+        Boto3Error.__init__(
+            self,
+            msg,
+        )
 
 
 class RetriesExceededError(Boto3Error):
-    def __init__(self, last_exception, msg='Max Retries Exceeded'):
+    def __init__(
+        self,
+        last_exception,
+        msg="Max Retries Exceeded",
+    ):
         super().__init__(msg)
         self.last_exception = last_exception
 
@@ -88,13 +111,20 @@ class S3UploadFailedError(Boto3Error):
 class DynamoDBOperationNotSupportedError(Boto3Error):
     """Raised for operations that are not supported for an operand."""
 
-    def __init__(self, operation, value):
+    def __init__(
+        self,
+        operation,
+        value,
+    ):
         msg = (
-            f'{operation} operation cannot be applied to value {value} of type '
-            f'{type(value)} directly. Must use AttributeBase object methods '
-            f'(i.e. Attr().eq()). to generate ConditionBase instances first.'
+            f"{operation} operation cannot be applied to value {value} of type "
+            f"{type(value)} directly. Must use AttributeBase object methods "
+            f"(i.e. Attr().eq()). to generate ConditionBase instances first."
         )
-        Exception.__init__(self, msg)
+        Exception.__init__(
+            self,
+            msg,
+        )
 
 
 # FIXME: Backward compatibility
@@ -104,13 +134,19 @@ DynanmoDBOperationNotSupportedError = DynamoDBOperationNotSupportedError
 class DynamoDBNeedsConditionError(Boto3Error):
     """Raised when input is not a condition"""
 
-    def __init__(self, value):
+    def __init__(
+        self,
+        value,
+    ):
         msg = (
-            f'Expecting a ConditionBase object. Got {value} of type {type(value)}. '
-            f'Use AttributeBase object methods (i.e. Attr().eq()). to '
-            f'generate ConditionBase instances.'
+            f"Expecting a ConditionBase object. Got {value} of type {type(value)}. "
+            f"Use AttributeBase object methods (i.e. Attr().eq()). to "
+            f"generate ConditionBase instances."
         )
-        Exception.__init__(self, msg)
+        Exception.__init__(
+            self,
+            msg,
+        )
 
 
 class DynamoDBNeedsKeyConditionError(Boto3Error):

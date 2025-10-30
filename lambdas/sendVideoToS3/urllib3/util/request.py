@@ -1,22 +1,40 @@
-from __future__ import annotations
+from __future__ import (
+    annotations,
+)
 
 import io
 import typing
-from base64 import b64encode
-from enum import Enum
+from base64 import (
+    b64encode,
+)
+from enum import (
+    Enum,
+)
 
-from ..exceptions import UnrewindableBodyError
-from .util import to_bytes
+from ..exceptions import (
+    UnrewindableBodyError,
+)
+from .util import (
+    to_bytes,
+)
 
 if typing.TYPE_CHECKING:
-    from typing_extensions import Final
+    from typing_extensions import (
+        Final,
+    )
 
 # Pass as a value within ``headers`` to skip
 # emitting some HTTP headers that are added automatically.
 # The only headers that are supported are ``Accept-Encoding``,
 # ``Host``, and ``User-Agent``.
 SKIP_HEADER = "@@@SKIP_HEADER@@@"
-SKIPPABLE_HEADERS = frozenset(["accept-encoding", "host", "user-agent"])
+SKIPPABLE_HEADERS = frozenset(
+    [
+        "accept-encoding",
+        "host",
+        "user-agent",
+    ]
+)
 
 ACCEPT_ENCODING = "gzip,deflate"
 try:
@@ -42,14 +60,24 @@ class _TYPE_FAILEDTELL(Enum):
 
 _FAILEDTELL: Final[_TYPE_FAILEDTELL] = _TYPE_FAILEDTELL.token
 
-_TYPE_BODY_POSITION = typing.Union[int, _TYPE_FAILEDTELL]
+_TYPE_BODY_POSITION = typing.Union[
+    int,
+    _TYPE_FAILEDTELL,
+]
 
 # When sending a request with these methods we aren't expecting
 # a body so don't need to set an explicit 'Content-Length: 0'
 # The reason we do this in the negative instead of tracking methods
 # which 'should' have a body is because unknown methods should be
 # treated as if they were 'POST' which *does* expect a body.
-_METHODS_NOT_EXPECTING_BODY = {"GET", "HEAD", "DELETE", "TRACE", "OPTIONS", "CONNECT"}
+_METHODS_NOT_EXPECTING_BODY = {
+    "GET",
+    "HEAD",
+    "DELETE",
+    "TRACE",
+    "OPTIONS",
+    "CONNECT",
+}
 
 
 def make_headers(
@@ -59,7 +87,10 @@ def make_headers(
     basic_auth: str | None = None,
     proxy_basic_auth: str | None = None,
     disable_cache: bool | None = None,
-) -> dict[str, str]:
+) -> dict[
+    str,
+    str,
+]:
     """
     Shortcuts for generating request headers.
 
@@ -99,11 +130,20 @@ def make_headers(
         print(urllib3.util.make_headers(accept_encoding=True))
         # {'accept-encoding': 'gzip,deflate'}
     """
-    headers: dict[str, str] = {}
+    headers: dict[
+        str,
+        str,
+    ] = {}
     if accept_encoding:
-        if isinstance(accept_encoding, str):
+        if isinstance(
+            accept_encoding,
+            str,
+        ):
             pass
-        elif isinstance(accept_encoding, list):
+        elif isinstance(
+            accept_encoding,
+            list,
+        ):
             accept_encoding = ",".join(accept_encoding)
         else:
             accept_encoding = ACCEPT_ENCODING
@@ -116,14 +156,14 @@ def make_headers(
         headers["connection"] = "keep-alive"
 
     if basic_auth:
-        headers[
-            "authorization"
-        ] = f"Basic {b64encode(basic_auth.encode('latin-1')).decode()}"
+        headers["authorization"] = (
+            f"Basic {b64encode(basic_auth.encode('latin-1')).decode()}"
+        )
 
     if proxy_basic_auth:
-        headers[
-            "proxy-authorization"
-        ] = f"Basic {b64encode(proxy_basic_auth.encode('latin-1')).decode()}"
+        headers["proxy-authorization"] = (
+            f"Basic {b64encode(proxy_basic_auth.encode('latin-1')).decode()}"
+        )
 
     if disable_cache:
         headers["cache-control"] = "no-cache"
@@ -132,15 +172,26 @@ def make_headers(
 
 
 def set_file_position(
-    body: typing.Any, pos: _TYPE_BODY_POSITION | None
+    body: typing.Any,
+    pos: _TYPE_BODY_POSITION | None,
 ) -> _TYPE_BODY_POSITION | None:
     """
     If a position is provided, move file to that point.
     Otherwise, we'll attempt to record a position for future use.
     """
     if pos is not None:
-        rewind_body(body, pos)
-    elif getattr(body, "tell", None) is not None:
+        rewind_body(
+            body,
+            pos,
+        )
+    elif (
+        getattr(
+            body,
+            "tell",
+            None,
+        )
+        is not None
+    ):
         try:
             pos = body.tell()
         except OSError:
@@ -151,7 +202,10 @@ def set_file_position(
     return pos
 
 
-def rewind_body(body: typing.IO[typing.AnyStr], body_pos: _TYPE_BODY_POSITION) -> None:
+def rewind_body(
+    body: typing.IO[typing.AnyStr],
+    body_pos: _TYPE_BODY_POSITION,
+) -> None:
     """
     Attempt to rewind body to a certain position.
     Primarily used for request redirects and retries.
@@ -162,8 +216,15 @@ def rewind_body(body: typing.IO[typing.AnyStr], body_pos: _TYPE_BODY_POSITION) -
     :param int pos:
         Position to seek to in file.
     """
-    body_seek = getattr(body, "seek", None)
-    if body_seek is not None and isinstance(body_pos, int):
+    body_seek = getattr(
+        body,
+        "seek",
+        None,
+    )
+    if body_seek is not None and isinstance(
+        body_pos,
+        int,
+    ):
         try:
             body_seek(body_pos)
         except OSError as e:
@@ -187,7 +248,9 @@ class ChunksAndContentLength(typing.NamedTuple):
 
 
 def body_to_chunks(
-    body: typing.Any | None, method: str, blocksize: int
+    body: typing.Any | None,
+    method: str,
+    blocksize: int,
 ) -> ChunksAndContentLength:
     """Takes the HTTP request method, body, and blocksize and
     transforms them into an iterable of chunks to pass to
@@ -212,16 +275,28 @@ def body_to_chunks(
             content_length = None
 
     # Bytes or strings become bytes
-    elif isinstance(body, (str, bytes)):
+    elif isinstance(
+        body,
+        (
+            str,
+            bytes,
+        ),
+    ):
         chunks = (to_bytes(body),)
         content_length = len(chunks[0])
 
     # File-like object, TODO: use seek() and tell() for length?
-    elif hasattr(body, "read"):
+    elif hasattr(
+        body,
+        "read",
+    ):
 
         def chunk_readable() -> typing.Iterable[bytes]:
             nonlocal body, blocksize
-            encode = isinstance(body, io.TextIOBase)
+            encode = isinstance(
+                body,
+                io.TextIOBase,
+            )
             while True:
                 datablock = body.read(blocksize)
                 if not datablock:
@@ -253,4 +328,7 @@ def body_to_chunks(
             chunks = (body,)
             content_length = mv.nbytes
 
-    return ChunksAndContentLength(chunks=chunks, content_length=content_length)
+    return ChunksAndContentLength(
+        chunks=chunks,
+        content_length=content_length,
+    )

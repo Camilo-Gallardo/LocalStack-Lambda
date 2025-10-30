@@ -22,7 +22,6 @@ import threading
 from collections import defaultdict
 
 from botocore.exceptions import IncompleteReadError, ReadTimeoutError
-
 from s3transfer.compat import SOCKET_ERROR, fallocate, rename_file
 
 MAX_PARTS = 10000
@@ -43,20 +42,16 @@ S3_RETRYABLE_DOWNLOAD_ERRORS = (
 
 
 def random_file_extension(num_digits=8):
-    return ''.join(random.choice(string.hexdigits) for _ in range(num_digits))
+    return "".join(random.choice(string.hexdigits) for _ in range(num_digits))
 
 
 def signal_not_transferring(request, operation_name, **kwargs):
-    if operation_name in ['PutObject', 'UploadPart'] and hasattr(
-        request.body, 'signal_not_transferring'
-    ):
+    if operation_name in ["PutObject", "UploadPart"] and hasattr(request.body, "signal_not_transferring"):
         request.body.signal_not_transferring()
 
 
 def signal_transferring(request, operation_name, **kwargs):
-    if operation_name in ['PutObject', 'UploadPart'] and hasattr(
-        request.body, 'signal_transferring'
-    ):
+    if operation_name in ["PutObject", "UploadPart"] and hasattr(request.body, "signal_transferring"):
         request.body.signal_transferring()
 
 
@@ -64,9 +59,7 @@ def calculate_num_parts(size, part_size):
     return int(math.ceil(size / float(part_size)))
 
 
-def calculate_range_parameter(
-    part_size, part_index, num_parts, total_size=None
-):
+def calculate_range_parameter(part_size, part_index, num_parts, total_size=None):
     """Calculate the range parameter for multipart downloads/copies
 
     :type part_size: int
@@ -85,12 +78,12 @@ def calculate_range_parameter(
     # Used to calculate the Range parameter
     start_range = part_index * part_size
     if part_index == num_parts - 1:
-        end_range = ''
+        end_range = ""
         if total_size is not None:
             end_range = str(total_size - 1)
     else:
         end_range = start_range + part_size - 1
-    range_param = f'bytes={start_range}-{end_range}'
+    range_param = f"bytes={start_range}-{end_range}"
     return range_param
 
 
@@ -113,13 +106,9 @@ def get_callbacks(transfer_future, callback_type):
     """
     callbacks = []
     for subscriber in transfer_future.meta.call_args.subscribers:
-        callback_name = 'on_' + callback_type
+        callback_name = "on_" + callback_type
         if hasattr(subscriber, callback_name):
-            callbacks.append(
-                functools.partial(
-                    getattr(subscriber, callback_name), future=transfer_future
-                )
-            )
+            callbacks.append(functools.partial(getattr(subscriber, callback_name), future=transfer_future))
     return callbacks
 
 
@@ -182,9 +171,7 @@ class FunctionContainer:
         self._kwargs = kwargs
 
     def __repr__(self):
-        return 'Function: {} with args {} and kwargs {}'.format(
-            self._func, self._args, self._kwargs
-        )
+        return "Function: {} with args {} and kwargs {}".format(self._func, self._args, self._kwargs)
 
     def __call__(self):
         return self._func(*self._args, **self._kwargs)
@@ -211,19 +198,14 @@ class CountCallbackInvoker:
         """Increment the count by one"""
         with self._lock:
             if self._is_finalized:
-                raise RuntimeError(
-                    'Counter has been finalized it can no longer be '
-                    'incremented.'
-                )
+                raise RuntimeError("Counter has been finalized it can no longer be " "incremented.")
             self._count += 1
 
     def decrement(self):
         """Decrement the count by one"""
         with self._lock:
             if self._count == 0:
-                raise RuntimeError(
-                    'Counter is at zero. It cannot dip below zero'
-                )
+                raise RuntimeError("Counter is at zero. It cannot dip below zero")
             self._count -= 1
             if self._is_finalized and self._count == 0:
                 self._callback()
@@ -247,9 +229,7 @@ class OSUtils:
         return os.path.getsize(filename)
 
     def open_file_chunk_reader(self, filename, start_byte, size, callbacks):
-        return ReadFileChunk.from_filename(
-            filename, start_byte, size, callbacks, enable_callbacks=False
-        )
+        return ReadFileChunk.from_filename(filename, start_byte, size, callbacks, enable_callbacks=False)
 
     def open_file_chunk_reader_from_fileobj(
         self,
@@ -321,7 +301,7 @@ class OSUtils:
 
     def allocate(self, filename, size):
         try:
-            with self.open(filename, 'wb') as f:
+            with self.open(filename, "wb") as f:
                 fallocate(f, size)
         except OSError:
             self.remove_file(filename)
@@ -329,7 +309,7 @@ class OSUtils:
 
 
 class DeferredOpenFile:
-    def __init__(self, filename, start_byte=0, mode='rb', open_function=open):
+    def __init__(self, filename, start_byte=0, mode="rb", open_function=open):
         """A class that defers the opening of a file till needed
 
         This is useful for deferring opening of a file till it is needed
@@ -491,14 +471,12 @@ class ReadFileChunk:
         :return: A new instance of ``ReadFileChunk``
 
         """
-        f = open(filename, 'rb')
+        f = open(filename, "rb")
         f.seek(start_byte)
         file_size = os.fstat(f.fileno()).st_size
         return cls(f, chunk_size, file_size, callbacks, enable_callbacks)
 
-    def _calculate_file_size(
-        self, fileobj, requested_size, start_byte, actual_file_size
-    ):
+    def _calculate_file_size(self, fileobj, requested_size, start_byte, actual_file_size):
         max_chunk_size = actual_file_size - start_byte
         return min(max_chunk_size, requested_size)
 
@@ -516,12 +494,12 @@ class ReadFileChunk:
 
     def signal_transferring(self):
         self.enable_callback()
-        if hasattr(self._fileobj, 'signal_transferring'):
+        if hasattr(self._fileobj, "signal_transferring"):
             self._fileobj.signal_transferring()
 
     def signal_not_transferring(self):
         self.disable_callback()
-        if hasattr(self._fileobj, 'signal_not_transferring'):
+        if hasattr(self._fileobj, "signal_not_transferring"):
             self._fileobj.signal_not_transferring()
 
     def enable_callback(self):
@@ -549,9 +527,7 @@ class ReadFileChunk:
             bounded_where = max(min(where - self._start_byte, self._size), 0)
             bounded_amount_read = min(self._amount_read, self._size)
             amount = bounded_where - bounded_amount_read
-            invoke_progress_callbacks(
-                self._callbacks, bytes_transferred=amount
-            )
+            invoke_progress_callbacks(self._callbacks, bytes_transferred=amount)
         self._amount_read = max(where - self._start_byte, 0)
 
     def close(self):
@@ -727,15 +703,10 @@ class SlidingWindowSemaphore(TaskSemaphore):
                 # We can't do anything right now because we're still waiting
                 # for the min sequence for the tag to be released.  We have
                 # to queue this for pending release.
-                self._pending_release.setdefault(tag, []).append(
-                    sequence_number
-                )
+                self._pending_release.setdefault(tag, []).append(sequence_number)
                 self._pending_release[tag].sort(reverse=True)
             else:
-                raise ValueError(
-                    "Attempted to release unknown sequence number "
-                    "%s for tag: %s" % (sequence_number, tag)
-                )
+                raise ValueError("Attempted to release unknown sequence number " "%s for tag: %s" % (sequence_number, tag))
         finally:
             self._condition.release()
 
@@ -770,16 +741,10 @@ class ChunksizeAdjuster:
 
     def _adjust_for_chunksize_limits(self, current_chunksize):
         if current_chunksize > self.max_size:
-            logger.debug(
-                "Chunksize greater than maximum chunksize. "
-                "Setting to %s from %s." % (self.max_size, current_chunksize)
-            )
+            logger.debug("Chunksize greater than maximum chunksize. " "Setting to %s from %s." % (self.max_size, current_chunksize))
             return self.max_size
         elif current_chunksize < self.min_size:
-            logger.debug(
-                "Chunksize less than minimum chunksize. "
-                "Setting to %s from %s." % (self.min_size, current_chunksize)
-            )
+            logger.debug("Chunksize less than minimum chunksize. " "Setting to %s from %s." % (self.min_size, current_chunksize))
             return self.min_size
         else:
             return current_chunksize
@@ -793,10 +758,6 @@ class ChunksizeAdjuster:
             num_parts = int(math.ceil(file_size / float(chunksize)))
 
         if chunksize != current_chunksize:
-            logger.debug(
-                "Chunksize would result in the number of parts exceeding the "
-                "maximum. Setting to %s from %s."
-                % (chunksize, current_chunksize)
-            )
+            logger.debug("Chunksize would result in the number of parts exceeding the " "maximum. Setting to %s from %s." % (chunksize, current_chunksize))
 
         return chunksize

@@ -1,0 +1,22 @@
+service: aws-python-alexa-skill
+
+env_vars: {}   # nada especial
+aws_services: []  # no usa AWS aquí
+http_mocks: []    # sin HTTP
+
+# Dile al runner cómo llamar
+handler_module: "lambdas.aws-python-alexa-skill.handler"
+handler_name: "lucky_number"
+
+# Evento Alexa mínimo con slot UpperLimit=10
+test_event:
+  session:
+    new: true
+  request:
+    type: "IntentRequest"
+    intent:
+      name: "GetLuckyNumbers"
+      slots:
+        UpperLimit:
+          name: "UpperLimit"
+          value: "10"
