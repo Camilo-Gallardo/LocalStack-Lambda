@@ -25,6 +25,28 @@ import pytest
 import responses
 import yaml
 
+
+class MockLambdaContext:
+    """Mock AWS Lambda context for testing. Works with all lambdas."""
+
+    def __init__(self, function_name: str = "test-function"):
+        self.function_name = function_name
+        self.function_version = "$LATEST"
+        self.invoked_function_arn = (
+            f"arn:aws:lambda:us-east-1:123456789012:function:{function_name}"
+        )
+        self.memory_limit_in_mb = "128"
+        self.aws_request_id = f"test-{function_name}-{int(time.time())}"
+        self.log_group_name = f"/aws/lambda/{function_name}"
+        self.log_stream_name = f"2024/01/01/[$LATEST]test-{int(time.time())}"
+        self.identity = None
+        self.client_context = None
+
+    def get_remaining_time_in_millis(self):
+        """Return mock remaining execution time in milliseconds."""
+        return 300000  # 5 minutes
+
+
 # =======================================================================
 # Lambda Discovery
 # =======================================================================
@@ -153,8 +175,51 @@ def setup_aws_resources(aws_config: List[Dict], endpoint_url: str):
                             raise
                         time.sleep(1)
 
+            elif service_name == "dynamodb" and resource_type == "table":
+                table_name = resource.get("name")
+                key_schema = resource.get("key_schema", [])
+                attribute_definitions = resource.get("attribute_definitions", [])
+                billing_mode = resource.get("billing_mode", "PAY_PER_REQUEST")
+
+                try:
+                    create_params = {
+                        "TableName": table_name,
+                        "KeySchema": key_schema,
+                        "AttributeDefinitions": attribute_definitions,
+                        "BillingMode": billing_mode,
+                    }
+
+                    # Add provisioned throughput if not using PAY_PER_REQUEST
+                    if billing_mode != "PAY_PER_REQUEST":
+                        create_params["ProvisionedThroughput"] = {
+                            "ReadCapacityUnits": resource.get("read_capacity", 5),
+                            "WriteCapacityUnits": resource.get("write_capacity", 5),
+                        }
+
+                    client.create_table(**create_params)
+                    print(f"✅ Created DynamoDB table: {table_name}")
+
+                    # Wait for table to be active
+                    waiter = client.get_waiter("table_exists")
+                    waiter.wait(TableName=table_name)
+
+                except client.exceptions.ResourceInUseException:
+                    print(f"ℹ️  DynamoDB table already exists: {table_name}")
+                except Exception as e:
+                    print(f"❌ Error creating DynamoDB table {table_name}: {e}")
+                    raise
+
+            elif service_name == "sns" and resource_type == "topic":
+                topic_name = resource.get("name")
+                try:
+                    response = client.create_topic(Name=topic_name)
+                    topic_arn = response["TopicArn"]
+                    print(f"✅ Created SNS topic: {topic_name} ({topic_arn})")
+                except Exception as e:
+                    print(f"❌ Error creating SNS topic {topic_name}: {e}")
+                    raise
+
             # Add more resource types as needed
-            # Example: DynamoDB tables, SQS queues, etc.
 
 
 # =======================================================================
@@ -379,7 +444,9 @@ def test_lambda_config_driven(lambda_info: Dict[str, Any], monkeypatch):
     print(f"\n📤 Calling handler with event:")
     print(json.dumps(test_event, indent=2))
 
-    result = handler_module.handler(test_event, None)
+    # result = handler_module.handler(test_event, None)
+    mock_context = MockLambdaContext(function_name=lambda_name)
+    result = handler_module.handler(test_event, mock_context)
 
     print(f"\n📥 Handler response:")
     print(json.dumps(result, indent=2))

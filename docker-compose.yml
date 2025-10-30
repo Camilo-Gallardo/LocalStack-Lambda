@@ -6,7 +6,7 @@ services:
       - "4566:4566" # Edge port
       - "4510-4559:4510-4559" # Puertos internos (lambdas)
     environment:
-      - SERVICES=lambda,logs,iam,sts,cloudwatch,events,apigateway,s3
+      - SERVICES=lambda,logs,iam,sts,cloudwatch,events,apigateway,s3,dynamodb,sns
       - DEBUG=1
       - LAMBDA_EXECUTOR=docker-reuse
       - PERSISTENCE=1
@@ -14,4 +14,3 @@ services:
     volumes:
       - "./.localstack:/var/lib/localstack"
       - "/var/run/docker.sock:/var/run/docker.sock"
-

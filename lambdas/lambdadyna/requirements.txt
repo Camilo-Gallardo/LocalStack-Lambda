@@ -1,0 +1,12 @@
+# --- Dependencias principales ---
+boto3==1.34.130          # SDK oficial de AWS (incluye clientes para DynamoDB, SNS, etc.)
+botocore==1.34.130       # Núcleo de boto3, requerido explícitamente por AWS Lambda en local
+
+# --- Dependencias para logging y manejo de errores ---
+requests==2.32.3         # Para pruebas o invocaciones HTTP externas si se agregan en el futuro
+
+# --- Dependencias para pruebas locales ---
+pytest==8.3.3            # Framework de pruebas unitarias
+pytest-mock==3.14.0      # Extensión para simular (mock) servicios AWS durante las pruebas
+localstack-client==2.6   # Cliente para interactuar con LocalStack en pruebas locales
+pyyaml==6.0.2            # Permite leer el archivo YAML de configuración de pruebas
