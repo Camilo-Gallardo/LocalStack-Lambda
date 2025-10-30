@@ -1,0 +1,197 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/lambda-contract.schema.json",
+  "title": "Lambda Integration Contract",
+  "type": "object",
+  "required": ["lambda_name", "trigger_type", "invoke", "assertions"],
+  "additionalProperties": false,
+  "properties": {
+    "lambda_name": { "type": "string", "minLength": 1 },
+    "display_name": { "type": "string" },
+    "trigger_type": {
+      "type": "string",
+      "enum": ["direct", "apigw", "s3", "eventbridge"]
+    },
+    "markers": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "required_env": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["default"],
+        "properties": {
+          "default": { "type": ["string", "boolean", "number", "null"] },
+          "description": { "type": "string" }
+        },
+        "additionalProperties": false
+      }
+    },
+    "skip_if_missing": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "secrets": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "capabilities": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "localstack_resources": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "s3": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": { "type": "string" },
+              "from_output": { "type": "string" },
+              "create": { "type": "boolean", "default": true },
+              "objects": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": ["key"],
+                  "properties": {
+                    "key": { "type": "string" },
+                    "body": { "type": "string" },
+                    "from_file": { "type": "string" },
+                    "content_type": { "type": "string" }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            },
+            "anyOf": [
+              { "required": ["name"] },
+              { "required": ["from_output"] }
+            ],
+            "additionalProperties": false
+          }
+        }
+      }
+    },
+    "http_mocks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["method", "url"],
+        "properties": {
+          "method": { "type": "string" },
+          "url": { "type": "string" },
+          "status": { "type": "integer", "default": 200 },
+          "headers": {
+            "type": "object",
+            "additionalProperties": { "type": "string" }
+          },
+          "body": { "type": ["string", "object"], "default": "" },
+          "json": {},
+          "repeatable": { "type": "boolean", "default": true }
+        },
+        "additionalProperties": false
+      }
+    },
+    "model_mocks": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "bedrock": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["model_id", "response_body"],
+            "properties": {
+              "model_id": { "type": "string" },
+              "response_body": { "type": ["object", "string"] },
+              "status": { "type": "integer", "default": 200 }
+            },
+            "additionalProperties": false
+          }
+        }
+      }
+    },
+    "invoke": {
+      "type": "object",
+      "required": ["action"],
+      "properties": {
+        "action": {
+          "type": "string",
+          "enum": ["lambda_invoke", "s3_put_object", "apigw_event", "eventbridge_put_event"]
+        },
+        "payload": {},
+        "payload_file": { "type": "string" },
+        "s3_object": {
+          "type": "object",
+          "properties": {
+            "bucket": { "type": "string" },
+            "bucket_from_output": { "type": "string" },
+            "key": { "type": "string" },
+            "body": { "type": "string" },
+            "content_type": { "type": "string" }
+          },
+          "anyOf": [
+            { "required": ["bucket", "key", "body"] },
+            { "required": ["bucket_from_output", "key", "body"] }
+          ],
+          "additionalProperties": false
+        },
+        "apigw": {
+          "type": "object",
+          "required": ["method", "path"],
+          "properties": {
+            "method": { "type": "string" },
+            "path": { "type": "string" },
+            "query": { "type": "object", "additionalProperties": { "type": "string" } },
+            "body": {},
+            "headers": { "type": "object", "additionalProperties": { "type": "string" } }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "assertions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["type"],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "lambda_response_jsonpath",
+              "lambda_logs_contains",
+              "s3_object_exists",
+              "s3_object_jsonpath",
+              "http_call_made",
+              "bedrock_invocation_count"
+            ]
+          },
+          "expression": { "type": "string" },
+          "expected": {},
+          "bucket": { "type": "string" },
+          "bucket_from_output": { "type": "string" },
+          "key": { "type": "string" },
+          "timeout_seconds": { "type": "integer", "default": 20 },
+          "poll_interval_seconds": { "type": "number", "default": 1.0 },
+          "count": { "type": "integer", "minimum": 0 }
+        },
+        "additionalProperties": false
+      }
+    },
+    "cleanup": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "s3_delete_objects": { "type": "boolean", "default": true }
+      }
+    }
+  }
+}

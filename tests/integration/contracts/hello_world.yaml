@@ -1,0 +1,16 @@
+lambda_name: hello_world
+display_name: Hello World Smoke Contract
+trigger_type: direct
+markers:
+  - smoke
+invoke:
+  action: lambda_invoke
+  payload:
+    name: "Codex"
+assertions:
+  - type: lambda_response_jsonpath
+    expression: "$.status_code"
+    expected: 200
+  - type: lambda_response_jsonpath
+    expression: "$.payload.message"
+    expected: "Hello, Codex!"

@@ -207,29 +207,9 @@ list-lambdas: ## Lista lambdas desplegadas
 	@cd infra/terraform && $(TF) output -json lambda_names 2>/dev/null | jq -r '.[]' | \
 		awk '{print "   ✓ " $$0}' || echo "   ⚠️  Ejecuta 'make deploy' primero"
 
-smoke: ensure-dirs ## Smoke tests (invoca todas las lambdas)
-	@echo "╔══════════════════════════════════════════════════════════════╗"
-	@echo "║  🔥 Ejecutando smoke tests...                                ║"
-	@echo "╚══════════════════════════════════════════════════════════════╝"
-	@names=$$(cd infra/terraform && $(TF) output -json lambda_names 2>/dev/null | jq -r '.[]'); \
-	if [ -z "$$names" ] || [ "$$names" = "null" ]; then \
-	  echo "⚠️  No hay output de Terraform, usando carpetas con dist.zip..."; \
-	  names=$$(find lambdas -mindepth 1 -maxdepth 1 -type d -printf "%f\n"); \
-	fi; \
-	for fn in $$names; do \
-	  echo ""; \
-	  echo "==> Invoke $$fn"; \
-	  "$(PY)" "$(SCRIPTS_DIR)/invoke.py" --function "$$fn" --payload '{"name":"Smoke"}' || exit 1; \
-	  echo "==> Logs $$fn (últimos $(LOG_WINDOW)s)"; \
-	  "$(PY)" "$(SCRIPTS_DIR)/tail_logs.py" \
-	    --log-group "/aws/lambda/$$fn" \
-	    --since-seconds "$(LOG_WINDOW)" \
-	    --output-file "logs/$$fn.log" \
-	    --max-bytes "2000000" \
-	    --backup-count "5" || true; \
-	done
-	@echo ""
-	@echo "✅ Smoke tests completados"
+smoke: ## Smoke tests (subset de contratos marcados)
+	@echo "🔥 Ejecutando smoke tests (contracts)..."
+	@$(PYTEST) --no-cov -m "integration and smoke" tests/integration
 
 # =========================
 # Tests Tradicionales
@@ -240,8 +220,8 @@ test-unit: ## Unit tests
 	@$(PYTEST) -q tests/unit
 
 test-integration: ## Tests de integración
-	@echo "🧪 Ejecutando tests de integración..."
-	@$(PYTEST) -q --no-cov tests/integration
+	@echo "🧪 Ejecutando tests de integración (contracts)..."
+	@$(PYTEST) --no-cov -m integration tests/integration
 
 test-integration-verbose: ## Tests de integración (verbose)
 	@echo "🧪 Ejecutando tests de integración (verbose)..."

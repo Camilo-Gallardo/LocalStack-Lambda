@@ -1,6 +1,7 @@
 pytest
 pytest-cov
 boto3
+botocore
 black
 flake8
 isort
@@ -9,3 +10,7 @@ bandit
 pip-audit
 awscli-local
 requests
+responses
+jsonschema
+jsonpath-ng
+pyyaml

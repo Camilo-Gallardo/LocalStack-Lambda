@@ -1,0 +1,37 @@
+lambda_name: transcriptToJSON
+display_name: Transcript DOCX to JSON
+trigger_type: s3
+required_env:
+  BEDROCK_REGION:
+    default: us-east-1
+    description: "Region for Bedrock runtime stub"
+skip_if_missing:
+  capabilities:
+    - bedrock
+localstack_resources:
+  s3:
+    - name: "transcript-contracts-bucket"
+      create: true
+      objects:
+        - key: "{tmp_prefix}/fixtures/sample.docx"
+          body: "fake-docx-binary"
+invoke:
+  action: s3_put_object
+  s3_object:
+    bucket: "transcript-contracts-bucket"
+    key: "{tmp_prefix}/fixtures/sample.docx"
+    body: "fake-docx-binary"
+    content_type: application/vnd.openxmlformats-officedocument.wordprocessingml.document
+model_mocks:
+  bedrock:
+    - model_id: amazon.titan-transcribe
+      response_body:
+        transcript: "Transcribed hello world"
+assertions:
+  - type: s3_object_jsonpath
+    bucket: "transcript-contracts-bucket"
+    key: "{tmp_prefix}/output/sample.json"
+    expression: "$.transcript"
+    expected: "Transcribed hello world"
+  - type: bedrock_invocation_count
+    count: 1

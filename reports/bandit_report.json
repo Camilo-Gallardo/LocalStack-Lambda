@@ -1,6 +1,6 @@
 {
   "errors": [],
-  "generated_at": "2025-10-27T14:35:12Z",
+  "generated_at": "2025-10-30T17:11:20Z",
   "metrics": {
     "_totals": {
       "CONFIDENCE.HIGH": 462,
@@ -11,7 +11,7 @@
       "SEVERITY.LOW": 490,
       "SEVERITY.MEDIUM": 28,
       "SEVERITY.UNDEFINED": 0,
-      "loc": 762706,
+      "loc": 762782,
       "nosec": 0,
       "skipped_tests": 0
     },
@@ -3365,7 +3365,7 @@
       "SEVERITY.LOW": 0,
       "SEVERITY.MEDIUM": 4,
       "SEVERITY.UNDEFINED": 0,
-      "loc": 139,
+      "loc": 177,
       "nosec": 0,
       "skipped_tests": 0
     },
@@ -7486,7 +7486,7 @@
       "SEVERITY.LOW": 0,
       "SEVERITY.MEDIUM": 4,
       "SEVERITY.UNDEFINED": 0,
-      "loc": 139,
+      "loc": 177,
       "nosec": 0,
       "skipped_tests": 0
     },
@@ -34540,7 +34540,7 @@
       "test_name": "subprocess_without_shell_equals_true"
     },
     {
-      "code": "31 \n32     response = requests.post(token_url, data=token_data)\n33     response.raise_for_status()\n",
+      "code": "62 \n63     response = requests.post(token_url, data=token_data)\n64     response.raise_for_status()\n",
       "col_offset": 15,
       "end_col_offset": 56,
       "filename": "lambdas/getSharepointVideos/build/handler.py",
@@ -34551,16 +34551,16 @@
       },
       "issue_severity": "MEDIUM",
       "issue_text": "Call to requests without timeout",
-      "line_number": 32,
+      "line_number": 63,
       "line_range": [
-        32
+        63
       ],
       "more_info": "https://bandit.readthedocs.io/en/1.8.6/plugins/b113_request_without_timeout.html",
       "test_id": "B113",
       "test_name": "request_without_timeout"
     },
     {
-      "code": "43 \n44     response = requests.get(url, headers=headers)\n45     response.raise_for_status()\n",
+      "code": "74 \n75     response = requests.get(url, headers=headers)\n76     response.raise_for_status()\n",
       "col_offset": 15,
       "end_col_offset": 49,
       "filename": "lambdas/getSharepointVideos/build/handler.py",
@@ -34571,16 +34571,16 @@
       },
       "issue_severity": "MEDIUM",
       "issue_text": "Call to requests without timeout",
-      "line_number": 44,
+      "line_number": 75,
       "line_range": [
-        44
+        75
       ],
       "more_info": "https://bandit.readthedocs.io/en/1.8.6/plugins/b113_request_without_timeout.html",
       "test_id": "B113",
       "test_name": "request_without_timeout"
     },
     {
-      "code": "60     try:\n61         response = requests.get(url, headers=headers)\n62         response.raise_for_status()\n",
+      "code": "91     try:\n92         response = requests.get(url, headers=headers)\n93         response.raise_for_status()\n",
       "col_offset": 19,
       "end_col_offset": 53,
       "filename": "lambdas/getSharepointVideos/build/handler.py",
@@ -34591,16 +34591,16 @@
       },
       "issue_severity": "MEDIUM",
       "issue_text": "Call to requests without timeout",
-      "line_number": 61,
+      "line_number": 92,
       "line_range": [
-        61
+        92
       ],
       "more_info": "https://bandit.readthedocs.io/en/1.8.6/plugins/b113_request_without_timeout.html",
       "test_id": "B113",
       "test_name": "request_without_timeout"
     },
     {
-      "code": "77     try:\n78         response = requests.get(url, headers=headers)\n79         response.raise_for_status()\n",
+      "code": "108     try:\n109         response = requests.get(url, headers=headers)\n110         response.raise_for_status()\n",
       "col_offset": 19,
       "end_col_offset": 53,
       "filename": "lambdas/getSharepointVideos/build/handler.py",
@@ -34611,9 +34611,9 @@
       },
       "issue_severity": "MEDIUM",
       "issue_text": "Call to requests without timeout",
-      "line_number": 78,
+      "line_number": 109,
       "line_range": [
-        78
+        109
       ],
       "more_info": "https://bandit.readthedocs.io/en/1.8.6/plugins/b113_request_without_timeout.html",
       "test_id": "B113",
@@ -35591,7 +35591,7 @@
       "test_name": "subprocess_without_shell_equals_true"
     },
     {
-      "code": "31 \n32     response = requests.post(token_url, data=token_data)\n33     response.raise_for_status()\n",
+      "code": "62 \n63     response = requests.post(token_url, data=token_data)\n64     response.raise_for_status()\n",
       "col_offset": 15,
       "end_col_offset": 56,
       "filename": "lambdas/getSharepointVideos/handler.py",
@@ -35602,16 +35602,16 @@
       },
       "issue_severity": "MEDIUM",
       "issue_text": "Call to requests without timeout",
-      "line_number": 32,
+      "line_number": 63,
       "line_range": [
-        32
+        63
       ],
       "more_info": "https://bandit.readthedocs.io/en/1.8.6/plugins/b113_request_without_timeout.html",
       "test_id": "B113",
       "test_name": "request_without_timeout"
     },
     {
-      "code": "43 \n44     response = requests.get(url, headers=headers)\n45     response.raise_for_status()\n",
+      "code": "74 \n75     response = requests.get(url, headers=headers)\n76     response.raise_for_status()\n",
       "col_offset": 15,
       "end_col_offset": 49,
       "filename": "lambdas/getSharepointVideos/handler.py",
@@ -35622,16 +35622,16 @@
       },
       "issue_severity": "MEDIUM",
       "issue_text": "Call to requests without timeout",
-      "line_number": 44,
+      "line_number": 75,
       "line_range": [
-        44
+        75
       ],
       "more_info": "https://bandit.readthedocs.io/en/1.8.6/plugins/b113_request_without_timeout.html",
       "test_id": "B113",
       "test_name": "request_without_timeout"
     },
     {
-      "code": "60     try:\n61         response = requests.get(url, headers=headers)\n62         response.raise_for_status()\n",
+      "code": "91     try:\n92         response = requests.get(url, headers=headers)\n93         response.raise_for_status()\n",
       "col_offset": 19,
       "end_col_offset": 53,
       "filename": "lambdas/getSharepointVideos/handler.py",
@@ -35642,16 +35642,16 @@
       },
       "issue_severity": "MEDIUM",
       "issue_text": "Call to requests without timeout",
-      "line_number": 61,
+      "line_number": 92,
       "line_range": [
-        61
+        92
       ],
       "more_info": "https://bandit.readthedocs.io/en/1.8.6/plugins/b113_request_without_timeout.html",
       "test_id": "B113",
       "test_name": "request_without_timeout"
     },
     {
-      "code": "77     try:\n78         response = requests.get(url, headers=headers)\n79         response.raise_for_status()\n",
+      "code": "108     try:\n109         response = requests.get(url, headers=headers)\n110         response.raise_for_status()\n",
       "col_offset": 19,
       "end_col_offset": 53,
       "filename": "lambdas/getSharepointVideos/handler.py",
@@ -35662,9 +35662,9 @@
       },
       "issue_severity": "MEDIUM",
       "issue_text": "Call to requests without timeout",
-      "line_number": 78,
+      "line_number": 109,
       "line_range": [
-        78
+        109
       ],
       "more_info": "https://bandit.readthedocs.io/en/1.8.6/plugins/b113_request_without_timeout.html",
       "test_id": "B113",

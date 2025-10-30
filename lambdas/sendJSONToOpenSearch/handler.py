@@ -7,7 +7,14 @@ import logging
 import boto3
 import requests
 from botocore.exceptions import ClientError
-from unidecode import unidecode
+try:
+    from unidecode import unidecode  # type: ignore
+except ImportError:  # pragma: no cover - fallback for local/offline packaging
+    logger = logging.getLogger(__name__)
+    logger.warning("unidecode module not available; falling back to no-op normalization")
+
+    def unidecode(value: str) -> str:  # type: ignore
+        return value
 
 # Set up logging for Lambda
 logger = logging.getLogger()

@@ -1,0 +1,46 @@
+lambda_name: getSharepointVideos
+display_name: Graph Videos Fetcher
+trigger_type: direct
+required_env:
+  GRAPH_TENANT_ID:
+    default: "fake-tenant"
+  GRAPH_CLIENT_ID:
+    default: "fake-client"
+skip_if_missing:
+  secrets:
+    - GRAPH_CLIENT_SECRET
+localstack_resources:
+  s3:
+    - from_output: "videos_bucket.value"
+      create: true
+      objects: []
+http_mocks:
+  - method: POST
+    url: "https://login.microsoftonline.com/fake-tenant/oauth2/v2.0/token"
+    status: 200
+    json:
+      token_type: Bearer
+      expires_in: 3600
+      access_token: "fake-token"
+  - method: GET
+    url: "https://graph.microsoft.com/v1.0/sites/root/drive/root/children"
+    status: 200
+    json:
+      value:
+        - name: "video.mp4"
+          downloadUrl: "https://graph.microsoft.com/content/video.mp4"
+  - method: GET
+    url: "https://graph.microsoft.com/content/video.mp4"
+    status: 200
+    body: "fake-video-bytes"
+invoke:
+  action: lambda_invoke
+  payload:
+    query: "videos"
+assertions:
+  - type: lambda_response_jsonpath
+    expression: "$.status_code"
+    expected: 200
+  - type: s3_object_exists
+    bucket_from_output: "videos_bucket.value"
+    key: "{tmp_prefix}/video.mp4"

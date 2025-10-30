@@ -17,6 +17,37 @@ PREFIX_JSON_FOLDER = os.environ.get("PREFIX_JSON_FOLDER")
 
 s3_client = boto3.client("s3")
 
+_TRUTHY = {"1", "true", "yes", "on"}
+REQUIRED_GRAPH_ENV = [
+    "CLIENT_ID",
+    "CLIENT_SECRET",
+    "TENANT_ID",
+    "SITE_ID",
+    "DRIVE_ID",
+    "FOLDER_ID",
+]
+
+
+def should_use_mock() -> bool:
+    explicit = os.environ.get("USE_MOCK_SHAREPOINT")
+    if explicit is not None:
+        return explicit.strip().lower() in _TRUTHY
+    return any(not os.environ.get(var) for var in REQUIRED_GRAPH_ENV)
+
+
+def mocked_missions() -> List[Dict[str, Any]]:
+    return [
+        {
+            "missionId": "mock-mission-001",
+            "missionName": "Mock Mission Alpha",
+            "folderPath": f"{FOLDER_ID or 'mock-root'}/Mock Mission Alpha",
+            "createdDate": "2024-01-01T00:00:00Z",
+            "modifiedDate": "2024-01-02T00:00:00Z",
+            "videoCount": 0,
+            "processedCount": 0,
+        }
+    ]
+
 
 def get_access_token() -> str:
     """Obtain Microsoft Graph API access token."""
@@ -124,6 +155,19 @@ def handler(event, context):
     try:
         print(f"Event: {json.dumps(event)}")
 
+        if should_use_mock():
+            print("Returning mocked SharePoint missions (offline mode enabled).")
+            return {
+                "statusCode": 200,
+                "headers": {
+                    "Content-Type": "application/json",
+                    "Access-Control-Allow-Origin": "*",
+                    "Access-Control-Allow-Headers": "Content-Type,Authorization",
+                    "Access-Control-Allow-Methods": "GET,OPTIONS",
+                },
+                "body": json.dumps({"missions": mocked_missions()}),
+            }
+
         # Get access token
         access_token = get_access_token()
 
@@ -142,9 +186,7 @@ def handler(event, context):
             # Count videos
             video_count = 0
             if "video_folder_id" in subfolders:
-                video_count = count_folder_items(
-                    access_token, subfolders["video_folder_id"]
-                )
+                video_count = count_folder_items(access_token, subfolders["video_folder_id"])
 
             # Count processed videos from S3
             processed_count = count_processed_videos(mission_name)

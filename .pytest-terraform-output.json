@@ -1,0 +1,24 @@
+{
+  "lambda_names": {
+    "sensitive": false,
+    "type": [
+      "tuple",
+      [
+        "string",
+        "string",
+        "string",
+        "string",
+        "string",
+        "string"
+      ]
+    ],
+    "value": [
+      "getSharepointVideos",
+      "greeter",
+      "hello_world",
+      "sendJSONToOpenSearch",
+      "sendVideoToS3",
+      "transcriptToJSON"
+    ]
+  }
+}

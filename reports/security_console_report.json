@@ -11,19 +11,11 @@
     "total": 0,
     "by_severity": {},
     "by_lambda": {
-      "transcriptToJSON": {
-        "error": null,
-        "vulnerabilities": []
-      },
-      "greeter": {
-        "error": null,
-        "vulnerabilities": []
-      },
       "getSharepointVideos": {
         "error": null,
         "vulnerabilities": []
       },
-      "sendJSONToOpenSearch": {
+      "transcriptToJSON": {
         "error": null,
         "vulnerabilities": []
       },
@@ -31,7 +23,15 @@
         "error": null,
         "vulnerabilities": []
       },
+      "greeter": {
+        "error": null,
+        "vulnerabilities": []
+      },
       "hello_world": {
+        "error": null,
+        "vulnerabilities": []
+      },
+      "sendJSONToOpenSearch": {
         "error": null,
         "vulnerabilities": []
       }
@@ -178,7 +178,7 @@
       "bandit": [
         {
           "file": "lambdas/getSharepointVideos/handler.py",
-          "line": 32,
+          "line": 63,
           "test": "request_without_timeout",
           "issue_text": "Call to requests without timeout",
           "severity": "MEDIUM",
@@ -186,7 +186,7 @@
         },
         {
           "file": "lambdas/getSharepointVideos/handler.py",
-          "line": 44,
+          "line": 75,
           "test": "request_without_timeout",
           "issue_text": "Call to requests without timeout",
           "severity": "MEDIUM",
@@ -194,7 +194,7 @@
         },
         {
           "file": "lambdas/getSharepointVideos/handler.py",
-          "line": 61,
+          "line": 92,
           "test": "request_without_timeout",
           "issue_text": "Call to requests without timeout",
           "severity": "MEDIUM",
@@ -202,7 +202,7 @@
         },
         {
           "file": "lambdas/getSharepointVideos/handler.py",
-          "line": 78,
+          "line": 109,
           "test": "request_without_timeout",
           "issue_text": "Call to requests without timeout",
           "severity": "MEDIUM",

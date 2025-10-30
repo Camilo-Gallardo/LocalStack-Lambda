@@ -1,6 +1,10 @@
 [tool.pytest.ini_options]
 addopts = "-q --maxfail=1 --disable-warnings --cov=lambdas --cov-report=term-missing --cov-fail-under=80"
 pythonpath = ["lambdas"]
+markers = [
+    "integration: contract-driven integration tests against LocalStack",
+    "smoke: fast subset of integration contracts for pipeline smoke checks",
+]
 
 
 [tool.black]
@@ -9,4 +13,3 @@ line-length = 100
 
 [tool.isort]
 profile = "black"
-
