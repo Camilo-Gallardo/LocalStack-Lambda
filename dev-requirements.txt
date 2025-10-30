@@ -9,3 +9,8 @@ bandit
 pip-audit
 awscli-local
 requests
+responses
+pytest-httpserver
+pytest-mock
+botocore
+unidecode
