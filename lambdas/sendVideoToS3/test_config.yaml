@@ -1,0 +1,98 @@
+# Test configuration for sendVideoToS3 lambda
+name: sendVideoToS3
+description: "Uploads video and transcript to S3 from SharePoint"
+
+# Variables de entorno requeridas
+env_vars:
+  CLIENT_ID: "test-client-id"
+  CLIENT_SECRET: "test-client-secret"  # pragma: allowlist secret
+  TENANT_ID: "test-tenant-id"
+  SITE_ID: "test-site-id"
+  DRIVE_ID: "test-drive-id"
+  BUCKET_NAME: "test-video-bucket"
+  PREFIX_JSON_FOLDER: "transcripts"
+  PREFIX_VIDEOS_FOLDER: "videos"
+
+# Servicios AWS necesarios (se crean en LocalStack)
+aws_services:
+  - service: s3
+    resources:
+      - type: bucket
+        name: "test-video-bucket"
+
+# Mocks HTTP (responses interceptará estas llamadas)
+http_mocks:
+  - description: "Microsoft OAuth token"
+    method: POST
+    url: "https://login.microsoftonline.com/{TENANT_ID}/oauth2/v2.0/token"
+    response:
+      status: 200
+      json:
+        access_token: "fake-access-token-12345"
+        expires_in: 3600
+
+  - description: "Get video metadata"
+    method: GET
+    url: "https://graph.microsoft.com/v1.0/sites/{SITE_ID}/drives/{DRIVE_ID}/items/{event.pathParameters.videoId}"
+    response:
+      status: 200
+      json:
+        "@microsoft.graph.downloadUrl": "https://fake-download-url.com/video.mp4"
+        name: "sample-video.mp4"
+        size: 1024000
+
+  - description: "Download video content"
+    method: GET
+    url: "https://fake-download-url.com/video.mp4"
+    response:
+      status: 200
+      body: "fake-video-content"
+      headers:
+        Content-Type: "video/mp4"
+
+  - description: "Get transcript metadata"
+    method: GET
+    url: "https://graph.microsoft.com/v1.0/sites/{SITE_ID}/drives/{DRIVE_ID}/items/{event.pathParameters.transcriptId}"
+    response:
+      status: 200
+      json:
+        "@microsoft.graph.downloadUrl": "https://fake-download-url.com/transcript.vtt"
+        name: "sample-transcript.vtt"
+
+  - description: "Download transcript content"
+    method: GET
+    url: "https://fake-download-url.com/transcript.vtt"
+    response:
+      status: 200
+      body: "WEBVTT\n\n00:00:00.000 --> 00:00:05.000\nFake transcript content"
+
+# Evento de prueba (API Gateway event)
+test_event:
+  pathParameters:
+    videoId: "video-item-123"
+    transcriptId: "transcript-item-456"
+
+# Validaciones de respuesta esperada
+expected_response:
+  statusCode: 200
+  body_contains:
+    - "sample-video.mp4"
+    - "sample-transcript.vtt"
+
+# Validaciones en AWS después de ejecución
+post_execution_checks:
+  - service: s3
+    operation: get_object
+    params:
+      Bucket: "test-video-bucket"
+      Key: "videos/sample-video.mp4"
+    assert:
+      body_equals: "fake-video-content"
+
+  - service: s3
+    operation: get_object
+    params:
+      Bucket: "test-video-bucket"
+      Key: "transcripts/sample-transcript.vtt"
+    assert:
+      body_contains: "WEBVTT"

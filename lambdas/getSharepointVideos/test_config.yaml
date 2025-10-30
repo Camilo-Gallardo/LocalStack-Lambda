@@ -1,0 +1,103 @@
+# Test configuration for getSharepointVideos lambda
+name: getSharepointVideos
+description: "Lists videos from SharePoint and uploads metadata to S3"
+
+# Variables de entorno requeridas
+env_vars:
+  CLIENT_ID: "test-client-id"
+  CLIENT_SECRET: "test-client-secret"  # pragma: allowlist secret
+  TENANT_ID: "test-tenant-id"
+  SITE_ID: "test-site-id"
+  DRIVE_ID: "test-drive-id"
+  FOLDER_ID: "test-folder-id"
+  BUCKET_NAME: "test-sharepoint-bucket"
+  PREFIX_JSON_FOLDER: "metadata"
+
+# Servicios AWS necesarios
+aws_services:
+  - service: s3
+    resources:
+      - type: bucket
+        name: "test-sharepoint-bucket"
+
+# Mocks HTTP
+http_mocks:
+  - description: "Microsoft OAuth token"
+    method: POST
+    url: "https://login.microsoftonline.com/{TENANT_ID}/oauth2/v2.0/token"
+    response:
+      status: 200
+      json:
+        access_token: "fake-access-token"
+        expires_in: 3600
+
+  - description: "List mission folders (root children)"
+    method: GET
+    url: "https://graph.microsoft.com/v1.0/sites/{SITE_ID}/drives/{DRIVE_ID}/items/{FOLDER_ID}/children"
+    response:
+      status: 200
+      json:
+        value:
+          - id: "mission-folder-001"
+            name: "Mission 2024-01"
+            folder:
+              childCount: 10
+          - id: "mission-folder-002"
+            name: "Mission 2024-02"
+            folder:
+              childCount: 5
+          - id: "not-a-folder-file.txt"
+            name: "README.txt"
+            file:
+              mimeType: "text/plain"
+
+  - description: "List videos in mission folder 001"
+    method: GET
+    url: "https://graph.microsoft.com/v1.0/sites/{SITE_ID}/drives/{DRIVE_ID}/items/mission-folder-001/children"
+    response:
+      status: 200
+      json:
+        value:
+          - id: "video-001"
+            name: "recording-2024-01-15.mp4"
+            file:
+              mimeType: "video/mp4"
+            size: 1048576
+            createdDateTime: "2024-01-15T10:00:00Z"
+            lastModifiedDateTime: "2024-01-15T10:30:00Z"
+          - id: "transcript-001"
+            name: "recording-2024-01-15.vtt"
+            file:
+              mimeType: "text/vtt"
+            size: 2048
+
+  - description: "List videos in mission folder 002"
+    method: GET
+    url: "https://graph.microsoft.com/v1.0/sites/{SITE_ID}/drives/{DRIVE_ID}/items/mission-folder-002/children"
+    response:
+      status: 200
+      json:
+        value:
+          - id: "video-002"
+            name: "recording-2024-02-20.mp4"
+            file:
+              mimeType: "video/mp4"
+            size: 2097152
+            createdDateTime: "2024-02-20T14:00:00Z"
+            lastModifiedDateTime: "2024-02-20T14:45:00Z"
+
+# Evento de prueba (API Gateway event)
+test_event: {}
+
+# Validaciones de respuesta esperada
+expected_response:
+  statusCode: 200
+  body_contains:
+    - "Mission 2024-01"
+    - "Mission 2024-02"
+    - "missions"
+    - "missionId"
+
+# Validaciones post-ejecución
+post_execution_checks: []
+  # El lambda solo lista missions, no sube archivos a S3 en este flujo

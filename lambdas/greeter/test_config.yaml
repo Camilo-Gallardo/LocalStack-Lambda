@@ -1,0 +1,29 @@
+# Test configuration for greeter lambda
+name: greeter
+description: "Simple greeter lambda with name parameter"
+
+# Variables de entorno requeridas
+env_vars:
+  STAGE: "test"
+
+# No requiere servicios AWS
+aws_services: []
+
+# No requiere mocks HTTP
+http_mocks: []
+
+# Evento de prueba
+test_event:
+  name: "TestUser"
+
+# Validaciones de respuesta esperada (respuesta directa, no API Gateway)
+expected_response:
+  response_contains:
+    - "ok"
+    - "message"
+    - "Greeter"
+    - "TestUser"
+    - "stage"
+
+# No requiere validaciones post-ejecución
+post_execution_checks: []

@@ -1,0 +1,21 @@
+# Test configuration for hello_world lambda
+name: hello_world
+description: "Simple hello world lambda"
+
+env_vars:
+  STAGE: "test"
+
+aws_services: []
+
+http_mocks: []
+
+test_event:
+  body: '{"name": "TestUser"}'
+
+expected_response:
+  # hello_world returns a dict directly, not API Gateway format
+  response_contains:
+    - "message"
+    - "Hello"
+
+post_execution_checks: []

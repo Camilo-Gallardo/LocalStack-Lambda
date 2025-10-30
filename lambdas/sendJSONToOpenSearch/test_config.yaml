@@ -1,0 +1,162 @@
+# Test configuration for sendJSONToOpenSearch lambda
+name: sendJSONToOpenSearch
+description: "Lists videos from SharePoint missions and checks processing status"
+
+# Variables de entorno requeridas
+env_vars:
+  CLIENT_ID: "test-client-id"
+  CLIENT_SECRET: "test-client-secret"  # pragma: allowlist secret
+  TENANT_ID: "test-tenant-id"
+  SITE_ID: "test-site-id"
+  DRIVE_ID: "test-drive-id"
+  FOLDER_ID: "test-folder-id"
+  BUCKET_NAME: "test-opensearch-bucket"
+  PREFIX_JSON_FOLDER: "json/"
+
+# Servicios AWS necesarios
+aws_services:
+  - service: s3
+    resources:
+      - type: bucket
+        name: "test-opensearch-bucket"
+
+# Mocks HTTP
+http_mocks:
+  - description: "Microsoft OAuth token"
+    method: POST
+    url: "https://login.microsoftonline.com/{TENANT_ID}/oauth2/v2.0/token"
+    response:
+      status: 200
+      json:
+        access_token: "fake-access-token-opensearch"
+        expires_in: 3600
+
+  - description: "List mission folders"
+    method: GET
+    url: "https://graph.microsoft.com/v1.0/sites/{SITE_ID}/drives/{DRIVE_ID}/items/{FOLDER_ID}/children"
+    response:
+      status: 200
+      json:
+        value:
+          - id: "mission-001"
+            name: "Mission Alpha"
+            folder:
+              childCount: 5
+          - id: "mission-002"
+            name: "Mission Beta"
+            folder:
+              childCount: 3
+          - id: "readme-file.txt"
+            name: "README.txt"
+            file:
+              mimeType: "text/plain"
+
+  - description: "List files in Mission Alpha"
+    method: GET
+    url: "https://graph.microsoft.com/v1.0/sites/{SITE_ID}/drives/{DRIVE_ID}/items/mission-001/children"
+    response:
+      status: 200
+      json:
+        value:
+          - id: "video-subfolder-001"
+            name: "video"
+            folder:
+              childCount: 2
+          - id: "transcript-subfolder-001"
+            name: "transcript"
+            folder:
+              childCount: 2
+
+  - description: "List files in Mission Beta"
+    method: GET
+    url: "https://graph.microsoft.com/v1.0/sites/{SITE_ID}/drives/{DRIVE_ID}/items/mission-002/children"
+    response:
+      status: 200
+      json:
+        value:
+          - id: "video-subfolder-002"
+            name: "video"
+            folder:
+              childCount: 1
+          - id: "transcript-subfolder-002"
+            name: "transcript"
+            folder:
+              childCount: 1
+
+  - description: "List videos in Mission Alpha video folder"
+    method: GET
+    url: "https://graph.microsoft.com/v1.0/sites/{SITE_ID}/drives/{DRIVE_ID}/items/video-subfolder-001/children"
+    response:
+      status: 200
+      json:
+        value:
+          - id: "video-001"
+            name: "demo-video-alpha.mp4"
+            file:
+              mimeType: "video/mp4"
+            size: 1048576
+          - id: "video-002"
+            name: "demo-video-beta.mp4"
+            file:
+              mimeType: "video/mp4"
+            size: 2097152
+
+  - description: "List transcripts in Mission Alpha transcript folder"
+    method: GET
+    url: "https://graph.microsoft.com/v1.0/sites/{SITE_ID}/drives/{DRIVE_ID}/items/transcript-subfolder-001/children"
+    response:
+      status: 200
+      json:
+        value:
+          - id: "transcript-001"
+            name: "demo-video-alpha.vtt"
+            file:
+              mimeType: "text/vtt"
+            size: 4096
+          - id: "transcript-002"
+            name: "demo-video-beta.vtt"
+            file:
+              mimeType: "text/vtt"
+            size: 8192
+
+  - description: "List videos in Mission Beta video folder"
+    method: GET
+    url: "https://graph.microsoft.com/v1.0/sites/{SITE_ID}/drives/{DRIVE_ID}/items/video-subfolder-002/children"
+    response:
+      status: 200
+      json:
+        value:
+          - id: "video-003"
+            name: "demo-video-gamma.mp4"
+            file:
+              mimeType: "video/mp4"
+            size: 3145728
+
+  - description: "List transcripts in Mission Beta transcript folder"
+    method: GET
+    url: "https://graph.microsoft.com/v1.0/sites/{SITE_ID}/drives/{DRIVE_ID}/items/transcript-subfolder-002/children"
+    response:
+      status: 200
+      json:
+        value:
+          - id: "transcript-003"
+            name: "demo-video-gamma.vtt"
+            file:
+              mimeType: "text/vtt"
+            size: 6144
+
+# Evento de prueba
+test_event: {}
+
+# Validaciones de respuesta esperada
+expected_response:
+  statusCode: 200
+  body_contains:
+    - "missionId"
+    - "Mission Alpha"
+    - "Mission Beta"
+    - "videos"
+    - "videoCount"
+
+# No requiere validaciones post-ejecución en este flujo
+post_execution_checks: []
